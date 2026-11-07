@@ -4,6 +4,7 @@ export type ShareErrorCode =
   | 'rate-limited' // 429
   | 'network' // fetch failed, tab closed
   | 'server' // 5xx
+  | 'not-ready' // explicit refusal while claude.ai finishes an artifact update
   | 'auth' // signed out of claude.ai
   | 'forbidden' // not the owner / no permission to share
   | 'not-found' // artifact does not exist
@@ -11,6 +12,7 @@ export type ShareErrorCode =
   | 'limit' // per-artifact invitee cap reached
   | 'daily-limit' // the account's daily invitation cap reached
   | 'invalid' // the address was rejected
+  | 'access-unavailable' // the requested access level is disabled
   | 'unknown';
 
 export class ShareError extends Error {
@@ -24,21 +26,26 @@ export class ShareError extends Error {
   }
 }
 
-const RETRYABLE = new Set<ShareErrorCode>(['rate-limited', 'network', 'server']);
+const RETRYABLE = new Set<ShareErrorCode>(['rate-limited', 'not-ready']);
 /** Errors that will fail every other invite on the same artifact too. */
 const ARTIFACT_LEVEL = new Set<ShareErrorCode>(['forbidden', 'not-found', 'unshareable', 'limit']);
 /** Errors that will fail every invite in the run until the user acts; the item stays pending for Resume. */
 const RUN_LEVEL: Partial<Record<ShareErrorCode, string>> = {
   auth: 'You are signed out of claude.ai. Sign in, then resume.',
   'daily-limit': "claude.ai's daily invitation limit is reached. Resume tomorrow.",
+  network: 'The last invitation may have been sent. Resume to check current access before trying again.',
+  server: 'The last invitation may have been sent. Resume to check current access before trying again.',
 };
 
 export function toShareError(err: unknown): ShareError {
   if (err instanceof ShareError) return err;
+
   if (err && typeof err === 'object' && 'code' in err && 'message' in err) {
     const e = err as { message: string; code: ShareErrorCode; retryAfterMs?: number };
+
     return new ShareError(e.message, e.code, e.retryAfterMs);
   }
+
   return new ShareError(err instanceof Error ? err.message : String(err), 'unknown');
 }
 
@@ -87,11 +94,13 @@ export interface RunSummary {
 export function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
     if (signal?.aborted) return resolve();
+
     const done = () => {
       clearTimeout(timer);
       signal?.removeEventListener('abort', done);
       resolve();
     };
+
     const timer = setTimeout(done, ms);
     signal?.addEventListener('abort', done, { once: true });
   });
@@ -101,7 +110,11 @@ export function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> 
  * Invites every `pending` item, one at a time. Mutates items in place and reports each change
  * through `onUpdate`, so the caller can persist progress and resume a stopped run later.
  */
-export async function runInvites(items: RunItem[], client: InviteClient, options: RunOptions): Promise<RunSummary> {
+export async function runInvites(
+  items: RunItem[],
+  client: InviteClient,
+  options: RunOptions,
+): Promise<RunSummary> {
   const {
     delayMs,
     jitterMs = 0,
@@ -123,6 +136,7 @@ export async function runInvites(items: RunItem[], client: InviteClient, options
   for (let i = 0; i < items.length; i++) {
     const item = items[i]!;
     if (item.status !== 'pending') continue;
+
     if (stopped()) {
       stopReason = STOPPED;
       break;
@@ -130,18 +144,22 @@ export async function runInvites(items: RunItem[], client: InviteClient, options
 
     if (sentAny && delayMs > 0) {
       await sleep(delayMs + Math.floor(random() * jitterMs), signal);
+
       // Stop pressed during the pause: don't send this one.
       if (stopped()) {
         stopReason = STOPPED;
         break;
       }
     }
+
     sentAny = true;
 
     let error: ShareError | undefined;
     let interrupted = false;
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       item.attempts++;
+
       try {
         await client.invite(item.artifact, item.email, item.access);
         error = undefined;
@@ -151,6 +169,7 @@ export async function runInvites(items: RunItem[], client: InviteClient, options
         if (!RETRYABLE.has(error.code) || attempt === maxRetries) break;
         const backoff = error.retryAfterMs ?? Math.min(baseBackoffMs * 2 ** attempt, 60_000);
         if (!stopped()) await sleep(backoff, signal);
+
         if (stopped()) {
           interrupted = true;
           break;
@@ -166,6 +185,7 @@ export async function runInvites(items: RunItem[], client: InviteClient, options
     }
 
     const runLevel = error && RUN_LEVEL[error.code];
+
     if (runLevel) {
       // Not this address's fault: keep it pending so Resume sends it.
       await onUpdate?.(item, i);
@@ -190,11 +210,16 @@ export async function runInvites(items: RunItem[], client: InviteClient, options
     consecutiveFailures++;
     await onUpdate?.(item, i);
 
-    if (ARTIFACT_LEVEL.has(error.code)) {
-      // Don't keep hitting an artifact that will reject every invite.
+    if (ARTIFACT_LEVEL.has(error.code) || error.code === 'access-unavailable') {
+      // Skip only the scope that this rejection applies to.
       for (let j = i + 1; j < items.length; j++) {
         const other = items[j]!;
-        if (other.status === 'pending' && other.artifact.id === item.artifact.id) {
+
+        if (
+          other.status === 'pending' &&
+          other.artifact.id === item.artifact.id &&
+          (error.code !== 'access-unavailable' || other.access === item.access)
+        ) {
           other.status = 'skipped';
           other.error = `Skipped: ${error.message}`;
           other.errorCode = error.code;
@@ -202,6 +227,7 @@ export async function runInvites(items: RunItem[], client: InviteClient, options
           await onUpdate?.(other, j);
         }
       }
+
       // An artifact-level rejection isn't a sign the whole run is broken.
       consecutiveFailures = 0;
       continue;
@@ -219,6 +245,7 @@ export async function runInvites(items: RunItem[], client: InviteClient, options
 export function summarize(items: readonly RunItem[], stopReason?: string): RunSummary {
   const count = (s: ItemStatus) => items.filter((i) => i.status === s).length;
   const pending = count('pending');
+
   return {
     status: stopReason || pending > 0 ? 'stopped' : 'completed',
     reason: stopReason,

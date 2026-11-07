@@ -14,7 +14,13 @@ export interface RunState {
 }
 
 export async function loadConfig(): Promise<Config> {
-  return loadStoredConfig((await chrome.storage.local.get(CONFIG_KEY))[CONFIG_KEY]);
+  const raw: unknown = (await chrome.storage.local.get(CONFIG_KEY))[CONFIG_KEY];
+  const config = loadStoredConfig(raw);
+  // Version 1 list ids are generated during migration, so persist them before
+  // another extension view can load a different set of ids.
+  if (raw && typeof raw === 'object' && 'version' in raw && raw.version === 1) await saveConfig(config);
+
+  return config;
 }
 
 export async function saveConfig(config: Config): Promise<void> {
@@ -34,7 +40,9 @@ function watch<T>(key: string, cb: (value: T | null) => void): () => void {
   const listener = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
     if (area === 'local' && key in changes) cb((changes[key]!.newValue as T | undefined) ?? null);
   };
+
   chrome.storage.onChanged.addListener(listener);
+
   return () => chrome.storage.onChanged.removeListener(listener);
 }
 
