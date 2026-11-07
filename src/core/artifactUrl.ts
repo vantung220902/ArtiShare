@@ -18,31 +18,40 @@ export function parseArtifactRef(input: string): ArtifactRef | null {
   if (!raw) return null;
 
   const withScheme = /^https?:\/\//i.test(raw) ? raw : raw.includes('/') ? `https://${raw}` : null;
+
   if (withScheme) {
     let url: URL;
+
     try {
       url = new URL(withScheme);
     } catch {
       return null;
     }
+
     if (url.hostname !== 'claude.ai') return null;
     const parts = url.pathname.split('/').filter(Boolean);
+
     if (parts[0] === 'artifact' && parts[1] && SHORT_ID_RE.test(parts[1])) {
       return make('artifact', parts[1]);
     }
+
     if (parts[0] === 'code' && parts[1] === 'artifact' && parts[2] && UUID_RE.test(parts[2])) {
       return make('code-artifact', parts[2].toLowerCase());
     }
+
     return null;
   }
 
   if (UUID_RE.test(raw)) return make('code-artifact', raw.toLowerCase());
   if (BARE_ID_RE.test(raw)) return make('artifact', raw);
+
   return null;
 }
 
 function make(kind: ArtifactRef['kind'], id: string): ArtifactRef {
-  const url = kind === 'artifact' ? `https://claude.ai/artifact/${id}` : `https://claude.ai/code/artifact/${id}`;
+  const url =
+    kind === 'artifact' ? `https://claude.ai/artifact/${id}` : `https://claude.ai/code/artifact/${id}`;
+
   return { id, kind, url };
 }
 
@@ -56,13 +65,16 @@ const BASE58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 export function artifactUuid(ref: ArtifactRef): string | null {
   if (ref.kind === 'code-artifact') return UUID_RE.test(ref.id) ? ref.id.toLowerCase() : null;
   let n = 0n;
+
   for (const ch of ref.id) {
     const digit = BASE58.indexOf(ch);
     if (digit < 0) return null;
     n = n * 58n + BigInt(digit);
   }
+
   if (n >= 1n << 128n) return null;
   const hex = n.toString(16).padStart(32, '0');
+
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
@@ -77,18 +89,22 @@ export function parseArtifactList(text: string | readonly string[]): ParsedArtif
   const refs: ArtifactRef[] = [];
   const invalid: string[] = [];
   const seen = new Set<string>();
+
   for (const token of tokens) {
     const t = token.trim();
     if (!t) continue;
     const ref = parseArtifactRef(t);
+
     if (!ref) {
       invalid.push(t);
       continue;
     }
+
     const key = `${ref.kind}:${ref.id}`;
     if (seen.has(key)) continue;
     seen.add(key);
     refs.push(ref);
   }
+
   return { refs, invalid };
 }

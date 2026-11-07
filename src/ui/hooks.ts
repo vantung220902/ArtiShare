@@ -1,25 +1,71 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { Config } from '../core/config';
-import { loadConfig, loadRun, type RunState, saveConfig, watchConfig, watchRun } from '../lib/storage';
+import { EMPTY_CONFIG, loadStoredConfig, type Config, type ConfigChange } from '../core/config';
+import { send } from '../lib/messages';
+import { loadRun, type RunState, watchConfig, watchRun } from '../lib/storage';
 
-export function useConfig(): [Config | null, (next: Config) => Promise<void>] {
+export function useConfig(): [Config | null, (change: ConfigChange) => Promise<Config>, string] {
   const [config, setConfig] = useState<Config | null>(null);
+  const [error, setError] = useState('');
   useEffect(() => {
-    void loadConfig().then(setConfig);
-    return watchConfig(() => void loadConfig().then(setConfig));
+    let mounted = true;
+    let updates = 0;
+    const unwatch = watchConfig((value) => {
+      updates++;
+      if (mounted) setConfig(value ? loadStoredConfig(value) : structuredClone(EMPTY_CONFIG));
+    });
+    const initial = updates;
+    void send('config-get', {}).then(
+      (value) => {
+        if (mounted && updates === initial) setConfig(value);
+      },
+      (err: Error) => {
+        if (mounted) setError(err.message);
+      },
+    );
+
+    return () => {
+      mounted = false;
+      unwatch();
+    };
   }, []);
-  const update = useCallback(async (next: Config) => {
-    await saveConfig(next);
-    setConfig(next);
+  const update = useCallback(async (change: ConfigChange) => {
+    const next = await send('config-change', { change });
+    setError('');
+
+    return next;
   }, []);
-  return [config, update];
+
+  return [config, update, error];
 }
 
-export function useRun(): RunState | null | undefined {
+export function useRun(): [RunState | null | undefined, string] {
   const [run, setRun] = useState<RunState | null | undefined>(undefined);
+  const [error, setError] = useState('');
   useEffect(() => {
-    void loadRun().then(setRun);
-    return watchRun(setRun);
+    let mounted = true;
+    let updates = 0;
+    const unwatch = watchRun((value) => {
+      updates++;
+      if (mounted) {
+        setRun(value);
+        setError('');
+      }
+    });
+    const initial = updates;
+    void loadRun().then(
+      (value) => {
+        if (mounted && updates === initial) setRun(value);
+      },
+      (err: Error) => {
+        if (mounted && updates === initial) setError(err.message);
+      },
+    );
+
+    return () => {
+      mounted = false;
+      unwatch();
+    };
   }, []);
-  return run;
+
+  return [run, error];
 }

@@ -11,9 +11,18 @@ import {
   upsertList,
 } from '../src/core/config';
 
-const acme = { id: 'acme', name: 'Acme', emails: ['alice@acme.com', 'bob@acme.com'], access: 'view' as const };
+const acme = {
+  id: 'acme',
+  name: 'Acme',
+  emails: ['alice@acme.com', 'bob@acme.com'],
+  access: 'view' as const,
+};
 const qa = { id: 'qa', name: 'QA', emails: ['bob@acme.com', 'qa@nimblehq.co'], access: 'edit' as const };
-const config = (overrides: Partial<Config> = {}): Config => ({ ...EMPTY_CONFIG, lists: [acme, qa], ...overrides });
+const config = (overrides: Partial<Config> = {}): Config => ({
+  ...EMPTY_CONFIG,
+  lists: [acme, qa],
+  ...overrides,
+});
 
 describe('loadStoredConfig', () => {
   it('keeps a current config as is', () => {
@@ -84,7 +93,9 @@ describe('defaultListIds', () => {
   });
 
   it('ticks only the chosen lists that still exist in "some" mode', () => {
-    expect(defaultListIds(config({ defaultSelection: { mode: 'some', listIds: ['qa', 'gone'] } }))).toEqual(['qa']);
+    expect(defaultListIds(config({ defaultSelection: { mode: 'some', listIds: ['qa', 'gone'] } }))).toEqual([
+      'qa',
+    ]);
     expect(defaultListIds(config())).toEqual([]);
   });
 });

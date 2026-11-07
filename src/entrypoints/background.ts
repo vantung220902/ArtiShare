@@ -1,18 +1,20 @@
 import { createApiShareClient } from '../claude/apiShareClient';
 import { createFakeShareClient } from '../claude/fakeShareClient';
 import type { Account, ShareClient } from '../claude/shareClient';
+import { createConfigController } from '../lib/configController';
 import { planArtifact } from '../core/planner';
-import { abortableSleep, type RunItem, runInvites, summarize } from '../core/runner';
+import { abortableSleep } from '../core/runner';
 import type { Envelope, Messages, PreviewResult, Reply } from '../lib/messages';
-import { loadRun, type RunState, saveRun } from '../lib/storage';
+import { createRunManager } from '../lib/runManager';
+import { loadConfig, loadRun, saveConfig, saveRun } from '../lib/storage';
 
 const FAKE = import.meta.env.WXT_FAKE_CLAUDE === 'true';
 const client: ShareClient = FAKE ? createFakeShareClient() : createApiShareClient();
+const configController = createConfigController(loadConfig, saveConfig);
 
 /** Pause between invites (plus up to half again of random jitter), to stay clear of rate limits. */
 const INVITE_DELAY_MS = 800;
 
-let activeRun: AbortController | null = null;
 let account: Account | null = null;
 
 /**
@@ -22,6 +24,8 @@ let account: Account | null = null;
 async function keepAliveSleep(ms: number, signal?: AbortSignal): Promise<void> {
   const slice = 20_000;
   let left = ms;
+
+  // oxlint-disable-next-line eslint/no-unmodified-loop-condition -- `signal.aborted` flips from outside
   while (left > 0 && !signal?.aborted) {
     const step = Math.min(slice, left);
     await abortableSleep(step, signal);
@@ -30,14 +34,25 @@ async function keepAliveSleep(ms: number, signal?: AbortSignal): Promise<void> {
   }
 }
 
+const runManager = createRunManager({
+  client,
+  load: loadRun,
+  save: saveRun,
+  delayMs: INVITE_DELAY_MS,
+  jitterMs: INVITE_DELAY_MS / 2,
+  sleep: keepAliveSleep,
+});
+
 async function whoami(): Promise<Account> {
   account ??= await client.whoami();
+
   return account;
 }
 
 async function preview(req: Messages['preview']['req']): Promise<PreviewResult[]> {
   const me = await whoami().catch(() => null);
   const results: PreviewResult[] = [];
+
   for (const artifact of req.artifacts) {
     try {
       const existing = await client.listSharees(artifact);
@@ -49,83 +64,37 @@ async function preview(req: Messages['preview']['req']): Promise<PreviewResult[]
       results.push({ artifact, error: (err as Error).message });
     }
   }
+
   return results;
-}
-
-async function execute(run: RunState): Promise<void> {
-  const controller = new AbortController();
-  activeRun = controller;
-  run.status = 'running';
-  run.reason = undefined;
-  await saveRun(run);
-
-  try {
-    const summary = await runInvites(run.items, client, {
-      delayMs: INVITE_DELAY_MS,
-      jitterMs: INVITE_DELAY_MS / 2,
-      signal: controller.signal,
-      sleep: keepAliveSleep,
-      onUpdate: () => saveRun(run),
-    });
-    run.status = summary.status;
-    run.reason = summary.reason;
-  } catch (err) {
-    run.status = 'stopped';
-    run.reason = `Unexpected error: ${(err as Error).message}`;
-  } finally {
-    activeRun = null;
-    await saveRun(run);
-  }
-}
-
-async function start(req: Messages['start']['req']): Promise<null> {
-  if (activeRun) throw new Error('A run is already in progress.');
-  const items: RunItem[] = req.plans.flatMap((plan) =>
-    plan.toInvite.map((i) => ({
-      artifact: plan.artifact,
-      email: i.email,
-      access: i.access,
-      status: 'pending' as const,
-      attempts: 0,
-    })),
-  );
-  if (!items.length) throw new Error('Nobody to invite.');
-  const run: RunState = {
-    id: crypto.randomUUID(),
-    label: req.label,
-    createdAt: Date.now(),
-    status: 'running',
-    items,
-  };
-  void execute(run);
-  return null;
-}
-
-async function resume(): Promise<null> {
-  if (activeRun) throw new Error('A run is already in progress.');
-  const run = await loadRun();
-  if (!run || summarize(run.items).pending === 0) throw new Error('There is nothing left to resume.');
-  void execute(run);
-  return null;
 }
 
 async function handle(msg: Envelope): Promise<unknown> {
   switch (msg.type) {
+    case 'config-get':
+      return configController.get();
+    case 'config-change':
+      return configController.change(msg.change);
     case 'whoami':
       account = null;
+
       return whoami();
     case 'preview':
       return preview(msg);
     case 'start':
-      return start(msg);
+      await runManager.start(msg.label, msg.plans);
+
+      return null;
     case 'stop':
-      activeRun?.abort();
+      runManager.stop();
+
       return null;
     case 'resume':
-      return resume();
+      await runManager.resume();
+
+      return null;
     case 'clear':
-      if (activeRun) throw new Error('Stop the run before clearing it.');
-      await saveRun(null);
+      await runManager.clear();
+
       return null;
   }
 }
@@ -133,21 +102,13 @@ async function handle(msg: Envelope): Promise<unknown> {
 export default defineBackground(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
 
-  // A fresh worker means any run marked "running" was cut off (browser or extension restart).
-  void loadRun().then((run) => {
-    if (run?.status === 'running' && !activeRun) {
-      run.status = 'stopped';
-      run.reason = 'Interrupted because the browser or extension restarted. Resume to continue.';
-      void saveRun(run);
-    }
-  });
-
   chrome.runtime.onMessage.addListener((msg: Envelope, sender, sendResponse: (r: Reply<unknown>) => void) => {
     if (sender.id !== chrome.runtime.id) return false;
     handle(msg).then(
       (data) => sendResponse({ ok: true, data }),
       (err: Error) => sendResponse({ ok: false, error: err.message }),
     );
+
     return true;
   });
 });

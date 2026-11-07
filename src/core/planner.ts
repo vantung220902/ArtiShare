@@ -32,9 +32,11 @@ export function planArtifact({ artifact, desired, existing, selfEmail }: PlanInp
       plan.self.push(email);
       continue;
     }
+
     const current = existingByEmail.get(email);
     if (current) plan.alreadyShared.push({ email, access: current.access, status: current.status });
     else plan.toInvite.push({ email, access });
   }
+
   return plan;
 }

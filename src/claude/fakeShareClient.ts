@@ -14,8 +14,11 @@ export function createFakeShareClient(): ShareClient {
   const shares = new Map<string, Sharee[]>();
   const slowSeen = new Set<string>();
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
   const list = (a: ArtifactRef) => {
-    if (!shares.has(a.id)) shares.set(a.id, [{ email: 'owner@example.com', access: 'owner', status: 'active' }]);
+    if (!shares.has(a.id))
+      shares.set(a.id, [{ email: 'owner@example.com', access: 'owner', status: 'active' }]);
+
     return shares.get(a.id)!;
   };
 
@@ -25,16 +28,20 @@ export function createFakeShareClient(): ShareClient {
     },
     async listSharees(artifact) {
       await wait(150);
+
       return structuredClone(list(artifact));
     },
     async invite(artifact, email, access: AccessLevel) {
       await wait(300);
-      if (artifact.id.includes('Forbidden')) throw new ShareError('You can only share artifacts you own', 'forbidden');
+      if (artifact.id.includes('Forbidden'))
+        throw new ShareError('You can only share artifacts you own', 'forbidden');
       if (email.startsWith('fail')) throw new ShareError('This address was rejected', 'invalid');
+
       if (email.startsWith('slow') && !slowSeen.has(email)) {
         slowSeen.add(email);
         throw new ShareError('Too many requests', 'rate-limited', 1_000);
       }
+
       list(artifact).push({ email, access, status: 'pending' });
     },
   };
