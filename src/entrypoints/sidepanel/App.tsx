@@ -1,22 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Account } from '../../claude/shareClient';
 import { parseArtifactList, parseArtifactRef } from '../../core/artifactUrl';
-import { type Config, listEmails, resolveJob } from '../../core/config';
-import { runReportCsv } from '../../core/csv';
-import { mergeEmails, parseEmails } from '../../core/emails';
+import { type Config, type DefaultSelection, defaultListIds, type EmailList, type Invitee, resolveInvites } from '../../core/config';
 import { summarize } from '../../core/runner';
 import { ACCESS_LABELS, type AccessLevel, type ArtifactRef } from '../../core/types';
 import { type PreviewResult, send } from '../../lib/messages';
 import type { RunState } from '../../lib/storage';
-import { AccessSelect } from '../../ui/AccessSelect';
-import { EmailInput } from '../../ui/EmailInput';
-import { download, useConfig, useRun } from '../../ui/hooks';
+import { useConfig, useRun } from '../../ui/hooks';
+import { ListForm } from '../../ui/ListForm';
 
-const AD_HOC = '';
+type Tab = 'share' | 'lists';
+type Save = (next: Config) => Promise<void>;
 
 export function App() {
-  const [config] = useConfig();
+  const [config, save] = useConfig();
   const run = useRun();
+  const [tab, setTab] = useState<Tab>('share');
   const [account, setAccount] = useState<Account | null>(null);
   const [accountError, setAccountError] = useState('');
 
@@ -33,12 +32,7 @@ export function App() {
 
   return (
     <div className="panel">
-      <div className="row spread" style={{ marginBottom: 10 }}>
-        <h1>ArtiShare</h1>
-        <button className="link" onClick={() => chrome.runtime.openOptionsPage()}>
-          Lists &amp; config
-        </button>
-      </div>
+      <h1 style={{ marginBottom: 4 }}>ArtiShare</h1>
       <p className="hint truncate">
         {account ? (
           <>
@@ -56,7 +50,22 @@ export function App() {
           'Checking claude.ai sign-in…'
         )}
       </p>
-      {run ? <RunView run={run} /> : <Setup config={config} />}
+
+      <div className="tabs" role="tablist">
+        <button role="tab" aria-selected={tab === 'share'} onClick={() => setTab('share')}>
+          Share
+        </button>
+        <button role="tab" aria-selected={tab === 'lists'} onClick={() => setTab('lists')}>
+          Lists <span className="chip">{config.lists.length}</span>
+        </button>
+      </div>
+
+      {/* Both tabs stay mounted so switching doesn't lose what you've typed. */}
+      <div hidden={tab !== 'share'}>{run ? <RunView run={run} /> : <ShareView config={config} save={save} />}</div>
+      <div hidden={tab !== 'lists'}>
+        <ListsView config={config} save={save} />
+      </div>
+
       <p className="hint" style={{ marginTop: 16 }}>
         Version {chrome.runtime.getManifest().version}
       </p>
@@ -64,48 +73,49 @@ export function App() {
   );
 }
 
-interface Draft {
-  jobName: string;
-  artifacts: ArtifactRef[];
-  emails: string[];
-  access: AccessLevel;
+const byName = (lists: readonly EmailList[]) => [...lists].sort((a, b) => a.name.localeCompare(b.name));
+const people = (n: number) => `${n} ${n === 1 ? 'person' : 'people'}`;
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/** The artifact open in the active tab, if any. The claude.ai host permission exposes those tabs' URLs. */
+async function currentTabArtifact(): Promise<ArtifactRef | null> {
+  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  return tab?.url ? parseArtifactRef(tab.url) : null;
 }
 
-function Setup({ config }: { config: Config }) {
-  const [jobName, setJobName] = useState(AD_HOC);
+interface Draft {
+  label: string;
+  artifacts: ArtifactRef[];
+  invites: Invitee[];
+}
+
+function ShareView({ config, save }: { config: Config; save: Save }) {
   const [artifactText, setArtifactText] = useState('');
-  const [lists, setLists] = useState<string[]>([]);
-  const [emailText, setEmailText] = useState('');
-  const [access, setAccess] = useState<AccessLevel>(config.defaults.access);
+  const [selected, setSelected] = useState<string[]>(() => defaultListIds(config));
+  const [creating, setCreating] = useState(false);
   const [preview, setPreview] = useState<{ draft: Draft; results: PreviewResult[] } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const job = config.jobs.find((j) => j.name === jobName);
-
-  // Selecting a job fills the form; you can still tweak it before previewing.
+  // Start from the artifact you're looking at.
   useEffect(() => {
-    if (!job) return;
-    const resolved = resolveJob(config, job);
-    setArtifactText(resolved.artifacts.map((a) => a.url).join('\n'));
-    setLists(job.lists);
-    setEmailText(job.emails.join('\n'));
-    setAccess(resolved.access);
-  }, [jobName]); // eslint-disable-line react-hooks/exhaustive-deps
+    void currentTabArtifact().then((ref) => ref && setArtifactText((text) => (text.trim() ? text : ref.url)));
+  }, []);
 
+  // Changing the default selection in the Lists tab re-applies it here.
+  const defaultKey = JSON.stringify(config.defaultSelection);
+  useEffect(() => setSelected(defaultListIds(config)), [defaultKey]);
+
+  const lists = byName(config.lists);
   const artifacts = parseArtifactList(artifactText);
-  const emails = useMemo(
-    () => mergeEmails(...lists.map((l) => listEmails(config, l)), parseEmails(emailText).valid),
-    [lists, emailText, config],
-  );
+  const invites = useMemo(() => resolveInvites(config, selected), [config, selected]);
+  const showForm = creating || lists.length === 0;
+
+  const toggle = (id: string, on: boolean) => setSelected((ids) => (on ? [...ids, id] : ids.filter((x) => x !== id)));
 
   const addCurrentTab = async () => {
-    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    const ref = tab?.url ? parseArtifactRef(tab.url) : null;
-    if (!ref) {
-      setError('The current tab is not a claude.ai artifact.');
-      return;
-    }
+    const ref = await currentTabArtifact();
+    if (!ref) return setError('The current tab is not a claude.ai artifact.');
     setError('');
     if (!artifacts.refs.some((r) => r.id === ref.id)) setArtifactText([artifactText.trim(), ref.url].filter(Boolean).join('\n'));
   };
@@ -114,16 +124,15 @@ function Setup({ config }: { config: Config }) {
     setError('');
     if (!artifacts.refs.length) return setError('Add at least one artifact.');
     if (artifacts.invalid.length) return setError(`Not artifact links: ${artifacts.invalid.join(', ')}`);
-    if (!emails.length) return setError('Pick a list or add some emails.');
-    const draft: Draft = { jobName: job?.name ?? 'Ad hoc', artifacts: artifacts.refs, emails, access };
+    if (!invites.length) return setError('Tick a list, or create one.');
+    const label = lists
+      .filter((l) => selected.includes(l.id))
+      .map((l) => l.name)
+      .join(', ');
+    const draft: Draft = { label, artifacts: artifacts.refs, invites };
     setBusy(true);
     try {
-      const results = await send('preview', {
-        artifacts: draft.artifacts,
-        emails: draft.emails,
-        access: draft.access,
-        orgDomains: config.defaults.orgDomains,
-      });
+      const results = await send('preview', { artifacts: draft.artifacts, invites: draft.invites });
       setPreview({ draft, results });
     } catch (e) {
       setError((e as Error).message);
@@ -132,27 +141,13 @@ function Setup({ config }: { config: Config }) {
     }
   };
 
-  if (preview) {
-    return <Preview {...preview} delayMs={config.defaults.delayMs} onBack={() => setPreview(null)} />;
-  }
+  if (preview) return <Preview {...preview} onBack={() => setPreview(null)} />;
 
   return (
     <div className="stack">
       <div className="card stack">
-        <label>Job</label>
-        <select value={jobName} onChange={(e) => setJobName(e.target.value)}>
-          <option value={AD_HOC}>Ad hoc (fill in below)</option>
-          {config.jobs.map((j) => (
-            <option key={j.name} value={j.name}>
-              {j.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="card stack">
         <div className="row spread">
-          <label>
+          <label htmlFor="artifacts">
             Artifacts <span className="hint">{artifacts.refs.length} found</span>
           </label>
           <button className="link" onClick={addCurrentTab}>
@@ -160,6 +155,7 @@ function Setup({ config }: { config: Config }) {
           </button>
         </div>
         <textarea
+          id="artifacts"
           rows={3}
           value={artifactText}
           onChange={(e) => setArtifactText(e.target.value)}
@@ -170,82 +166,67 @@ function Setup({ config }: { config: Config }) {
       </div>
 
       <div className="card stack">
-        <label>Lists</label>
-        {Object.keys(config.lists).length === 0 ? (
-          <span className="hint">
-            No saved lists.{' '}
-            <button className="link" onClick={() => chrome.runtime.openOptionsPage()}>
-              Create one
-            </button>{' '}
-            or paste emails below.
-          </span>
-        ) : (
-          <div className="checks">
-            {Object.keys(config.lists)
-              .sort()
-              .map((l) => (
-                <label key={l}>
-                  <input
-                    type="checkbox"
-                    checked={lists.includes(l)}
-                    onChange={(e) => setLists(e.target.checked ? [...lists, l] : lists.filter((x) => x !== l))}
-                  />
-                  {l} <span className="hint">({config.lists[l]?.length})</span>
-                </label>
-              ))}
+        <label>Share with</label>
+        {lists.length > 0 && (
+          <div className="choices">
+            {lists.map((l) => (
+              <label key={l.id}>
+                <input type="checkbox" checked={selected.includes(l.id)} onChange={(e) => toggle(l.id, e.target.checked)} />
+                <span className="grow">
+                  {l.name}{' '}
+                  <span className="hint">
+                    {people(l.emails.length)} · {ACCESS_LABELS[l.access]}
+                  </span>
+                </span>
+              </label>
+            ))}
           </div>
         )}
-        <label>
-          Emails <span className="hint">optional, added to the lists</span>
-        </label>
-        <EmailInput value={emailText} onChange={setEmailText} rows={4} />
-      </div>
-
-      <div className="card stack">
-        <label>Access</label>
-        <AccessSelect value={access} onChange={setAccess} />
+        {showForm ? (
+          <div className="card" style={{ margin: 0 }}>
+            <ListForm
+              config={config}
+              save={save}
+              onSaved={(list) => {
+                setSelected((ids) => [...ids, list.id]);
+                setCreating(false);
+              }}
+              onCancel={lists.length ? () => setCreating(false) : undefined}
+            />
+          </div>
+        ) : (
+          <div>
+            <button className="link" onClick={() => setCreating(true)}>
+              + New list
+            </button>
+          </div>
+        )}
       </div>
 
       {error && <p className="err">{error}</p>}
       <button className="primary" onClick={runPreview} disabled={busy}>
-        {busy
-          ? 'Checking current access…'
-          : `Preview ${emails.length} ${emails.length === 1 ? 'person' : 'people'} × ${artifacts.refs.length} artifact${
-              artifacts.refs.length === 1 ? '' : 's'
-            }`}
+        {busy ? 'Checking current access…' : `Preview ${people(invites.length)} × ${plural(artifacts.refs.length, 'artifact')}`}
       </button>
       <p className="hint">Preview only reads who already has access. Nothing is sent until you confirm.</p>
     </div>
   );
 }
 
-function Preview({
-  draft,
-  results,
-  delayMs,
-  onBack,
-}: {
-  draft: Draft;
-  results: PreviewResult[];
-  delayMs: number;
-  onBack: () => void;
-}) {
+function Preview({ draft, results, onBack }: { draft: Draft; results: PreviewResult[]; onBack: () => void }) {
   const [error, setError] = useState('');
   const [starting, setStarting] = useState(false);
   const plans = results.flatMap((r) => (r.plan ? [r.plan] : []));
   const total = plans.reduce((n, p) => n + p.toInvite.length, 0);
-  const external = plans.reduce((n, p) => n + p.toInvite.filter((i) => !i.internal).length, 0);
 
   const start = async () => {
     const ok = window.confirm(
-      `Send ${total} invitation${total === 1 ? '' : 's'} with "${ACCESS_LABELS[draft.access]}" access across ${plans.length} artifact${
-        plans.length === 1 ? '' : 's'
-      }?\n\n${external} of them go to people outside your organization, who will get an email from Claude.`,
+      `Send ${plural(total, 'invitation')} across ${plural(plans.length, 'artifact')}?\n\n` +
+        'People outside your organization will get an email from Claude.',
     );
     if (!ok) return;
     setStarting(true);
     try {
-      await send('start', { jobName: draft.jobName, plans, delayMs });
+      await send('start', { label: draft.label, plans });
     } catch (e) {
       setError((e as Error).message);
       setStarting(false);
@@ -258,9 +239,7 @@ function Preview({
         <button className="link" onClick={onBack}>
           ← Back
         </button>
-        <span className="hint">
-          {draft.jobName} · {ACCESS_LABELS[draft.access]}
-        </span>
+        <span className="hint truncate">{draft.label}</span>
       </div>
       {results.map((r) => (
         <div key={r.artifact.id} className="card stack">
@@ -275,30 +254,30 @@ function Preview({
                 <div className="row">
                   <span className="chip ok">{r.plan.toInvite.length} to invite</span>
                   <span className="chip">{r.plan.alreadyShared.length} already shared</span>
-                  {r.plan.overLimit.length > 0 && <span className="chip err">{r.plan.overLimit.length} over the cap</span>}
                   {r.plan.self.length > 0 && <span className="chip">you</span>}
                 </div>
-                <span className="hint">
-                  Outside people after this run: {r.plan.externalAfter} / {r.plan.externalLimit}
-                </span>
-                <EmailGroup title="Will be invited" emails={r.plan.toInvite.map((i) => i.email)} />
+                <EmailGroup title="Will be invited" emails={r.plan.toInvite.map((i) => `${i.email} · ${ACCESS_LABELS[i.access]}`)} />
                 <EmailGroup
                   title="Already have access (left unchanged)"
                   emails={r.plan.alreadyShared.map(
-                    (s) => `${s.email} (${s.access in ACCESS_LABELS ? ACCESS_LABELS[s.access as AccessLevel] : s.access}${
-                      s.status === 'pending' ? ', pending' : ''
-                    })`,
+                    (s) =>
+                      `${s.email} · ${s.access in ACCESS_LABELS ? ACCESS_LABELS[s.access as AccessLevel] : s.access}${
+                        s.status === 'pending' ? ' (pending)' : ''
+                      }`,
                   )}
                 />
-                <EmailGroup title="Over the 50-outside-people cap (skipped)" emails={r.plan.overLimit} />
               </>
             )
           )}
         </div>
       ))}
+      <p className="hint">
+        claude.ai allows up to 50 people outside your organization per artifact. If an artifact reaches that, the rest of its
+        invites are skipped.
+      </p>
       {error && <p className="err">{error}</p>}
       <button className="primary" disabled={!total || starting} onClick={start}>
-        {total ? `Send ${total} invitation${total === 1 ? '' : 's'}` : 'Nothing to send'}
+        {total ? `Send ${plural(total, 'invitation')}` : 'Nothing to send'}
       </button>
     </div>
   );
@@ -340,7 +319,7 @@ function RunView({ run }: { run: RunState }) {
     <div className="stack">
       <div className="card stack">
         <div className="row spread">
-          <strong>{run.jobName}</strong>
+          <strong className="truncate grow">{run.label}</strong>
           <span className={run.status === 'completed' ? 'ok' : run.status === 'running' ? 'muted' : 'warn'}>
             {run.status === 'running' ? 'Running…' : run.status === 'completed' ? 'Done' : 'Stopped'}
           </span>
@@ -362,16 +341,13 @@ function RunView({ run }: { run: RunState }) {
               Resume
             </button>
           )}
-          <button onClick={() => download(`artishare-report-${new Date(run.createdAt).toISOString().slice(0, 10)}.csv`, runReportCsv(run.items), 'text/csv')}>
-            Export CSV
-          </button>
           {run.status !== 'running' && (
             <button
               onClick={() => {
                 if (s.pending === 0 || window.confirm('Discard this run? The remaining invites will not be sent.')) void act('clear');
               }}
             >
-              New run
+              New share
             </button>
           )}
         </div>
@@ -400,6 +376,83 @@ function RunView({ run }: { run: RunState }) {
           </table>
         </div>
       ))}
+    </div>
+  );
+}
+
+function ListsView({ config, save }: { config: Config; save: Save }) {
+  const [adding, setAdding] = useState(false);
+  const lists = byName(config.lists);
+  const sel = config.defaultSelection;
+  const setSelection = (next: DefaultSelection) => void save({ ...config, defaultSelection: next });
+  const toggleDefault = (id: string, on: boolean) => {
+    if (sel.mode !== 'some') return;
+    setSelection({ mode: 'some', listIds: on ? [...sel.listIds, id] : sel.listIds.filter((x) => x !== id) });
+  };
+
+  return (
+    <div className="stack">
+      <div className="card stack">
+        <label>Ticked by default when sharing</label>
+        <div className="choices">
+          <label>
+            <input type="radio" name="default-selection" checked={sel.mode === 'all'} onChange={() => setSelection({ mode: 'all' })} />
+            All lists
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="default-selection"
+              checked={sel.mode === 'some'}
+              onChange={() => setSelection({ mode: 'some', listIds: defaultListIds(config) })}
+            />
+            Only these:
+          </label>
+          {sel.mode === 'some' &&
+            (lists.length ? (
+              <div className="choices" style={{ paddingLeft: 22 }}>
+                {lists.map((l) => (
+                  <label key={l.id}>
+                    <input type="checkbox" checked={sel.listIds.includes(l.id)} onChange={(e) => toggleDefault(l.id, e.target.checked)} />
+                    {l.name}
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <span className="hint" style={{ paddingLeft: 22 }}>
+                No lists yet.
+              </span>
+            ))}
+        </div>
+      </div>
+
+      <div className="card stack">
+        <h2>Lists</h2>
+        <p className="hint">Each list has its own permission. Someone in two ticked lists gets the higher one.</p>
+        {lists.length === 0 && !adding && <p className="muted">No lists yet.</p>}
+        {lists.map((l) => (
+          <details key={l.id} className="card" style={{ margin: 0 }}>
+            <summary>
+              <strong>{l.name}</strong>{' '}
+              <span className="hint">
+                {people(l.emails.length)} · {ACCESS_LABELS[l.access]}
+              </span>
+            </summary>
+            <div style={{ marginTop: 8 }}>
+              <ListForm config={config} save={save} list={l} />
+            </div>
+          </details>
+        ))}
+        {adding ? (
+          <div className="card" style={{ margin: 0 }}>
+            <ListForm config={config} save={save} onSaved={() => setAdding(false)} onCancel={() => setAdding(false)} />
+          </div>
+        ) : (
+          <div>
+            <button onClick={() => setAdding(true)}>New list</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

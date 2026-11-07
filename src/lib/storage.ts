@@ -1,4 +1,4 @@
-import { type Config, ConfigSchema, EMPTY_CONFIG } from '../core/config';
+import { type Config, ConfigSchema, loadStoredConfig } from '../core/config';
 import type { RunItem } from '../core/runner';
 
 const CONFIG_KEY = 'config';
@@ -6,19 +6,15 @@ const RUN_KEY = 'run';
 
 export interface RunState {
   id: string;
-  jobName: string;
+  label: string;
   createdAt: number;
   status: 'running' | 'stopped' | 'completed';
   reason?: string;
-  delayMs: number;
   items: RunItem[];
 }
 
 export async function loadConfig(): Promise<Config> {
-  const stored = (await chrome.storage.local.get(CONFIG_KEY))[CONFIG_KEY];
-  if (!stored) return structuredClone(EMPTY_CONFIG);
-  const parsed = ConfigSchema.safeParse(stored);
-  return parsed.success ? parsed.data : structuredClone(EMPTY_CONFIG);
+  return loadStoredConfig((await chrome.storage.local.get(CONFIG_KEY))[CONFIG_KEY]);
 }
 
 export async function saveConfig(config: Config): Promise<void> {
