@@ -1,5 +1,4 @@
 import { parseEmails } from '../core/emails';
-import { pickFile } from './hooks';
 
 interface Props {
   value: string;
@@ -8,16 +7,9 @@ interface Props {
   placeholder?: string;
 }
 
-/** Textarea for addresses with live validation and "Import CSV/TXT" (appends to what's there). */
+/** Textarea for addresses with live validation. Accepts any pasted shape, including CSV text. */
 export function EmailInput({ value, onChange, rows = 5, placeholder }: Props) {
   const parsed = parseEmails(value);
-
-  const importFile = async () => {
-    const file = await pickFile('.csv,.txt,.tsv,text/csv,text/plain');
-    if (!file) return;
-    const found = parseEmails(file.text).valid;
-    onChange([value.trim(), ...found].filter(Boolean).join('\n'));
-  };
 
   return (
     <div className="stack">
@@ -28,22 +20,17 @@ export function EmailInput({ value, onChange, rows = 5, placeholder }: Props) {
         onChange={(e) => onChange(e.target.value)}
         spellCheck={false}
       />
-      <div className="row spread">
-        <span className="hint">
-          <span className="ok">{parsed.valid.length} valid</span>
-          {parsed.duplicates.length > 0 && <> · {parsed.duplicates.length} duplicate</>}
-          {parsed.invalid.length > 0 && (
-            <>
-              {' '}
-              · <span className="err">{parsed.invalid.length} invalid: {parsed.invalid.slice(0, 3).join(', ')}
-              {parsed.invalid.length > 3 ? '…' : ''}</span>
-            </>
-          )}
-        </span>
-        <button type="button" className="link" onClick={importFile}>
-          Import CSV/TXT
-        </button>
-      </div>
+      <span className="hint">
+        <span className="ok">{parsed.valid.length} valid</span>
+        {parsed.duplicates.length > 0 && <> · {parsed.duplicates.length} duplicate</>}
+        {parsed.invalid.length > 0 && (
+          <>
+            {' '}
+            · <span className="err">{parsed.invalid.length} invalid: {parsed.invalid.slice(0, 3).join(', ')}
+            {parsed.invalid.length > 3 ? '…' : ''}</span>
+          </>
+        )}
+      </span>
     </div>
   );
 }

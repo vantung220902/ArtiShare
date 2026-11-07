@@ -15,7 +15,7 @@ export default defineConfig({
     host_permissions: ['https://claude.ai/*'],
     action: { default_title: 'ArtiShare' },
     // Public key only. It pins the extension ID to eeihicglfclmofckclcpjleekpddjflg wherever the
-    // unpacked folder lives, so saved lists and jobs survive updates and moving the folder.
+    // unpacked folder lives, so saved lists survive updates and moving the folder.
     key: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqXRHCvMs3DIO2wNZLu1Pf9cDzmX7B9T+tz6nA7BF0aCGPqQ02qyUU8gqFPPq2C/8dcku3Vw1S1ZLdwYHJb2vkqiI0WJzkZvladAB/JB4+rDQ6qdGbtK4/1dpIzz/OA6jfUaT0K9mzufvrSvM9gc0W6ypD23bxP+QV7ARwuC66XEKlPtgdUf9CPB15pebWnhxD7Wvred9yBHGtlN2YdnLgoX0Sph34yQ4ZAmTHbpV2K7Da38eBMH9zpDsKavvWYOm0xo1FvN2YeyZcauksZs+Wxdrq6uvZj/SkZDDUXjqtkogLnUqY3388jBqicw5v1QQPeMkfJb4qxxyHIkS/s2sUQIDAQAB',
   },
 });

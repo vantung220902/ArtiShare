@@ -1,78 +1,40 @@
-import { domainOf } from './emails';
-import { type AccessLevel, type ArtifactRef, EXTERNAL_INVITE_LIMIT, type Sharee } from './types';
-
-export interface PlannedInvite {
-  email: string;
-  access: AccessLevel;
-  internal: boolean;
-}
+import type { Invitee } from './config';
+import type { ArtifactRef, Sharee } from './types';
 
 export interface ArtifactPlan {
   artifact: ArtifactRef;
-  toInvite: PlannedInvite[];
-  /** Already has access or a pending invite. v1 never changes their access level. */
+  toInvite: Invitee[];
+  /** Already has access or a pending invite. Their access level is never changed. */
   alreadyShared: { email: string; access: Sharee['access']; status: Sharee['status'] }[];
-  /** Outside addresses that would exceed the per-artifact cap. */
-  overLimit: string[];
   /** The signed-in user's own address, if it was in the list. */
   self: string[];
-  /** Outside people counted toward the cap after this plan runs. */
-  externalAfter: number;
-  externalLimit: number;
 }
 
 export interface PlanInput {
   artifact: ArtifactRef;
-  /** Normalized, valid, de-duplicated addresses. */
-  desired: readonly string[];
-  access: AccessLevel;
+  /** Normalized, valid, de-duplicated addresses, each with the access to invite them with. */
+  desired: readonly Invitee[];
   existing: readonly Sharee[];
-  /** Domains of the owner's claude.ai organization; addresses there don't count toward the cap. */
-  orgDomains: readonly string[];
   selfEmail?: string;
-  externalLimit?: number;
 }
 
-export function planArtifact(input: PlanInput): ArtifactPlan {
-  const { artifact, desired, access, existing, selfEmail } = input;
-  const limit = input.externalLimit ?? EXTERNAL_INVITE_LIMIT;
-  const orgDomains = new Set(input.orgDomains.map((d) => d.toLowerCase()));
-  const isInternal = (email: string, sharee?: Sharee) => sharee?.internal ?? orgDomains.has(domainOf(email));
-
+/**
+ * Splits the desired invitees into who to invite and who to leave alone. claude.ai enforces its own
+ * per-artifact cap; when an invite hits it, the run skips the rest of that artifact.
+ */
+export function planArtifact({ artifact, desired, existing, selfEmail }: PlanInput): ArtifactPlan {
   const existingByEmail = new Map(existing.map((s) => [s.email.toLowerCase(), s]));
-  let externalUsed = existing.filter((s) => s.access !== 'owner' && !isInternal(s.email, s)).length;
+  const self = selfEmail?.toLowerCase();
+  const plan: ArtifactPlan = { artifact, toInvite: [], alreadyShared: [], self: [] };
 
-  const plan: ArtifactPlan = {
-    artifact,
-    toInvite: [],
-    alreadyShared: [],
-    overLimit: [],
-    self: [],
-    externalAfter: 0,
-    externalLimit: limit,
-  };
-
-  for (const email of desired) {
-    if (selfEmail && email === selfEmail.toLowerCase()) {
+  for (const { email, access } of desired) {
+    if (email === self) {
       plan.self.push(email);
       continue;
     }
     const current = existingByEmail.get(email);
-    if (current) {
-      plan.alreadyShared.push({ email, access: current.access, status: current.status });
-      continue;
-    }
-    const internal = isInternal(email);
-    if (!internal) {
-      if (externalUsed >= limit) {
-        plan.overLimit.push(email);
-        continue;
-      }
-      externalUsed++;
-    }
-    plan.toInvite.push({ email, access, internal });
+    if (current) plan.alreadyShared.push({ email, access: current.access, status: current.status });
+    else plan.toInvite.push({ email, access });
   }
-
-  plan.externalAfter = externalUsed;
   return plan;
 }

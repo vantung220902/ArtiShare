@@ -115,6 +115,6 @@ Without a `reason`: `400` = not a valid address, `409` = that address can't be i
 
 - A live `POST …/invite` response. The shape above comes from the Share menu's code.
 - The exact per-artifact cap. The help article says 50 people outside the organization, and the
-  extension's preview uses that; `peopleMax` reads 200. The server's own `invite_cap_reached`
-  is handled either way.
+  side panel mentions that; `peopleMax` reads 200. The extension doesn't count toward a cap itself:
+  it relies on the server's `invite_cap_reached` and skips the rest of that artifact.
 - `claude.ai/code/artifact/{uuid}` links.
