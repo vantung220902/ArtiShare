@@ -64,13 +64,15 @@ export function ListForm({ config, save, list, onSaved, onCancel }: Props) {
     <div className="stack">
       <input type="text" placeholder="List name, e.g. Acme clients" value={name} onChange={(e) => setName(e.target.value)} />
       <EmailInput value={text} onChange={setText} rows={list ? 6 : 4} />
-      <div className="row">
-        <label htmlFor={accessId}>Permission</label>
+      <div className="row nowrap">
+        <label htmlFor={accessId} className="field-label">
+          Permission
+        </label>
         <div className="grow">
           <AccessSelect id={accessId} value={access} onChange={setAccess} />
         </div>
       </div>
-      {error && <p className="err">{error}</p>}
+      {error && <p className="alert">{error}</p>}
       <div className="row">
         <button className="primary" disabled={!!list && !dirty} onClick={submit}>
           {list ? 'Save' : 'Save list'}
@@ -80,12 +82,16 @@ export function ListForm({ config, save, list, onSaved, onCancel }: Props) {
             <button disabled={!dirty} onClick={reset}>
               Revert
             </button>
-            <button className="danger" onClick={remove}>
+            <button className="ghost danger push" onClick={remove}>
               Delete
             </button>
           </>
         ) : (
-          onCancel && <button onClick={onCancel}>Cancel</button>
+          onCancel && (
+            <button className="ghost" onClick={onCancel}>
+              Cancel
+            </button>
+          )
         )}
       </div>
     </div>
