@@ -31,45 +31,95 @@ export interface PageResponse {
 }
 
 let ownTabId: number | undefined;
+let pendingTab: Promise<number> | undefined;
 
-async function isUsable(tab: chrome.tabs.Tab | undefined): Promise<boolean> {
-  return !!tab?.id && !tab.discarded && tab.status === 'complete' && !!tab.url?.startsWith(`${CLAUDE_ORIGIN}/`);
+function isUsable(tab: chrome.tabs.Tab | undefined): boolean {
+  return (
+    !!tab?.id && !tab.discarded && tab.status === 'complete' && !!tab.url?.startsWith(`${CLAUDE_ORIGIN}/`)
+  );
 }
 
 function waitForLoad(tabId: number, timeoutMs = 30_000): Promise<void> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
+    let settled = false;
+
+    const finish = (error?: ShareError) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
       chrome.tabs.onUpdated.removeListener(listener);
-      reject(new ShareError('claude.ai took too long to load.', 'network'));
-    }, timeoutMs);
-    const listener = (id: number, info: { status?: string }) => {
-      if (id === tabId && info.status === 'complete') {
-        clearTimeout(timer);
-        chrome.tabs.onUpdated.removeListener(listener);
-        resolve();
-      }
+      chrome.tabs.onRemoved.removeListener(removed);
+      if (error) reject(error);
+      else resolve();
     };
+
+    const listener = (id: number, info: { status?: string }) => {
+      if (id === tabId && info.status === 'complete') finish();
+    };
+
+    const removed = (id: number) => {
+      if (id === tabId) finish(new ShareError('The claude.ai tab closed while loading.', 'network'));
+    };
+
+    const timer = setTimeout(
+      () => finish(new ShareError('claude.ai took too long to load.', 'network')),
+      timeoutMs,
+    );
+
     chrome.tabs.onUpdated.addListener(listener);
+    chrome.tabs.onRemoved.addListener(removed);
+    // Creation may finish before the listener is attached.
+    void chrome.tabs.get(tabId).then(
+      (tab) => {
+        if (tab.status === 'complete') finish();
+      },
+      () => finish(new ShareError('The claude.ai tab closed while loading.', 'network')),
+    );
   });
 }
 
 /** Finds an open claude.ai tab, or opens one in the background. */
-export async function getClaudeTab(): Promise<number> {
+async function findClaudeTab(): Promise<number> {
   if (ownTabId !== undefined) {
     const tab = await chrome.tabs.get(ownTabId).catch(() => undefined);
-    if (await isUsable(tab)) return ownTabId;
+    if (isUsable(tab)) return ownTabId;
     ownTabId = undefined;
   }
+
   const tabs = await chrome.tabs.query({ url: CLAUDE_MATCH });
+
   for (const tab of tabs) {
-    if (await isUsable(tab)) return tab.id!;
+    if (isUsable(tab)) return tab.id!;
   }
+
+  for (const tab of tabs) {
+    if (tab.id === undefined || tab.discarded || tab.status !== 'loading') continue;
+
+    try {
+      await waitForLoad(tab.id);
+    } catch {
+      continue;
+    }
+
+    const loaded = await chrome.tabs.get(tab.id).catch(() => undefined);
+    if (isUsable(loaded)) return tab.id;
+  }
+
   const created = await chrome.tabs.create({ url: `${CLAUDE_ORIGIN}/`, active: false });
   const id = created.id;
   if (id === undefined) throw new ShareError("Couldn't open a claude.ai tab.", 'network');
   await waitForLoad(id);
   ownTabId = id;
+
   return id;
+}
+
+export function getClaudeTab(): Promise<number> {
+  pendingTab ??= findClaudeTab().finally(() => {
+    pendingTab = undefined;
+  });
+
+  return pendingTab;
 }
 
 /**
@@ -79,8 +129,14 @@ export async function getClaudeTab(): Promise<number> {
 async function inPage<A, R>(func: (arg: A) => Promise<R | { error: string }>, arg: A): Promise<R> {
   const tabId = await getClaudeTab();
   let results: chrome.scripting.InjectionResult<R | { error: string }>[];
+
   try {
-    results = await chrome.scripting.executeScript({ target: { tabId }, world: 'ISOLATED', args: [arg], func });
+    results = await chrome.scripting.executeScript({
+      target: { tabId },
+      world: 'ISOLATED',
+      args: [arg],
+      func,
+    });
   } catch (e) {
     ownTabId = undefined;
     throw new ShareError(`Couldn't reach the claude.ai tab: ${(e as Error).message}`, 'network');
@@ -88,16 +144,20 @@ async function inPage<A, R>(func: (arg: A) => Promise<R | { error: string }>, ar
 
   const result = results[0]?.result;
   if (result === undefined) throw new ShareError('The claude.ai tab returned nothing.', 'network');
+
   if (result && typeof result === 'object' && 'error' in result) {
     throw new ShareError(`Request failed: ${result.error}`, 'network');
   }
-  return result as R;
+
+  return result;
 }
 
 /** The absolute claude.ai URL for `path`; throws if `path` would point anywhere else. */
 export function claudeUrl(path: string): string {
   const url = path.startsWith('/') && !path.startsWith('//') ? new URL(path, CLAUDE_ORIGIN) : null;
-  if (url?.origin !== CLAUDE_ORIGIN) throw new ShareError(`Refusing to send a request outside claude.ai: ${path}`, 'unknown');
+  if (url?.origin !== CLAUDE_ORIGIN)
+    throw new ShareError(`Refusing to send a request outside claude.ai: ${path}`, 'unknown');
+
   return url.href;
 }
 
@@ -108,9 +168,11 @@ interface InPageRequest extends PageRequest {
 
 export async function pageFetch(req: PageRequest): Promise<PageResponse> {
   const arg: InPageRequest = { ...req, url: claudeUrl(req.path), origin: CLAUDE_ORIGIN };
+
   return inPage<InPageRequest, PageResponse>(async (r: InPageRequest) => {
     // The tab may have navigated since it was picked; never send the session's request elsewhere.
     if (location.origin !== r.origin) return { error: `the tab is no longer on ${r.origin}` };
+
     try {
       const res = await fetch(r.url, {
         method: r.method,
@@ -121,6 +183,7 @@ export async function pageFetch(req: PageRequest): Promise<PageResponse> {
         },
         body: r.body !== undefined ? JSON.stringify(r.body) : undefined,
       });
+
       return {
         status: res.status,
         body: await res.text(),
@@ -137,8 +200,10 @@ export async function pageFetch(req: PageRequest): Promise<PageResponse> {
 export async function pageCookie(name: string): Promise<string | null> {
   const value = await inPage(async (n: string) => {
     const hit = document.cookie.split('; ').find((c) => c.startsWith(`${n}=`));
+
     return { value: hit ? decodeURIComponent(hit.slice(n.length + 1)) : null };
   }, name);
+
   return value.value;
 }
 
@@ -146,25 +211,39 @@ export async function pageCookie(name: string): Promise<string | null> {
 export function errorFromResponse(res: PageResponse, context: string): ShareError {
   const detail = extractMessage(res.body);
   const msg = `${context} (HTTP ${res.status})${detail ? `: ${detail}` : ''}`;
+
   if (res.cfMitigated === 'challenge') {
-    return new ShareError('claude.ai wants to check that you are human. Open claude.ai, pass the check, then resume.', 'auth');
+    return new ShareError(
+      'claude.ai wants to check that you are human. Open claude.ai, pass the check, then resume.',
+      'auth',
+    );
   }
+
   if (res.status === 401) return new ShareError(msg, 'auth');
   if (res.status === 403) return new ShareError(msg, 'forbidden');
   if (res.status === 404) return new ShareError(msg, 'not-found');
+
   if (res.status === 429) {
     const secs = Number(res.retryAfter);
+
     return new ShareError(msg, 'rate-limited', Number.isFinite(secs) && secs > 0 ? secs * 1000 : undefined);
   }
+
   if (res.status >= 500) return new ShareError(msg, 'server');
   if (res.status === 400 || res.status === 422) return new ShareError(msg, 'invalid');
+
   return new ShareError(msg, 'unknown');
 }
 
 function extractMessage(body: string): string {
   try {
-    const json = JSON.parse(body) as { error?: { message?: string } | string; message?: string; detail?: string };
+    const json = JSON.parse(body) as {
+      error?: { message?: string } | string;
+      message?: string;
+      detail?: string;
+    };
     if (typeof json.error === 'string') return json.error;
+
     return json.error?.message ?? json.message ?? json.detail ?? '';
   } catch {
     return body.length > 200 ? '' : body.trim();

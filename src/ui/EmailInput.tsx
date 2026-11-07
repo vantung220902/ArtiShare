@@ -1,6 +1,7 @@
 import { parseEmails } from '../core/emails';
 
 interface Props {
+  id?: string;
   value: string;
   onChange: (text: string) => void;
   rows?: number;
@@ -8,12 +9,13 @@ interface Props {
 }
 
 /** Textarea for addresses with live validation. Accepts any pasted shape, including CSV text. */
-export function EmailInput({ value, onChange, rows = 5, placeholder }: Props) {
+export function EmailInput({ id, value, onChange, rows = 5, placeholder }: Props) {
   const parsed = parseEmails(value);
 
   return (
     <div className="stack">
       <textarea
+        id={id}
         rows={rows}
         value={value}
         placeholder={placeholder ?? 'One per line, or paste a comma-separated list or a CSV export'}

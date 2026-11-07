@@ -45,11 +45,14 @@ Signed out → `401`/`403`.
 {
   "invites": [
     {
-      "id": "…", "email": "person@example.com",
-      "status": "accepted",            // "accepted" | "pending" (others, such as expired, may appear)
-      "role": "commenter",             // "reader" | "commenter" | "editor"
+      "id": "…",
+      "email": "person@example.com",
+      "status": "accepted", // "accepted" | "pending" (others, such as expired, may appear)
+      "role": "commenter", // "reader" | "commenter" | "editor"
       "effectiveRole": "commenter",
-      "createdAt": "…", "acceptedAt": "…", "expiresAt": "…"
+      "createdAt": "…",
+      "acceptedAt": "…",
+      "expiresAt": "…"
     }
   ],
   "rolesOffered": ["reader", "commenter", "editor"],
@@ -60,6 +63,10 @@ Signed out → `401`/`403`.
 The owner isn't in the list. People added directly as organization members (Team/Enterprise)
 are in the artifact's permissions (`GET /api/frame/perm/{uuid}?org={org}`, as account UUIDs),
 not in this list.
+
+ArtiShare does not resolve those account UUIDs to email addresses. On Team and Enterprise plans,
+the preview cannot detect direct member access; users should check the Share menu before sending
+to organization members. Personal Pro, Max, and Ultra plans do not have this direct member-sharing path.
 
 Errors: wrong org or no permission → `403` (`{"type":"error","error":{"type":"permission_error",…},"code":"permission_denied"}`);
 unknown artifact → `404` (`not found`, plain text).
@@ -85,21 +92,23 @@ Refusals send JSON with a `reason` (and sometimes `plan_required`, `capability`,
 The status is `403` for rules about the artifact or account, other 4xx otherwise. Reasons that
 matter for bulk invites:
 
-| reason | meaning | extension treats it as |
-| --- | --- | --- |
-| `invite_cap_reached`, `people_list_full` | the artifact is at its invitation limit | `limit` (skip the rest of this artifact) |
-| `invite_daily_cap` | the account's daily invitation limit | `daily-limit` (stop the run; resume later) |
-| `external_invites_disabled` | outside invitations are off for the account or org | `unshareable` |
-| `editor_invites_disabled` | Can edit invitations are off | `unshareable` |
-| `plan` / `plan_required: true` | the plan doesn't allow it | `unshareable` |
-| `writer_only`, `editor_manage` | only the owner can invite | `forbidden` |
-| `address_outside_company`, `member_refused`, `member_*_unavailable` | this address can't get that access | `invalid` (this address only) |
-| `upload_window_open`, `missing_row`, `incomplete`, `generation_mismatch`, `perm_changed` | claude.ai is still checking a new version | `server` (retried) |
-| `agent_frame`, `legacy_frame`, `live_doc`, `connectors_declared`, `cmek`, `classifier_*`, … | this artifact can't be shared by email | `unshareable` (any other `403` reason) |
+| reason                                                                                      | meaning                                            | extension treats it as                     |
+| ------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------ |
+| `invite_cap_reached`, `people_list_full`                                                    | the artifact is at its invitation limit            | `limit` (skip the rest of this artifact)   |
+| `invite_daily_cap`                                                                          | the account's daily invitation limit               | `daily-limit` (stop the run; resume later) |
+| `external_invites_disabled`                                                                 | outside invitations are off for the account or org | `unshareable`                              |
+| `editor_invites_disabled`                                                                   | Can edit invitations are off                       | `access-unavailable` (skip Can edit only)  |
+| `plan` / `plan_required: true`                                                              | the plan doesn't allow it                          | `unshareable`                              |
+| `writer_only`, `editor_manage`                                                              | only the owner can invite                          | `forbidden`                                |
+| `address_outside_company`, `member_refused`, `member_*_unavailable`                         | this address can't get that access                 | `invalid` (this address only)              |
+| `upload_window_open`, `missing_row`, `incomplete`, `generation_mismatch`, `perm_changed`    | claude.ai is still checking a new version          | `not-ready` (retried)                      |
+| `agent_frame`, `legacy_frame`, `live_doc`, `connectors_declared`, `cmek`, `classifier_*`, … | this artifact can't be shared by email             | `unshareable` (any other `403` reason)     |
 
 Without a `reason`: `400` = not a valid address, `409` = that address can't be invited,
-`404` = artifact gone, `429` = rate-limited (`Retry-After`), `502`/`503`/`504` = unavailable
-(`Retry-After`). A `403`/`404` with the header `cf-mitigated: challenge` is a Cloudflare human check.
+`404` = artifact gone, `429` = rate-limited (`Retry-After`), `502`/`503`/`504` = unavailable.
+The extension stops on ambiguous network or server failures and rechecks the invitation list on
+Resume before sending the pending address again. A `403`/`404` with the header
+`cf-mitigated: challenge` is a Cloudflare human check.
 
 ### Other Share menu calls (not used by the extension)
 

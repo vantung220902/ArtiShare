@@ -1,0 +1,65 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "import", "react", "jsx-a11y", "vitest"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "options": {
+    "typeAware": true,
+    "reportUnusedDisableDirectives": "warn"
+  },
+  "env": {
+    "browser": true,
+    "es2024": true,
+    "webextensions": true
+  },
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/only-export-components": [
+      "warn",
+      {
+        "allowConstantExport": true
+      }
+    ],
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": [
+      "error",
+      {
+        "checksVoidReturn": {
+          "attributes": false
+        }
+      }
+    ],
+    "typescript/await-thenable": "error",
+    "typescript/consistent-type-imports": "error",
+    "import/no-cycle": "error",
+    "eqeqeq": ["error", "smart"],
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/no-unnecessary-type-parameters": "off",
+    "typescript/consistent-return": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "import/no-unassigned-import": [
+      "warn",
+      {
+        "allow": ["**/*.css", "@fontsource*/**"]
+      }
+    ],
+    "react/exhaustive-effect-dependencies": "off"
+  },
+  "overrides": [
+    {
+      "files": ["tests/**", "*.config.ts"],
+      "env": {
+        "node": true
+      },
+      "rules": {
+        "vitest/require-mock-type-parameters": "off",
+        "typescript/unbound-method": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [".output/**", ".wxt/**", "dist/**", "node_modules/**"]
+}
