@@ -215,6 +215,14 @@ label {
   color: var(--muted);
   box-shadow: var(--shadow);
 }
+button.icon-btn {
+  flex: none;
+  padding: 6px;
+  color: var(--muted);
+}
+button.icon-btn:hover:not(:disabled) {
+  color: var(--text);
+}
 .dot {
   width: 7px;
   height: 7px;
