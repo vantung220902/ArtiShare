@@ -14,6 +14,6 @@ export interface Account {
  */
 export interface ShareClient extends InviteClient {
   whoami(): Promise<Account>;
-  /** People with access or a pending invitation. May leave out the owner (the planner knows them from whoami). */
+  /** Email invitees with access or a pending invitation. Excludes direct Team/Enterprise org members. */
   listSharees(artifact: ArtifactRef): Promise<Sharee[]>;
 }

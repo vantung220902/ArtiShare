@@ -13,11 +13,15 @@
     "build": "wxt build",
     "build:fake": "wxt build --mode fake",
     "zip": "wxt zip",
-    "release": "npm run typecheck && npm test && wxt zip",
+    "release": "npm run typecheck && npm run lint && npm run format:check && npm test && wxt zip",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "postinstall": "wxt prepare"
+    "postinstall": "wxt prepare",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
@@ -30,8 +34,14 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@wxt-dev/module-react": "^1.2.2",
+    "oxlint": "^1.92.0",
+    "oxlint-tsgolint": "^7.0.2006",
+    "prettier": "^3.9.10",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0",
     "wxt": "^0.21.5"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1"
   }
 }

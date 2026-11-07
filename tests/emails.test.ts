@@ -27,12 +27,17 @@ describe('parseEmails', () => {
   });
 
   it('reads any column of a CSV export and ignores headers and names', () => {
-    const csv = ['name,email,role', '"Smith, Alice",alice@acme.com,PM', 'Bob Jones,BOB@acme.com,Dev'].join('\n');
+    const csv = ['name,email,role', '"Smith, Alice",alice@acme.com,PM', 'Bob Jones,BOB@acme.com,Dev'].join(
+      '\n',
+    );
     expect(parseEmails(csv).valid).toEqual(['alice@acme.com', 'bob@acme.com']);
   });
 
   it('handles "Name <email>" entries', () => {
-    expect(parseEmails('Alice <alice@acme.com>, Bob<bob@acme.com>').valid).toEqual(['alice@acme.com', 'bob@acme.com']);
+    expect(parseEmails('Alice <alice@acme.com>, Bob<bob@acme.com>').valid).toEqual([
+      'alice@acme.com',
+      'bob@acme.com',
+    ]);
   });
 
   it('reports invalid tokens and duplicates', () => {
@@ -42,6 +47,14 @@ describe('parseEmails', () => {
     expect(r.duplicates).toEqual(['a@x.io']);
   });
 
+  it('preserves a pipe in an address instead of changing the recipient', () => {
+    expect(parseEmails('alice|bob@example.com')).toEqual({
+      valid: ['alice|bob@example.com'],
+      invalid: [],
+      duplicates: [],
+    });
+  });
+
   it('returns nothing for empty input', () => {
     expect(parseEmails('   ')).toEqual({ valid: [], invalid: [], duplicates: [] });
   });
@@ -49,7 +62,11 @@ describe('parseEmails', () => {
 
 describe('mergeEmails', () => {
   it('merges, normalizes, drops invalid and keeps first-seen order', () => {
-    expect(mergeEmails(['B@x.io', 'a@x.io'], ['a@x.io', 'bad', 'c@x.io'])).toEqual(['b@x.io', 'a@x.io', 'c@x.io']);
+    expect(mergeEmails(['B@x.io', 'a@x.io'], ['a@x.io', 'bad', 'c@x.io'])).toEqual([
+      'b@x.io',
+      'a@x.io',
+      'c@x.io',
+    ]);
   });
 });
 

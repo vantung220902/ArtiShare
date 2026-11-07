@@ -27,11 +27,13 @@ const ACCOUNT = json(200, {
 
 function transport(route: (req: PageRequest) => PageResponse): Transport & { calls: PageRequest[] } {
   const calls: PageRequest[] = [];
+
   return {
     calls,
     async fetch(req) {
       calls.push(req);
       if (req.path === '/api/account') return ACCOUNT;
+
       return route(req);
     },
     async cookie(name) {
@@ -72,14 +74,18 @@ describe('ApiShareClient', () => {
 
   it("tries the user's other organizations when the active one doesn't own the artifact", async () => {
     const t = transport((req) =>
-      req.path === invitesPath(OTHER) ? json(200, { invites: [] }) : json(403, { error: { message: 'Permission denied.' } }),
+      req.path === invitesPath(OTHER)
+        ? json(200, { invites: [] })
+        : json(403, { error: { message: 'Permission denied.' } }),
     );
     const client = createApiShareClient(t);
     await expect(client.listSharees(ART)).resolves.toEqual([]);
 
     // The invite then goes to the organization that worked, without looking it up again.
     t.calls.length = 0;
-    const ok = transport((req) => (req.path === invitePath(OTHER) ? json(200, { invite: { id: 'n' } }) : json(500, {})));
+    const ok = transport((req) =>
+      req.path === invitePath(OTHER) ? json(200, { invite: { id: 'n' } }) : json(500, {}),
+    );
     t.fetch = ok.fetch;
     await client.invite(ART, 'new@x.io', 'comment');
     expect(ok.calls.map((c) => c.path)).toEqual([invitePath(OTHER)]);
@@ -89,7 +95,9 @@ describe('ApiShareClient', () => {
   it('explains a 403 from every organization as not being the owner, and 404 as a bad link', async () => {
     const forbidden = createApiShareClient(transport(() => json(403, {})));
     await expect(forbidden.listSharees(ART)).rejects.toMatchObject({ code: 'forbidden' });
-    const missing = createApiShareClient(transport(() => ({ status: 404, body: 'not found\n', retryAfter: null })));
+    const missing = createApiShareClient(
+      transport(() => ({ status: 404, body: 'not found\n', retryAfter: null })),
+    );
     await expect(missing.listSharees(ART)).rejects.toMatchObject({ code: 'not-found' });
   });
 
@@ -97,6 +105,7 @@ describe('ApiShareClient', () => {
     const t = transport((req) => {
       if (req.path === invitesPath(ACTIVE)) return json(200, { invites: [] });
       if (req.path === invitePath(ACTIVE)) return json(200, { invite: { id: 'n' }, created: true });
+
       return json(500, {});
     });
     await createApiShareClient(t).invite(ART, 'new@x.io', 'edit');
@@ -110,7 +119,9 @@ describe('ApiShareClient', () => {
 
   it('accepts an org member being added directly', async () => {
     const t = transport((req) =>
-      req.method === 'GET' ? json(200, { invites: [] }) : json(200, { shared_with_member: { account_uuid: 'u', access: 'read' } }),
+      req.method === 'GET'
+        ? json(200, { invites: [] })
+        : json(200, { shared_with_member: { account_uuid: 'u', access: 'read' } }),
     );
     await expect(createApiShareClient(t).invite(ART, 'teammate@x.io', 'view')).resolves.toBeUndefined();
   });
@@ -131,7 +142,8 @@ describe('inviteError', () => {
     expect(codeOf(json(403, { reason: 'anything', plan_required: true }))).toBe('unshareable');
     expect(codeOf(json(403, { reason: 'writer_only' }))).toBe('forbidden');
     expect(codeOf(json(409, { reason: 'member_refused' }))).toBe('invalid');
-    expect(codeOf(json(409, { reason: 'upload_window_open' }))).toBe('server');
+    expect(codeOf(json(409, { reason: 'upload_window_open' }))).toBe('not-ready');
+    expect(codeOf(json(403, { reason: 'editor_invites_disabled' }))).toBe('access-unavailable');
   });
 
   it('treats an unknown 403 reason as about the artifact, and other unknown reasons as about the item', () => {
