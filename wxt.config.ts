@@ -9,7 +9,9 @@ export default defineConfig({
   manifest: {
     name: 'ArtiShare',
     description: 'Invite saved lists of email addresses to claude.ai artifacts in bulk.',
-    permissions: ['storage', 'sidePanel', 'tabs', 'scripting'],
+    // No `tabs` permission: the host permission below already exposes the URL of claude.ai tabs,
+    // which is all the extension reads, without the "Read your browsing history" install warning.
+    permissions: ['storage', 'sidePanel', 'scripting'],
     host_permissions: ['https://claude.ai/*'],
     action: { default_title: 'ArtiShare' },
     // Public key only. It pins the extension ID to eeihicglfclmofckclcpjleekpddjflg wherever the

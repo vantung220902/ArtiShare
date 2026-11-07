@@ -123,4 +123,4 @@ src/
 tests/          Vitest specs for src/core
 ```
 
-Requests to claude.ai run inside a claude.ai tab (`chrome.scripting.executeScript` in the page's main world), so they use your existing session. If no claude.ai tab is open, the extension opens one in the background. The endpoints, ids and error reasons are written up in [docs/claude-share-api.md](docs/claude-share-api.md).
+Requests to claude.ai run inside a claude.ai tab (`chrome.scripting.executeScript` in the extension's isolated world), so they use your existing session while the page's own scripts can't see or change them. If no claude.ai tab is open, the extension opens one in the background. The endpoints, ids and error reasons are written up in [docs/claude-share-api.md](docs/claude-share-api.md).
