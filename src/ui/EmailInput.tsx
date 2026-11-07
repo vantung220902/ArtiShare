@@ -20,17 +20,18 @@ export function EmailInput({ value, onChange, rows = 5, placeholder }: Props) {
         onChange={(e) => onChange(e.target.value)}
         spellCheck={false}
       />
-      <span className="hint">
-        <span className="ok">{parsed.valid.length} valid</span>
-        {parsed.duplicates.length > 0 && <> · {parsed.duplicates.length} duplicate</>}
+      <div className="row chips">
+        <span className={parsed.valid.length ? 'chip ok' : 'chip'}>{parsed.valid.length} valid</span>
+        {parsed.duplicates.length > 0 && <span className="chip">{parsed.duplicates.length} duplicate</span>}
         {parsed.invalid.length > 0 && (
-          <>
-            {' '}
-            · <span className="err">{parsed.invalid.length} invalid: {parsed.invalid.slice(0, 3).join(', ')}
-            {parsed.invalid.length > 3 ? '…' : ''}</span>
-          </>
+          <span className="chip err" title={parsed.invalid.join(', ')}>
+            <span className="truncate">
+              {parsed.invalid.length} invalid: {parsed.invalid.slice(0, 3).join(', ')}
+              {parsed.invalid.length > 3 ? '…' : ''}
+            </span>
+          </span>
         )}
-      </span>
+      </div>
     </div>
   );
 }
