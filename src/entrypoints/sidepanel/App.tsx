@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Account } from '../../claude/shareClient';
 import { parseArtifactList, parseArtifactRef } from '../../core/artifactUrl';
-import { type Config, resolveJob } from '../../core/config';
+import { type Config, listEmails, resolveJob } from '../../core/config';
 import { runReportCsv } from '../../core/csv';
 import { mergeEmails, parseEmails } from '../../core/emails';
 import { summarize } from '../../core/runner';
@@ -95,8 +95,8 @@ function Setup({ config }: { config: Config }) {
 
   const artifacts = parseArtifactList(artifactText);
   const emails = useMemo(
-    () => mergeEmails(...lists.map((l) => config.lists[l] ?? []), parseEmails(emailText).valid),
-    [lists, emailText, config.lists],
+    () => mergeEmails(...lists.map((l) => listEmails(config, l)), parseEmails(emailText).valid),
+    [lists, emailText, config],
   );
 
   const addCurrentTab = async () => {

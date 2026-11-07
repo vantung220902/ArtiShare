@@ -64,6 +64,30 @@ jobs:
     );
   });
 
+  it('treats names inherited from Object.prototype as unknown lists', () => {
+    const r = parseConfig(`
+version: 1
+lists: { a: [ok@x.io] }
+jobs:
+  - { name: J, artifacts: ["${A}"], lists: [a, toString, constructor, __proto__] }
+`);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.errors).toEqual([
+      'jobs[0] "J": unknown list "toString"',
+      'jobs[0] "J": unknown list "constructor"',
+      'jobs[0] "J": unknown list "__proto__"',
+    ]);
+  });
+
+  it('drops a list named __proto__ without touching any prototype', () => {
+    const r = parseConfig('version: 1\nlists:\n  __proto__: [a@x.io]\n  b: [b@x.io]\n');
+    if (!r.ok) throw new Error('fixture invalid');
+    expect(Object.keys(r.config.lists)).toEqual(['b']);
+    expect(Object.getPrototypeOf(r.config.lists)).toBe(Object.prototype);
+    expect(Object.prototype).not.toHaveProperty('a@x.io');
+  });
+
   it('rejects empty and malformed files', () => {
     expect(parseConfig('').ok).toBe(false);
     expect(parseConfig('version: [1').ok).toBe(false);
@@ -87,6 +111,13 @@ describe('resolveJob', () => {
     expect(job.artifacts.map((a) => a.url)).toEqual([A, B]);
     expect(job.emails).toEqual(['alice@acme.com', 'bob@acme.com', 'qa1@nimblehq.co', 'carol@acme.com']);
     expect(job.access).toBe('comment');
+  });
+
+  it('ignores list names that are not the config’s own lists', () => {
+    const r = parseConfig(`version: 1\nlists: { a: [a@x.io] }\njobs: [{ name: J, artifacts: ["${A}"], lists: [a] }]`);
+    if (!r.ok) throw new Error('fixture invalid');
+    const job = { ...r.config.jobs[0]!, lists: ['a', 'toString', 'constructor'] };
+    expect(resolveJob(r.config, job).emails).toEqual(['a@x.io']);
   });
 
   it('falls back to the default access level', () => {

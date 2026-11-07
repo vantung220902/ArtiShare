@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { parseArtifactList } from '../../core/artifactUrl';
-import { type Config, type Job, parseConfig, serializeConfig } from '../../core/config';
+import { type Config, hasList, type Job, listEmails, parseConfig, serializeConfig } from '../../core/config';
 import { parseEmails } from '../../core/emails';
 import { ACCESS_LABELS, ACCESS_LEVELS, type AccessLevel } from '../../core/types';
 import { AccessSelect } from '../../ui/AccessSelect';
@@ -178,7 +178,7 @@ function Lists({ config, save }: SectionProps) {
   const create = async () => {
     const name = newName.trim();
     if (!name) return setError('Give the list a name.');
-    if (name in config.lists) return setError(`A list called "${name}" already exists.`);
+    if (hasList(config, name)) return setError(`A list called "${name}" already exists.`);
     const { valid } = parseEmails(newText);
     if (!valid.length) return setError('Add at least one valid address.');
     await save({ ...config, lists: { ...config.lists, [name]: valid } });
@@ -214,7 +214,7 @@ function Lists({ config, save }: SectionProps) {
 }
 
 function ListEditor({ name, config, save }: SectionProps & { name: string }) {
-  const stored = config.lists[name] ?? [];
+  const stored = listEmails(config, name);
   const storedText = stored.join('\n');
   const [text, setText] = useState(storedText);
   useEffect(() => setText(storedText), [storedText]);
