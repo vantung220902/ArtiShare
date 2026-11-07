@@ -1,8 +1,14 @@
 import { ACCESS_LABELS, ACCESS_LEVELS, type AccessLevel } from '../core/types';
 
-export function AccessSelect({ value, onChange }: { value: AccessLevel; onChange: (a: AccessLevel) => void }) {
+interface Props {
+  value: AccessLevel;
+  onChange: (a: AccessLevel) => void;
+  id?: string;
+}
+
+export function AccessSelect({ value, onChange, id }: Props) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value as AccessLevel)}>
+    <select id={id} value={value} onChange={(e) => onChange(e.target.value as AccessLevel)}>
       {ACCESS_LEVELS.map((a) => (
         <option key={a} value={a}>
           {ACCESS_LABELS[a]}

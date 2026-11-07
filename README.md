@@ -6,11 +6,10 @@ A Chrome extension that invites saved lists of email addresses to claude.ai arti
 
 ## What it does
 
-- Keeps named **email lists**. You can paste them, import them from a CSV/TXT file, or load them from a shared config file.
-- Saves **jobs**: a set of artifacts plus lists, extra addresses, and an access level.
-- **Preview first.** For each artifact it reads who already has access and shows who will be invited, who is skipped because they already have access, and who goes over claude.ai's 50-outside-people cap. Nothing is sent until you confirm.
-- **Runs in the background**, one invite at a time with a pause between them. It retries rate limits and stops on repeated failures. You can Stop and Resume, and a run interrupted by a browser restart can also be resumed.
-- **Exports a CSV report** of every invite.
+- Keeps saved **lists**. Each list has a name, its email addresses, and the permission its people get (Can view, Commenter or Can edit).
+- **Share** one or more artifacts with the lists you tick. You choose which lists are ticked by default: all of them, or only some. You can also create a new list right there.
+- **Preview first.** For each artifact it reads who already has access and shows who will be invited and who is skipped because they already have access. Nothing is sent until you confirm.
+- **Runs in the background**, one invite at a time with a short pause between them. It retries rate limits and stops on repeated failures. You can Stop and Resume, and a run interrupted by a browser restart can also be resumed.
 
 It works inside your own signed-in claude.ai session. It never asks for a password, never removes anyone, and never lowers anyone's access.
 
@@ -26,7 +25,7 @@ You install it once. After that it's part of Chrome and starts with Chrome every
 
 The card on `chrome://extensions` should show the ID `eeihicglfclmofckclcpjleekpddjflg`. It's the same on every machine and for every folder.
 
-**To update:** replace the folder's contents with the new zip's, then click the reload icon ↻ on the extension's card. Your lists, jobs and settings are kept. The side panel shows the installed version at the bottom.
+**To update:** replace the folder's contents with the new zip's, then click the reload icon ↻ on the extension's card. Your lists and settings are kept. The side panel shows the installed version at the bottom.
 
 ### Publishing a new version (maintainer)
 
@@ -48,50 +47,20 @@ A Chrome Web Store listing would give one-click install and automatic updates. R
 
 ## Use it
 
-1. **Set up lists and jobs**: in the side panel, click **Lists & config** (or right-click the toolbar icon, then **Options**).
-   - *Defaults*: the default access level, the pause between invites, and your organization's email domains (for example `nimblehq.co`). Addresses on those domains don't count toward the 50-outside-people cap.
-   - *Email lists*: paste addresses in any shape (one per line, comma-separated, `Name <a@b.com>`, or a CSV export), or use **Import CSV/TXT**. Invalid addresses are flagged and duplicates are dropped.
-   - *Jobs*: combine artifacts, lists, extra addresses, and an access level.
-2. **Run**: open claude.ai and sign in, then open the side panel. Pick a job, or fill the form in by hand; **+ Current tab** adds the artifact you're looking at. Click **Preview**, check the numbers, then **Send**.
-3. **Report**: **Export CSV** at any time, then **New run** when you're done.
+Open claude.ai and sign in, then click the toolbar icon to open the side panel. It has two tabs.
 
-Running the same job again is safe: anyone who already has access is skipped.
+1. **Lists**: click **New list**, give it a name, paste the addresses, and pick a permission. Addresses can be in any shape: one per line, comma-separated, `Name <a@b.com>`, or text copied from a spreadsheet. Invalid addresses are flagged and duplicates are dropped. Under **Ticked by default when sharing**, choose *All lists* or *Only these* and tick the ones you share with most.
+2. **Share**: the artifact in the current tab is filled in for you. Add more links (one per line) or click **+ Current tab**. Tick the lists to share with, or click **+ New list** to make one on the spot. Click **Preview**, check the numbers, then **Send**.
 
-## Config file
-
-Share one file across the team: export it from the options page, commit it or put it in a shared drive, and have others import it. YAML and JSON are both accepted. Importing replaces everything stored in the extension.
-
-```yaml
-version: 1
-defaults:
-  access: view            # view | comment | edit  ("Can view" | "Commenter" | "Can edit")
-  delayMs: 800            # pause between invites, 0–60000
-  orgDomains: [nimblehq.co]
-lists:
-  acme-clients:
-    - alice@acme.com
-    - bob@acme.com
-  nimble-qa:
-    - qa1@nimblehq.co
-jobs:
-  - name: Acme Q4 review
-    artifacts:
-      - https://claude.ai/artifact/XXXXXXXXXXXXXXXXXXXXXX
-      - https://claude.ai/code/artifact/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-    lists: [acme-clients, nimble-qa]
-    emails: [carol@acme.com]   # extras for this job only
-    access: comment            # optional; falls back to defaults.access
-```
-
-The importer reports unknown lists, invalid addresses, links that aren't artifacts, and duplicate job names, each with its location in the file.
+If someone is in two ticked lists, they get the higher of the two permissions. Sharing again is safe: anyone who already has access is skipped, and their access is left as it is.
 
 ## Limits to know
 
 These come from claude.ai's own sharing rules ([help article](https://support.claude.com/en/articles/9547008)):
 
-- Each artifact can have **at most 50 people outside your organization**, and pending invitations count toward that. The preview shows how many each artifact will have after the run, and skips anyone over the cap.
+- Each artifact can have **at most 50 people outside your organization**, and pending invitations count toward that. claude.ai enforces this itself: when an artifact reaches it, the run skips the rest of that artifact's invites and moves on.
 - claude.ai also has a **daily invitation limit** per account. When a run hits it, the run stops and keeps the rest pending; **Resume** the next day.
-- Invitations to outside addresses expire after 30 days if they aren't accepted. Running the job again renews expired ones.
+- Invitations to outside addresses expire after 30 days if they aren't accepted. Sharing again renews expired ones.
 - Artifacts that connect to other websites can't be shared by email.
 - On Enterprise plans, an admin must turn on **Email invitations outside your organization** (Organization settings → Artifacts).
 - Email sharing is in beta, and claude.ai has no public sharing API. The extension uses the same requests as the Share menu, so a claude.ai change can break it. The preview step catches that before anything is sent.
@@ -114,11 +83,11 @@ Fake mode behavior: an artifact whose ID contains `Forbidden` rejects invites, a
 
 ```
 src/
-  core/         framework-free logic, unit-tested: email parsing, artifact links, config schema,
-                planner (dedupe and the 50-person cap), runner (queue, retry, stop), CSV report
+  core/         framework-free logic, unit-tested: email parsing, artifact links, saved lists
+                (schema and upgrade from 0.1.0), planner (who to invite), runner (queue, retry, stop)
   claude/       ShareClient interface, the claude.ai client, the fake client, and in-page fetch
   lib/          chrome.storage access and the side panel ↔ background message types
-  entrypoints/  background worker (runs invites), options page, side panel
+  entrypoints/  background worker (runs invites) and the side panel
   ui/           shared React components and styles
 tests/          Vitest specs for src/core
 ```

@@ -14,69 +14,47 @@ describe('planArtifact', () => {
     ];
     const plan = planArtifact({
       artifact,
-      desired: ['alice@acme.com', 'bob@acme.com', 'carol@acme.com'],
-      access: 'edit',
+      desired: [
+        { email: 'alice@acme.com', access: 'edit' },
+        { email: 'bob@acme.com', access: 'edit' },
+        { email: 'carol@acme.com', access: 'edit' },
+      ],
       existing,
-      orgDomains: ['nimblehq.co'],
     });
-    expect(plan.toInvite).toEqual([{ email: 'carol@acme.com', access: 'edit', internal: false }]);
+    expect(plan.toInvite).toEqual([{ email: 'carol@acme.com', access: 'edit' }]);
     expect(plan.alreadyShared).toEqual([
       { email: 'alice@acme.com', access: 'view', status: 'active' },
       { email: 'bob@acme.com', access: 'comment', status: 'pending' },
     ]);
   });
 
-  it('enforces the outside-invitee cap, counting existing outside sharees', () => {
-    const existing: Sharee[] = [
-      { email: 'x1@ext.io', access: 'view', status: 'active' },
-      { email: 'x2@ext.io', access: 'view', status: 'pending' },
-      { email: 'team@nimblehq.co', access: 'view', status: 'active' },
+  it('matches existing sharees ignoring case', () => {
+    const plan = planArtifact({
+      artifact,
+      desired: [{ email: 'alice@acme.com', access: 'view' }],
+      existing: [{ email: 'Alice@Acme.com', access: 'view', status: 'active' }],
+    });
+    expect(plan.toInvite).toEqual([]);
+    expect(plan.alreadyShared.map((s) => s.email)).toEqual(['alice@acme.com']);
+  });
+
+  it("keeps each invitee's own access", () => {
+    const desired = [
+      { email: 'a@x.io', access: 'view' as const },
+      { email: 'b@x.io', access: 'comment' as const },
+      { email: 'c@x.io', access: 'edit' as const },
     ];
-    const plan = planArtifact({
-      artifact,
-      desired: ['a@ext.io', 'mate@nimblehq.co', 'b@ext.io', 'c@ext.io'],
-      access: 'view',
-      existing,
-      orgDomains: ['nimblehq.co'],
-      externalLimit: 3,
-    });
-    expect(plan.toInvite.map((i) => i.email)).toEqual(['a@ext.io', 'mate@nimblehq.co']);
-    expect(plan.toInvite[1]?.internal).toBe(true);
-    expect(plan.overLimit).toEqual(['b@ext.io', 'c@ext.io']);
-    expect(plan.externalAfter).toBe(3);
-  });
-
-  it('trusts the internal flag from claude.ai over the domain list', () => {
-    const plan = planArtifact({
-      artifact,
-      desired: ['new@ext.io'],
-      access: 'view',
-      existing: [{ email: 'guest@other.io', access: 'view', status: 'active', internal: true }],
-      orgDomains: [],
-      externalLimit: 1,
-    });
-    expect(plan.toInvite.map((i) => i.email)).toEqual(['new@ext.io']);
-  });
-
-  it('treats every address as outside when no org domains are known', () => {
-    const plan = planArtifact({
-      artifact,
-      desired: ['a@nimblehq.co'],
-      access: 'view',
-      existing: [],
-      orgDomains: [],
-      externalLimit: 0,
-    });
-    expect(plan.overLimit).toEqual(['a@nimblehq.co']);
+    expect(planArtifact({ artifact, desired, existing: [] }).toInvite).toEqual(desired);
   });
 
   it('never invites the signed-in user', () => {
     const plan = planArtifact({
       artifact,
-      desired: ['me@nimblehq.co', 'a@x.io'],
-      access: 'view',
+      desired: [
+        { email: 'me@nimblehq.co', access: 'view' },
+        { email: 'a@x.io', access: 'view' },
+      ],
       existing: [],
-      orgDomains: [],
       selfEmail: 'Me@NimbleHQ.co',
     });
     expect(plan.self).toEqual(['me@nimblehq.co']);

@@ -23,31 +23,3 @@ export function useRun(): RunState | null | undefined {
   }, []);
   return run;
 }
-
-export function readFile(file: File): Promise<string> {
-  return file.text();
-}
-
-export function download(filename: string, text: string, type: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1_000);
-}
-
-/** Opens a file picker and resolves with the chosen file's text, or null if cancelled. */
-export function pickFile(accept: string): Promise<{ name: string; text: string } | null> {
-  return new Promise((resolve) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = accept;
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      resolve(file ? { name: file.name, text: await readFile(file) } : null);
-    };
-    input.oncancel = () => resolve(null);
-    input.click();
-  });
-}

@@ -1,127 +1,110 @@
-import { dump, load } from 'js-yaml';
 import { z } from 'zod';
-import { parseArtifactList } from './artifactUrl';
-import { isValidEmail, mergeEmails, normalizeEmail } from './emails';
-import type { AccessLevel, ArtifactRef } from './types';
+import { mergeEmails } from './emails';
+import { ACCESS_LEVELS, type AccessLevel } from './types';
 
 const AccessSchema = z.enum(['view', 'comment', 'edit']);
 
-const JobSchema = z.object({
-  name: z.string().trim().min(1, 'job name is required'),
-  artifacts: z.array(z.string()).min(1, 'a job needs at least one artifact'),
-  lists: z.array(z.string()).default([]),
-  emails: z.array(z.string()).default([]),
-  access: AccessSchema.optional(),
+const EmailListSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1),
+  emails: z.array(z.string()),
+  access: AccessSchema.default('view'),
 });
 
-const DefaultsSchema = z.object({
-  access: AccessSchema.default('view'),
-  /** Pause between invite requests, in milliseconds. */
-  delayMs: z.number().int().min(0).max(60_000).default(800),
-  /** Email domains that belong to your claude.ai organization (internal invites don't count toward the 50 cap). */
-  orgDomains: z.array(z.string()).default([]),
-});
+const DefaultSelectionSchema = z.discriminatedUnion('mode', [
+  z.object({ mode: z.literal('all') }),
+  z.object({ mode: z.literal('some'), listIds: z.array(z.string()) }),
+]);
 
 export const ConfigSchema = z.object({
-  version: z.literal(1),
-  defaults: DefaultsSchema.default({ access: 'view', delayMs: 800, orgDomains: [] }),
-  lists: z.record(z.string().trim().min(1), z.array(z.string())).default({}),
-  jobs: z.array(JobSchema).default([]),
+  version: z.literal(2),
+  lists: z.array(EmailListSchema).default([]),
+  /** Which saved lists the Share tab ticks when it opens. */
+  defaultSelection: DefaultSelectionSchema.default({ mode: 'some', listIds: [] }),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
-export type Job = z.infer<typeof JobSchema>;
+export type EmailList = z.infer<typeof EmailListSchema>;
+export type DefaultSelection = z.infer<typeof DefaultSelectionSchema>;
 
 export const EMPTY_CONFIG: Config = {
-  version: 1,
-  defaults: { access: 'view', delayMs: 800, orgDomains: [] },
-  lists: {},
-  jobs: [],
+  version: 2,
+  lists: [],
+  defaultSelection: { mode: 'some', listIds: [] },
 };
 
-export type ParseConfigResult = { ok: true; config: Config; warnings: string[] } | { ok: false; errors: string[] };
+/** The shape stored by version 0.1.0: named lists, one default access level, and jobs (now dropped). */
+const V1Schema = z.object({
+  version: z.literal(1),
+  defaults: z.object({ access: AccessSchema.default('view') }).default({ access: 'view' }),
+  lists: z.record(z.string(), z.array(z.string())).default({}),
+});
 
-/** Parses a YAML or JSON config (JSON is valid YAML), validates it and normalizes every address. */
-export function parseConfig(text: string): ParseConfigResult {
-  let data: unknown;
-  try {
-    data = load(text);
-  } catch (err) {
-    return { ok: false, errors: [`Not valid YAML/JSON: ${(err as Error).message.split('\n')[0]}`] };
-  }
-  if (data === null || data === undefined) return { ok: false, errors: ['The file is empty.'] };
+/** Reads the stored config, upgrading the 0.1.0 format. Anything unreadable gives an empty config. */
+export function loadStoredConfig(raw: unknown): Config {
+  const current = ConfigSchema.safeParse(raw);
+  if (current.success) return current.data;
 
-  const result = ConfigSchema.safeParse(data);
-  if (!result.success) {
-    return {
-      ok: false,
-      errors: result.error.issues.map((i) => `${i.path.length ? i.path.join('.') : '(root)'}: ${i.message}`),
-    };
-  }
-
-  const config = result.data;
-  const errors: string[] = [];
-  const warnings: string[] = [];
-
-  for (const [name, emails] of Object.entries(config.lists)) {
-    const bad = emails.filter((e) => !isValidEmail(normalizeEmail(e)));
-    if (bad.length) errors.push(`lists.${name}: invalid email(s): ${bad.join(', ')}`);
-    config.lists[name] = mergeEmails(emails);
-  }
-
-  config.jobs.forEach((job, i) => {
-    const where = `jobs[${i}] "${job.name}"`;
-    for (const list of job.lists) {
-      if (!hasList(config, list)) errors.push(`${where}: unknown list "${list}"`);
-    }
-    const bad = job.emails.filter((e) => !isValidEmail(normalizeEmail(e)));
-    if (bad.length) errors.push(`${where}: invalid email(s): ${bad.join(', ')}`);
-    job.emails = mergeEmails(job.emails);
-    const { invalid } = parseArtifactList(job.artifacts);
-    if (invalid.length) errors.push(`${where}: not a claude.ai artifact link: ${invalid.join(', ')}`);
-    if (!job.lists.length && !job.emails.length) warnings.push(`${where}: has no lists or emails`);
-  });
-
-  const names = config.jobs.map((j) => j.name);
-  const dupNames = names.filter((n, i) => names.indexOf(n) !== i);
-  if (dupNames.length) errors.push(`duplicate job name(s): ${[...new Set(dupNames)].join(', ')}`);
-
-  config.defaults.orgDomains = [...new Set(config.defaults.orgDomains.map((d) => d.trim().toLowerCase().replace(/^@/, '')))].filter(Boolean);
-
-  return errors.length ? { ok: false, errors } : { ok: true, config, warnings };
+  const v1 = V1Schema.safeParse(raw);
+  if (!v1.success) return structuredClone(EMPTY_CONFIG);
+  const lists = Object.entries(v1.data.lists)
+    .filter(([name]) => name.trim())
+    .map(([name, emails]) => createList(name, emails, v1.data.defaults.access));
+  return { ...structuredClone(EMPTY_CONFIG), lists };
 }
 
-export function serializeConfig(config: Config, format: 'yaml' | 'json'): string {
-  return format === 'json' ? `${JSON.stringify(config, null, 2)}\n` : dump(config, { lineWidth: 120 });
+export function createList(name: string, emails: readonly string[], access: AccessLevel): EmailList {
+  return { id: crypto.randomUUID(), name: name.trim(), emails: mergeEmails(emails), access };
 }
 
-/**
- * Whether `config` has a list called `name`. Checks own keys only, so names inherited from
- * Object.prototype (`toString`, `constructor`, …) don't count as lists.
- */
-export function hasList(config: Config, name: string): boolean {
-  return Object.hasOwn(config.lists, name);
+/** Whether another list (not `exceptId`) already uses `name`, ignoring case. */
+export function isNameTaken(config: Config, name: string, exceptId?: string): boolean {
+  const key = name.trim().toLowerCase();
+  return config.lists.some((l) => l.id !== exceptId && l.name.toLowerCase() === key);
 }
 
-/** The addresses in list `name`, or none when there's no such list. */
-export function listEmails(config: Config, name: string): string[] {
-  return hasList(config, name) ? (config.lists[name] ?? []) : [];
+/** Adds `list`, or replaces the list with the same id. */
+export function upsertList(config: Config, list: EmailList): Config {
+  const exists = config.lists.some((l) => l.id === list.id);
+  return { ...config, lists: exists ? config.lists.map((l) => (l.id === list.id ? list : l)) : [...config.lists, list] };
 }
 
-export interface ResolvedJob {
-  name: string;
-  artifacts: ArtifactRef[];
-  emails: string[];
+/** Removes a list and drops it from the default selection. */
+export function removeList(config: Config, id: string): Config {
+  const sel = config.defaultSelection;
+  return {
+    ...config,
+    lists: config.lists.filter((l) => l.id !== id),
+    defaultSelection: sel.mode === 'some' ? { mode: 'some', listIds: sel.listIds.filter((x) => x !== id) } : sel,
+  };
+}
+
+/** Ids of the lists ticked when the Share tab opens. */
+export function defaultListIds(config: Config): string[] {
+  const sel = config.defaultSelection;
+  if (sel.mode === 'all') return config.lists.map((l) => l.id);
+  return config.lists.filter((l) => sel.listIds.includes(l.id)).map((l) => l.id);
+}
+
+export interface Invitee {
+  email: string;
   access: AccessLevel;
 }
 
-/** Expands a job's lists into one de-duplicated address list and parses its artifact links. */
-export function resolveJob(config: Config, job: Job): ResolvedJob {
-  const fromLists = job.lists.map((name) => listEmails(config, name));
-  return {
-    name: job.name,
-    artifacts: parseArtifactList(job.artifacts).refs,
-    emails: mergeEmails(...fromLists, job.emails),
-    access: job.access ?? config.defaults.access,
-  };
+const rank = (a: AccessLevel) => ACCESS_LEVELS.indexOf(a);
+
+/**
+ * Everyone in the selected lists, each address once. When an address is in several lists,
+ * it gets the highest access among them. Unknown ids are ignored.
+ */
+export function resolveInvites(config: Config, selectedIds: readonly string[]): Invitee[] {
+  const byEmail = new Map<string, AccessLevel>();
+  for (const list of config.lists) {
+    if (!selectedIds.includes(list.id)) continue;
+    for (const email of mergeEmails(list.emails)) {
+      const current = byEmail.get(email);
+      if (!current || rank(list.access) > rank(current)) byEmail.set(email, list.access);
+    }
+  }
+  return [...byEmail].map(([email, access]) => ({ email, access }));
 }
