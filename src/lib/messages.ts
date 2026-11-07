@@ -1,6 +1,7 @@
 import type { Account } from '../claude/shareClient';
+import type { Invitee } from '../core/config';
 import type { ArtifactPlan } from '../core/planner';
-import type { AccessLevel, ArtifactRef } from '../core/types';
+import type { ArtifactRef } from '../core/types';
 
 export interface PreviewResult {
   artifact: ArtifactRef;
@@ -10,11 +11,9 @@ export interface PreviewResult {
 
 export interface Messages {
   whoami: { req: Record<string, never>; res: Account };
-  preview: {
-    req: { artifacts: ArtifactRef[]; emails: string[]; access: AccessLevel; orgDomains: string[] };
-    res: PreviewResult[];
-  };
-  start: { req: { jobName: string; plans: ArtifactPlan[]; delayMs: number }; res: null };
+  preview: { req: { artifacts: ArtifactRef[]; invites: Invitee[] }; res: PreviewResult[] };
+  /** `label` names the run in the side panel, e.g. the lists it came from. */
+  start: { req: { label: string; plans: ArtifactPlan[] }; res: null };
   stop: { req: Record<string, never>; res: null };
   resume: { req: Record<string, never>; res: null };
   clear: { req: Record<string, never>; res: null };

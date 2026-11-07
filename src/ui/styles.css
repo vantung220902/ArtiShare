@@ -44,7 +44,6 @@ h3 { font-size: 14px; margin: 0; }
 p { margin: 0 0 8px; }
 a { color: var(--accent); }
 
-.page { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
 .panel { padding: 12px; }
 
 .card {
@@ -91,8 +90,21 @@ button.danger { color: var(--err); }
 button.link { border: none; background: none; padding: 0; color: var(--accent); font-weight: 500; }
 button:disabled { opacity: 0.5; cursor: default; }
 
-.checks { display: flex; flex-wrap: wrap; gap: 6px 14px; }
-.checks label { font-weight: 400; display: flex; gap: 6px; align-items: center; }
+.choices { display: flex; flex-direction: column; gap: 6px; }
+.choices label { font-weight: 400; display: flex; gap: 6px; align-items: baseline; }
+.choices input { margin: 0; flex: none; }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: 4px 0 12px; }
+.tabs button {
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  padding: 6px 10px;
+  color: var(--muted);
+}
+.tabs button[aria-selected='true'] { color: var(--text); border-bottom-color: var(--accent); }
+.tabs button:hover:not([aria-selected='true']) { color: var(--text); }
 
 .chip {
   display: inline-block;
@@ -107,7 +119,6 @@ button:disabled { opacity: 0.5; cursor: default; }
 .err { color: var(--err); }
 .muted { color: var(--muted); }
 
-.errors { margin: 0; padding-left: 18px; color: var(--err); font-size: 12px; }
 
 .progress { height: 6px; background: var(--chip); border-radius: 999px; overflow: hidden; }
 .progress > div { height: 100%; background: var(--accent); transition: width 0.3s; }

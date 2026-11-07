@@ -9,6 +9,9 @@ import { loadRun, type RunState, saveRun } from '../lib/storage';
 const FAKE = import.meta.env.WXT_FAKE_CLAUDE === 'true';
 const client: ShareClient = FAKE ? createFakeShareClient() : createApiShareClient();
 
+/** Pause between invites (plus up to half again of random jitter), to stay clear of rate limits. */
+const INVITE_DELAY_MS = 800;
+
 let activeRun: AbortController | null = null;
 let account: Account | null = null;
 
@@ -40,14 +43,7 @@ async function preview(req: Messages['preview']['req']): Promise<PreviewResult[]
       const existing = await client.listSharees(artifact);
       results.push({
         artifact,
-        plan: planArtifact({
-          artifact,
-          desired: req.emails,
-          access: req.access,
-          existing,
-          orgDomains: req.orgDomains,
-          selfEmail: me?.email,
-        }),
+        plan: planArtifact({ artifact, desired: req.invites, existing, selfEmail: me?.email }),
       });
     } catch (err) {
       results.push({ artifact, error: (err as Error).message });
@@ -65,8 +61,8 @@ async function execute(run: RunState): Promise<void> {
 
   try {
     const summary = await runInvites(run.items, client, {
-      delayMs: run.delayMs,
-      jitterMs: Math.round(run.delayMs / 2),
+      delayMs: INVITE_DELAY_MS,
+      jitterMs: INVITE_DELAY_MS / 2,
       signal: controller.signal,
       sleep: keepAliveSleep,
       onUpdate: () => saveRun(run),
@@ -96,10 +92,9 @@ async function start(req: Messages['start']['req']): Promise<null> {
   if (!items.length) throw new Error('Nobody to invite.');
   const run: RunState = {
     id: crypto.randomUUID(),
-    jobName: req.jobName,
+    label: req.label,
     createdAt: Date.now(),
     status: 'running',
-    delayMs: req.delayMs,
     items,
   };
   void execute(run);
