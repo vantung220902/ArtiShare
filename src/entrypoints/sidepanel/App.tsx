@@ -2,7 +2,7 @@ import { useEffect, useState, type KeyboardEvent } from 'react';
 import type { Account } from '../../claude/shareClient';
 import { send } from '../../lib/messages';
 import { useConfig, useRun } from '../../ui/hooks';
-import { SendIcon } from '../../ui/icons';
+import { CloseIcon, SendIcon } from '../../ui/icons';
 import { ListsView } from './ListsView';
 import { RunView } from './RunView';
 import { ShareView } from './ShareView';
@@ -55,6 +55,15 @@ export function App() {
           <h1 className="wordmark">ArtiShare</h1>
         </div>
         <AccountPill account={account} error={accountError} />
+        {/* window.close() closes the side panel. A run keeps going in the background. */}
+        <button
+          className="ghost icon-btn"
+          aria-label="Close ArtiShare"
+          title="Close"
+          onClick={() => window.close()}
+        >
+          <CloseIcon size={16} />
+        </button>
       </header>
 
       {accountError && (
