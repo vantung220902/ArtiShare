@@ -11,8 +11,9 @@ invitation's id.
 ## Calling it
 
 - Requests go to `https://claude.ai` with the user's session cookies (`credentials: 'same-origin'`).
-  The extension runs `fetch()` inside a claude.ai tab's main world, so nothing about the session
-  leaves the page.
+  The extension runs `fetch()` inside a claude.ai tab's isolated world: Chrome sends it with the
+  page's origin and cookies, so nothing about the session leaves the page, and the page's own
+  scripts can't see or alter the requests.
 - Every `/api/frame/...` request needs the header **`X-Frame-CP: go`**. Without it the API answers
   `404` even for a valid artifact. The Share menu also sends `X-Frame-Client-Version` (the page's
   `<meta name="build-timestamp">`), `X-Frame-Session-Id` and sometimes `X-Frame-Surface` /

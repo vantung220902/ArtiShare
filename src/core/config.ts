@@ -72,7 +72,7 @@ export function parseConfig(text: string): ParseConfigResult {
   config.jobs.forEach((job, i) => {
     const where = `jobs[${i}] "${job.name}"`;
     for (const list of job.lists) {
-      if (!(list in config.lists)) errors.push(`${where}: unknown list "${list}"`);
+      if (!hasList(config, list)) errors.push(`${where}: unknown list "${list}"`);
     }
     const bad = job.emails.filter((e) => !isValidEmail(normalizeEmail(e)));
     if (bad.length) errors.push(`${where}: invalid email(s): ${bad.join(', ')}`);
@@ -95,6 +95,19 @@ export function serializeConfig(config: Config, format: 'yaml' | 'json'): string
   return format === 'json' ? `${JSON.stringify(config, null, 2)}\n` : dump(config, { lineWidth: 120 });
 }
 
+/**
+ * Whether `config` has a list called `name`. Checks own keys only, so names inherited from
+ * Object.prototype (`toString`, `constructor`, …) don't count as lists.
+ */
+export function hasList(config: Config, name: string): boolean {
+  return Object.hasOwn(config.lists, name);
+}
+
+/** The addresses in list `name`, or none when there's no such list. */
+export function listEmails(config: Config, name: string): string[] {
+  return hasList(config, name) ? (config.lists[name] ?? []) : [];
+}
+
 export interface ResolvedJob {
   name: string;
   artifacts: ArtifactRef[];
@@ -104,7 +117,7 @@ export interface ResolvedJob {
 
 /** Expands a job's lists into one de-duplicated address list and parses its artifact links. */
 export function resolveJob(config: Config, job: Job): ResolvedJob {
-  const fromLists = job.lists.map((name) => config.lists[name] ?? []);
+  const fromLists = job.lists.map((name) => listEmails(config, name));
   return {
     name: job.name,
     artifacts: parseArtifactList(job.artifacts).refs,
