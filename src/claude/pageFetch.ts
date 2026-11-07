@@ -1,9 +1,14 @@
 import { ShareError } from '../core/runner';
 
 /**
- * Runs fetch() inside a claude.ai tab's own page context (MAIN world), so requests carry the
- * user's session exactly as the Share menu's do. Nothing about the session leaves the page:
- * only the response status and body come back to the extension.
+ * Runs fetch() inside a claude.ai tab, so requests carry the user's session exactly as the Share
+ * menu's do. Nothing about the session leaves the page: only the response status and body come
+ * back to the extension.
+ *
+ * The code runs in the extension's ISOLATED world, not the page's MAIN world. Chrome sends an
+ * isolated-world fetch with the page's origin and cookies, but the page's own scripts (analytics
+ * or support widgets that wrap `window.fetch`) can't see the addresses being invited or tamper
+ * with the responses.
  */
 
 const CLAUDE_ORIGIN = 'https://claude.ai';
@@ -67,12 +72,15 @@ export async function getClaudeTab(): Promise<number> {
   return id;
 }
 
-/** Runs `func(arg)` in the claude.ai tab's main world and returns its result. */
+/**
+ * Runs `func(arg)` in the claude.ai tab (top frame, isolated world) and returns its result.
+ * `func` is serialized into the page, so it can't use anything from this module's scope.
+ */
 async function inPage<A, R>(func: (arg: A) => Promise<R | { error: string }>, arg: A): Promise<R> {
   const tabId = await getClaudeTab();
   let results: chrome.scripting.InjectionResult<R | { error: string }>[];
   try {
-    results = await chrome.scripting.executeScript({ target: { tabId }, world: 'MAIN', args: [arg], func });
+    results = await chrome.scripting.executeScript({ target: { tabId }, world: 'ISOLATED', args: [arg], func });
   } catch (e) {
     ownTabId = undefined;
     throw new ShareError(`Couldn't reach the claude.ai tab: ${(e as Error).message}`, 'network');
@@ -86,10 +94,25 @@ async function inPage<A, R>(func: (arg: A) => Promise<R | { error: string }>, ar
   return result as R;
 }
 
-export function pageFetch(req: PageRequest): Promise<PageResponse> {
-  return inPage<PageRequest, PageResponse>(async (r: PageRequest) => {
+/** The absolute claude.ai URL for `path`; throws if `path` would point anywhere else. */
+export function claudeUrl(path: string): string {
+  const url = path.startsWith('/') && !path.startsWith('//') ? new URL(path, CLAUDE_ORIGIN) : null;
+  if (url?.origin !== CLAUDE_ORIGIN) throw new ShareError(`Refusing to send a request outside claude.ai: ${path}`, 'unknown');
+  return url.href;
+}
+
+interface InPageRequest extends PageRequest {
+  url: string;
+  origin: string;
+}
+
+export async function pageFetch(req: PageRequest): Promise<PageResponse> {
+  const arg: InPageRequest = { ...req, url: claudeUrl(req.path), origin: CLAUDE_ORIGIN };
+  return inPage<InPageRequest, PageResponse>(async (r: InPageRequest) => {
+    // The tab may have navigated since it was picked; never send the session's request elsewhere.
+    if (location.origin !== r.origin) return { error: `the tab is no longer on ${r.origin}` };
     try {
-      const res = await fetch(r.path, {
+      const res = await fetch(r.url, {
         method: r.method,
         credentials: 'same-origin',
         headers: {
@@ -107,7 +130,7 @@ export function pageFetch(req: PageRequest): Promise<PageResponse> {
     } catch (e) {
       return { error: e instanceof Error ? e.message : String(e) };
     }
-  }, req);
+  }, arg);
 }
 
 /** Reads a (non-HttpOnly) claude.ai cookie in page context. */
