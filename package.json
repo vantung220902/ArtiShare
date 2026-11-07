@@ -1,0 +1,37 @@
+{
+  "name": "artishare",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome extension that invites lists of email addresses to claude.ai artifacts in bulk.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "wxt",
+    "dev:fake": "wxt --mode fake",
+    "build": "wxt build",
+    "build:fake": "wxt build --mode fake",
+    "zip": "wxt zip",
+    "release": "npm run typecheck && npm test && wxt zip",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "postinstall": "wxt prepare"
+  },
+  "dependencies": {
+    "js-yaml": "^5.5.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.3.7",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@wxt-dev/module-react": "^1.2.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0",
+    "wxt": "^0.21.5"
+  }
+}
