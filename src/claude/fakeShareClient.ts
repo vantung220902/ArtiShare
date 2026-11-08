@@ -1,3 +1,4 @@
+import { inboxKey } from '../core/emails';
 import { ShareError } from '../core/runner';
 import type { AccessLevel, ArtifactRef, Sharee } from '../core/types';
 import type { Account, ShareClient } from './shareClient';
@@ -42,7 +43,11 @@ export function createFakeShareClient(): ShareClient {
         throw new ShareError('Too many requests', 'rate-limited', 1_000);
       }
 
-      list(artifact).push({ email, access, status: 'pending' });
+      // Like claude.ai, one invitation per person: a Gmail alias replaces the earlier invitation.
+      const people = list(artifact);
+      const same = people.findIndex((p) => inboxKey(p.email) === inboxKey(email));
+      if (same !== -1) people.splice(same, 1);
+      people.push({ email, access, status: 'pending' });
     },
   };
 }

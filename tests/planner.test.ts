@@ -60,4 +60,32 @@ describe('planArtifact', () => {
     expect(plan.self).toEqual(['me@nimblehq.co']);
     expect(plan.toInvite.map((i) => i.email)).toEqual(['a@x.io']);
   });
+
+  it('treats Gmail +aliases as the person claude.ai already invited', () => {
+    const plan = planArtifact({
+      artifact,
+      desired: [
+        { email: 'tung@gmail.com', access: 'view' },
+        { email: 'tung+03@acme.com', access: 'view' },
+      ],
+      existing: [{ email: 'Tung+03@gmail.com', access: 'view', status: 'pending' }],
+    });
+    expect(plan.toInvite).toEqual([{ email: 'tung+03@acme.com', access: 'view' }]);
+    expect(plan.alreadyShared).toEqual([
+      { email: 'tung@gmail.com', access: 'view', status: 'pending', as: 'tung+03@gmail.com' },
+    ]);
+  });
+
+  it('invites one address per Gmail inbox', () => {
+    const plan = planArtifact({
+      artifact,
+      desired: [
+        { email: 'tung@gmail.com', access: 'view' },
+        { email: 'tung+03@gmail.com', access: 'view' },
+      ],
+      existing: [],
+    });
+    expect(plan.toInvite.map((i) => i.email)).toEqual(['tung@gmail.com']);
+    expect(plan.sameInbox).toEqual([{ email: 'tung+03@gmail.com', as: 'tung@gmail.com' }]);
+  });
 });

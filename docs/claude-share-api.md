@@ -27,6 +27,9 @@ invitation's id.
   For example `2PUa7qFdoBcApzhmHVvA4K` → `0b3c7e2a-1f4d-4a8e-9c2b-5d6e7f8a9b0c`.
   See `artifactUuid()` in `src/core/artifactUrl.ts`.
 - `claude.ai/code/artifact/{uuid}`: already the UUID (not yet checked against a live code artifact).
+- `claude.ai/chat/{chat}?artifact={uuid}` (an artifact open beside a chat): `{uuid}` is the
+  artifact's UUID, accepted as-is by `/api/frame/...` (checked November 2026). The extension
+  turns it into the matching `claude.ai/artifact/{id}` link.
 - Organization: the `lastActiveOrg` cookie (readable from page script) is the org selected in
   claude.ai. `GET /api/account` lists all of the user's orgs under `memberships[].organization.uuid`.
   An artifact in a different org answers `403` for the wrong `org`, so the client tries the active
@@ -70,6 +73,12 @@ to organization members. Personal Pro, Max, and Ultra plans do not have this dir
 
 Errors: wrong org or no permission → `403` (`{"type":"error","error":{"type":"permission_error",…},"code":"permission_denied"}`);
 unknown artifact → `404` (`not found`, plain text).
+
+One invitation per person: claude.ai treats Gmail `+tag` aliases as the same person. Inviting
+`name+tag@gmail.com` replaces a pending invitation to `name@gmail.com` (and the other way round),
+so the list only ever shows the latest address (checked November 2026). The extension matches
+addresses with `inboxKey()` in `src/core/emails.ts`. Dots in Gmail addresses and `+tag` on other
+domains have not been checked.
 
 Role names map to the Share menu's labels: `reader` = Can view, `commenter` = Commenter,
 `editor` = Can edit.
