@@ -92,6 +92,32 @@ describe('ApiShareClient', () => {
     expect(ok.calls[0]).toMatchObject({ method: 'POST', body: { email: 'new@x.io', role: 'commenter' } });
   });
 
+  it('tries current organizations after a cached organization stops working', async () => {
+    let currentOrg = ACTIVE;
+    const calls: string[] = [];
+    const t: Transport = {
+      async cookie() {
+        return null;
+      },
+      async fetch(req) {
+        calls.push(req.path);
+        if (req.path === '/api/account') {
+          return json(200, {
+            email_address: 'me@x.io',
+            memberships: [{ organization: { uuid: currentOrg } }],
+          });
+        }
+        return req.path === invitesPath(currentOrg) ? json(200, { invites: [] }) : json(403, {});
+      },
+    };
+    const client = createApiShareClient(t);
+    await client.listSharees(ART);
+    currentOrg = OTHER;
+    await client.whoami();
+    await expect(client.listSharees(ART)).resolves.toEqual([]);
+    expect(calls.slice(-2)).toEqual([invitesPath(ACTIVE), invitesPath(OTHER)]);
+  });
+
   it('explains a 403 from every organization as not being the owner, and 404 as a bad link', async () => {
     const forbidden = createApiShareClient(transport(() => json(403, {})));
     await expect(forbidden.listSharees(ART)).rejects.toMatchObject({ code: 'forbidden' });
@@ -138,7 +164,7 @@ describe('inviteError', () => {
   it("maps claude.ai's refusal reasons", () => {
     expect(codeOf(json(403, { reason: 'invite_cap_reached' }))).toBe('limit');
     expect(codeOf(json(403, { reason: 'invite_daily_cap' }))).toBe('daily-limit');
-    expect(codeOf(json(403, { reason: 'external_invites_disabled' }))).toBe('unshareable');
+    expect(codeOf(json(403, { reason: 'external_invites_disabled' }))).toBe('external-disabled');
     expect(codeOf(json(403, { reason: 'anything', plan_required: true }))).toBe('unshareable');
     expect(codeOf(json(403, { reason: 'writer_only' }))).toBe('forbidden');
     expect(codeOf(json(409, { reason: 'member_refused' }))).toBe('invalid');
@@ -159,6 +185,10 @@ describe('inviteError', () => {
     const limited = inviteError(json(429, {}, { retryAfter: '7' }));
     expect(limited).toBeInstanceOf(ShareError);
     expect(limited).toMatchObject({ code: 'rate-limited', retryAfterMs: 7000 });
+    const date = new Date(Date.now() + 60_000).toUTCString();
+    const dated = inviteError(json(429, {}, { retryAfter: date }));
+    expect(dated.retryAfterMs).toBeGreaterThan(58_000);
+    expect(dated.retryAfterMs).toBeLessThanOrEqual(60_000);
     expect(codeOf({ status: 403, body: '', retryAfter: null, cfMitigated: 'challenge' })).toBe('auth');
   });
 });

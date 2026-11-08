@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { Account } from '../../claude/shareClient';
 import { parseArtifactList, parseArtifactRef } from '../../core/artifactUrl';
 import { type Config, defaultListIds, type Invitee, resolveInvites } from '../../core/config';
 import { ACCESS_LABELS, type AccessLevel, type ArtifactRef } from '../../core/types';
@@ -22,15 +23,28 @@ interface Draft {
   invites: Invitee[];
 }
 
-export function ShareView({ config, save }: { config: Config; save: Save }) {
+export function ShareView({
+  config,
+  save,
+  onAccount,
+}: {
+  config: Config;
+  save: Save;
+  onAccount: (account: Account) => void;
+}) {
   const [artifactText, setArtifactText] = useState('');
   const [selected, setSelected] = useState<string[]>(() => defaultListIds(config));
   const [creating, setCreating] = useState(false);
-  const [preview, setPreview] = useState<{ draft: Draft; results: PreviewResult[] } | null>(null);
+  const [preview, setPreview] = useState<{
+    draft: Draft;
+    results: PreviewResult[];
+    accountEmail: string;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [draft, setDraft] = useState<ListDraft | null>(null);
   const form = useRef<ListFormHandle>(null);
+  const previousListIds = useRef(new Set(config.lists.map((list) => list.id)));
 
   // Start from the artifact you're looking at.
   useEffect(() => {
@@ -41,6 +55,20 @@ export function ShareView({ config, save }: { config: Config; save: Save }) {
   const defaultKey = JSON.stringify(config.defaultSelection);
   // oxlint-disable-next-line react/set-state-in-effect, react-hooks/exhaustive-deps -- keyed on the default selection only, not every config change
   useEffect(() => setSelected(defaultListIds(config)), [defaultKey]);
+
+  // In "All lists" mode, include lists created in the Lists tab without losing manual unticks.
+  useEffect(() => {
+    const ids = config.lists.map((list) => list.id);
+    const available = new Set(ids);
+    const added =
+      config.defaultSelection.mode === 'all' ? ids.filter((id) => !previousListIds.current.has(id)) : [];
+    previousListIds.current = available;
+    setSelected((current) => {
+      const next = current.filter((id) => available.has(id));
+      for (const id of added) if (!next.includes(id)) next.push(id);
+      return next.length === current.length && next.every((id, i) => id === current[i]) ? current : next;
+    });
+  }, [config.lists, config.defaultSelection.mode]);
 
   const lists = byName(config.lists);
   const artifacts = parseArtifactList(artifactText);
@@ -89,8 +117,12 @@ export function ShareView({ config, save }: { config: Config; save: Save }) {
     setBusy(true);
 
     try {
-      const results = await send('preview', { artifacts: next.artifacts, invites: next.invites });
-      setPreview({ draft: next, results });
+      const { account, results } = await send('preview', {
+        artifacts: next.artifacts,
+        invites: next.invites,
+      });
+      onAccount(account);
+      setPreview({ draft: next, results, accountEmail: account.email });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -180,7 +212,17 @@ export function ShareView({ config, save }: { config: Config; save: Save }) {
   );
 }
 
-function Preview({ draft, results, onBack }: { draft: Draft; results: PreviewResult[]; onBack: () => void }) {
+function Preview({
+  draft,
+  results,
+  accountEmail,
+  onBack,
+}: {
+  draft: Draft;
+  results: PreviewResult[];
+  accountEmail: string;
+  onBack: () => void;
+}) {
   const [error, setError] = useState('');
   const [starting, setStarting] = useState(false);
   const plans = results.flatMap((r) => (r.plan ? [r.plan] : []));
@@ -188,14 +230,14 @@ function Preview({ draft, results, onBack }: { draft: Draft; results: PreviewRes
 
   const start = async () => {
     const ok = window.confirm(
-      `Send ${plural(total, 'invitation')} across ${plural(plans.length, 'artifact')}?\n\n` +
+      `Send ${plural(total, 'invitation')} across ${plural(plans.length, 'artifact')} as ${accountEmail}?\n\n` +
         'People outside your organization will get an email from Claude.',
     );
     if (!ok) return;
     setStarting(true);
 
     try {
-      await send('start', { label: draft.label, plans });
+      await send('start', { label: draft.label, plans, accountEmail });
     } catch (e) {
       setError((e as Error).message);
       setStarting(false);
@@ -210,6 +252,7 @@ function Preview({ draft, results, onBack }: { draft: Draft; results: PreviewRes
         </button>
         <span className="hint truncate">{draft.label}</span>
       </div>
+      <p className="hint">Sending as {accountEmail}</p>
       {results.map((r) => (
         <section key={r.artifact.id} className="card stack">
           <ArtifactLink url={r.artifact.url} />

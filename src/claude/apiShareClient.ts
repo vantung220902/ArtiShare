@@ -28,7 +28,7 @@ const REASONS: Record<string, [ShareErrorCode, string]> = {
   people_list_full: ['limit', "This artifact's list of people is full."],
   invite_daily_cap: ['daily-limit', 'Daily invitation limit reached. Try again tomorrow.'],
   external_invites_disabled: [
-    'unshareable',
+    'external-disabled',
     'Inviting people outside your organization is turned off for your account or organization.',
   ],
   editor_invites_disabled: [
@@ -118,6 +118,7 @@ export function inviteError(res: PageResponse): ShareError {
 
 export function createApiShareClient(transport: Transport = pageTransport): ShareClient {
   let orgsPromise: Promise<Org[]> | undefined;
+  let accountEmail: string | undefined;
   /** Which of the user's organizations each artifact (by UUID) belongs to. */
   const orgOf = new Map<string, string>();
 
@@ -141,7 +142,11 @@ export function createApiShareClient(transport: Transport = pageTransport): Shar
     all.sort((a, b) => Number(b.uuid === active) - Number(a.uuid === active));
     if (active && !all.some((o) => o.uuid === active)) all.unshift({ uuid: active });
 
-    return { email: account.email_address.toLowerCase(), orgs: all };
+    const email = account.email_address.toLowerCase();
+    if (accountEmail !== undefined && accountEmail !== email) orgOf.clear();
+    accountEmail = email;
+
+    return { email, orgs: all };
   }
 
   function orgs(): Promise<Org[]> {
@@ -170,7 +175,7 @@ export function createApiShareClient(transport: Transport = pageTransport): Shar
   async function fetchInvites(artifact: ArtifactRef): Promise<{ org: string; res: PageResponse }> {
     const uuid = uuidOf(artifact);
     const known = orgOf.get(uuid);
-    const candidates = known ? [known] : (await orgs()).map((o) => o.uuid);
+    const candidates = [...new Set([...(known ? [known] : []), ...(await orgs()).map((o) => o.uuid)])];
 
     if (candidates.length === 0) {
       throw new ShareError("Couldn't find your claude.ai organization. Open claude.ai and sign in.", 'auth');
@@ -192,6 +197,7 @@ export function createApiShareClient(transport: Transport = pageTransport): Shar
       }
 
       if (res.status !== 403 && res.status !== 404) return { org, res };
+      if (org === known) orgOf.delete(uuid);
       first ??= { org, res };
     }
 

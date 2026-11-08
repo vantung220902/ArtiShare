@@ -75,6 +75,21 @@ describe('runInvites', () => {
     expect(sleep.mock.calls.map((c) => c[0])).toEqual([5_000, 2_000]);
   });
 
+  it('stops with the rate-limited invite pending when retries are exhausted', async () => {
+    const client = fakeClient(() => {
+      throw new ShareError('still limited', 'rate-limited');
+    });
+    const list = items([
+      [A, 'a@x.io'],
+      [A, 'b@x.io'],
+    ]);
+    const summary = await runInvites(list, client, { delayMs: 0, sleep: noSleep });
+    expect(client.calls).toEqual(['a@x.io', 'a@x.io', 'a@x.io', 'a@x.io']);
+    expect(list.map((item) => item.status)).toEqual(['pending', 'pending']);
+    expect(summary).toMatchObject({ status: 'stopped', failed: 0, pending: 2 });
+    expect(summary.reason).toMatch(/rate-limiting/);
+  });
+
   it('pauses without repeating a POST when the network outcome is uncertain', async () => {
     const client = fakeClient(() => {
       throw new ShareError('network down', 'network');
@@ -127,6 +142,20 @@ describe('runInvites', () => {
     await runInvites(list, client, { delayMs: 0, sleep: noSleep });
     expect(client.calls).toEqual(['editor1@x.io', 'reader@x.io']);
     expect(list.map((item) => item.status)).toEqual(['failed', 'invited', 'skipped']);
+  });
+
+  it('continues to internal invitees after outside invitations are disabled', async () => {
+    const list = items([
+      [A, 'outside@else.io'],
+      [A, 'inside@company.io'],
+    ]);
+    const client = fakeClient((email) => {
+      if (email.startsWith('outside')) throw new ShareError('outside disabled', 'external-disabled');
+    });
+    const summary = await runInvites(list, client, { delayMs: 0, sleep: noSleep });
+    expect(client.calls).toEqual(['outside@else.io', 'inside@company.io']);
+    expect(list.map((item) => item.status)).toEqual(['failed', 'invited']);
+    expect(summary.status).toBe('completed');
   });
 
   it('stops the run when signed out', async () => {

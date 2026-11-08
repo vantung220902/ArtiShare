@@ -1,3 +1,4 @@
+import { artifactUuid } from './artifactUrl';
 import type { AccessLevel, ArtifactRef } from './types';
 
 export type ShareErrorCode =
@@ -6,9 +7,11 @@ export type ShareErrorCode =
   | 'server' // 5xx
   | 'not-ready' // explicit refusal while claude.ai finishes an artifact update
   | 'auth' // signed out of claude.ai
+  | 'account-changed' // the signed-in account is not the one that started the run
   | 'forbidden' // not the owner / no permission to share
   | 'not-found' // artifact does not exist
-  | 'unshareable' // artifact type can't be shared by email, or email invites are disabled for the org
+  | 'unshareable' // artifact type can't be shared by email
+  | 'external-disabled' // this address is outside an org that blocks outside invitations
   | 'limit' // per-artifact invitee cap reached
   | 'daily-limit' // the account's daily invitation cap reached
   | 'invalid' // the address was rejected
@@ -32,9 +35,11 @@ const ARTIFACT_LEVEL = new Set<ShareErrorCode>(['forbidden', 'not-found', 'unsha
 /** Errors that will fail every invite in the run until the user acts; the item stays pending for Resume. */
 const RUN_LEVEL: Partial<Record<ShareErrorCode, string>> = {
   auth: 'You are signed out of claude.ai. Sign in, then resume.',
+  'account-changed': 'The signed-in account changed. Sign in as the account used for Preview, then resume.',
   'daily-limit': "claude.ai's daily invitation limit is reached. Resume tomorrow.",
   network: 'The last invitation may have been sent. Resume to check current access before trying again.',
   server: 'The last invitation may have been sent. Resume to check current access before trying again.',
+  'rate-limited': 'claude.ai is still rate-limiting invitations. Resume later to try again.',
 };
 
 export function toShareError(err: unknown): ShareError {
@@ -210,14 +215,21 @@ export async function runInvites(
     consecutiveFailures++;
     await onUpdate?.(item, i);
 
+    if (error.code === 'external-disabled') {
+      // This rule applies to outside addresses, not to colleagues on the same artifact.
+      consecutiveFailures = 0;
+      continue;
+    }
+
     if (ARTIFACT_LEVEL.has(error.code) || error.code === 'access-unavailable') {
       // Skip only the scope that this rejection applies to.
+      const artifactKey = artifactUuid(item.artifact) ?? item.artifact.url;
       for (let j = i + 1; j < items.length; j++) {
         const other = items[j]!;
 
         if (
           other.status === 'pending' &&
-          other.artifact.id === item.artifact.id &&
+          (artifactUuid(other.artifact) ?? other.artifact.url) === artifactKey &&
           (error.code !== 'access-unavailable' || other.access === item.access)
         ) {
           other.status = 'skipped';
