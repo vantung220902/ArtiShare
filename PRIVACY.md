@@ -9,7 +9,7 @@ ArtiShare is a Chrome extension that invites saved lists of email addresses to c
 ArtiShare stores two things in Chrome's local extension storage (`chrome.storage.local`) on your own computer:
 
 - **Your lists.** Each list has a name, the email addresses you typed into it, and the permission to give (view, comment or edit).
-- **The latest invitation run.** This holds the artifacts you shared, plus each invite's email address, permission and result, so you can resume a run that stopped.
+- **The latest invitation run.** This holds the artifacts you shared, your claude.ai account email, plus each invite's email address, permission and result. The account email keeps a resumed run on the same signed-in account.
 
 This data isn't synced to your Google account and isn't sent to the developer. If you remove the extension, Chrome deletes it.
 
@@ -23,7 +23,7 @@ It sends its requests from inside your open claude.ai tab, signed in as you, jus
 - read who already has access to the artifacts you pick;
 - send an invitation to each email address you choose to share with.
 
-Your account details are used only while the extension is open, and they aren't saved. The email addresses you invite go to claude.ai, which emails the invitations. From there, claude.ai's own [privacy policy](https://www.anthropic.com/legal/privacy) applies.
+Your account email is saved only with the latest run until you discard that run. Your organization details are used in memory and aren't saved. The email addresses you invite go to claude.ai, which emails the invitations. From there, claude.ai's own [privacy policy](https://www.anthropic.com/legal/privacy) applies.
 
 ## What ArtiShare doesn't do
 

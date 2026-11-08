@@ -101,17 +101,17 @@ Refusals send JSON with a `reason` (and sometimes `plan_required`, `capability`,
 The status is `403` for rules about the artifact or account, other 4xx otherwise. Reasons that
 matter for bulk invites:
 
-| reason                                                                                      | meaning                                            | extension treats it as                     |
-| ------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------ |
-| `invite_cap_reached`, `people_list_full`                                                    | the artifact is at its invitation limit            | `limit` (skip the rest of this artifact)   |
-| `invite_daily_cap`                                                                          | the account's daily invitation limit               | `daily-limit` (stop the run; resume later) |
-| `external_invites_disabled`                                                                 | outside invitations are off for the account or org | `unshareable`                              |
-| `editor_invites_disabled`                                                                   | Can edit invitations are off                       | `access-unavailable` (skip Can edit only)  |
-| `plan` / `plan_required: true`                                                              | the plan doesn't allow it                          | `unshareable`                              |
-| `writer_only`, `editor_manage`                                                              | only the owner can invite                          | `forbidden`                                |
-| `address_outside_company`, `member_refused`, `member_*_unavailable`                         | this address can't get that access                 | `invalid` (this address only)              |
-| `upload_window_open`, `missing_row`, `incomplete`, `generation_mismatch`, `perm_changed`    | claude.ai is still checking a new version          | `not-ready` (retried)                      |
-| `agent_frame`, `legacy_frame`, `live_doc`, `connectors_declared`, `cmek`, `classifier_*`, … | this artifact can't be shared by email             | `unshareable` (any other `403` reason)     |
+| reason                                                                                      | meaning                                            | extension treats it as                                         |
+| ------------------------------------------------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------- |
+| `invite_cap_reached`, `people_list_full`                                                    | the artifact is at its invitation limit            | `limit` (skip the rest of this artifact)                       |
+| `invite_daily_cap`                                                                          | the account's daily invitation limit               | `daily-limit` (stop the run; resume later)                     |
+| `external_invites_disabled`                                                                 | outside invitations are off for the account or org | `external-disabled` (fail this address, continue with members) |
+| `editor_invites_disabled`                                                                   | Can edit invitations are off                       | `access-unavailable` (skip Can edit only)                      |
+| `plan` / `plan_required: true`                                                              | the plan doesn't allow it                          | `unshareable`                                                  |
+| `writer_only`, `editor_manage`                                                              | only the owner can invite                          | `forbidden`                                                    |
+| `address_outside_company`, `member_refused`, `member_*_unavailable`                         | this address can't get that access                 | `invalid` (this address only)                                  |
+| `upload_window_open`, `missing_row`, `incomplete`, `generation_mismatch`, `perm_changed`    | claude.ai is still checking a new version          | `not-ready` (retried)                                          |
+| `agent_frame`, `legacy_frame`, `live_doc`, `connectors_declared`, `cmek`, `classifier_*`, … | this artifact can't be shared by email             | `unshareable` (any other `403` reason)                         |
 
 Without a `reason`: `400` = not a valid address, `409` = that address can't be invited,
 `404` = artifact gone, `429` = rate-limited (`Retry-After`), `502`/`503`/`504` = unavailable.

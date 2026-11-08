@@ -40,6 +40,7 @@ const stoppedRun = (): RunState => ({
   id: 'run-1',
   label: 'A',
   createdAt: 1,
+  accountEmail: 'owner@x.io',
   status: 'stopped',
   items: [{ artifact, ...invitee, status: 'pending', attempts: 0 }],
 });
@@ -68,10 +69,10 @@ describe('run manager', () => {
 
     const invite = vi.fn(async () => {});
     const run = manager(client({ invite }), db);
-    await expect(run.start('A', [plan])).rejects.toThrow('storage full');
+    await expect(run.start('A', [plan], 'owner@x.io')).rejects.toThrow('storage full');
     expect(invite).not.toHaveBeenCalled();
     fail = false;
-    await run.start('A', [plan]);
+    await run.start('A', [plan], 'owner@x.io');
     await run.waitForIdle();
     expect(invite).toHaveBeenCalledTimes(1);
   });
@@ -84,12 +85,79 @@ describe('run manager', () => {
       throw new ShareError('response lost', 'network');
     });
     const run = manager(client({ invite, listSharees: async () => shared }), db);
-    await run.start('A', [plan]);
+    await run.start('A', [plan], 'owner@x.io');
     await run.waitForIdle();
     expect(db.read()).toMatchObject({ status: 'stopped', items: [{ status: 'pending' }] });
     await run.resume();
     await run.waitForIdle();
     expect(invite).toHaveBeenCalledTimes(1);
     expect(db.read()).toMatchObject({ status: 'completed', items: [{ status: 'skipped' }] });
+  });
+
+  it('sends once for duplicate representations in a saved run', async () => {
+    const db = store();
+    const invite = vi.fn(async () => {});
+    const run = manager(client({ invite }), db);
+    const sameByUuid = parseArtifactRef(
+      'https://claude.ai/code/artifact/0b3c7e2a-1f4d-4a8e-9c2b-5d6e7f8a9b0c',
+    )!;
+    const sameByBase58 = parseArtifactRef('https://claude.ai/artifact/2PUa7qFdoBcApzhmHVvA4K')!;
+    const plans = [sameByUuid, sameByBase58].map((ref) =>
+      planArtifact({ artifact: ref, desired: [invitee], existing: [] }),
+    );
+    await run.start('A', plans, 'owner@x.io');
+    await run.waitForIdle();
+    expect(invite).toHaveBeenCalledTimes(1);
+    expect(db.read()?.items.map((item) => item.status)).toEqual(['invited', 'skipped']);
+  });
+
+  it('refuses to start when the signed-in account changed after Preview', async () => {
+    const db = store();
+    const invite = vi.fn(async () => {});
+    const run = manager(client({ whoami: async () => ({ email: 'other@x.io' }), invite }), db);
+    await expect(run.start('A', [plan], 'owner@x.io')).rejects.toThrow(/previewed as owner@x.io/);
+    expect(invite).not.toHaveBeenCalled();
+    expect(db.read()).toBeNull();
+  });
+
+  it('refuses to resume a run under another account', async () => {
+    const db = store(stoppedRun());
+    const invite = vi.fn(async () => {});
+    const run = manager(client({ whoami: async () => ({ email: 'other@x.io' }), invite }), db);
+    await expect(run.resume()).rejects.toThrow(/previewed as owner@x.io/);
+    expect(invite).not.toHaveBeenCalled();
+    expect(db.read()?.status).toBe('stopped');
+  });
+
+  it('does not resume an older run with no recorded account', async () => {
+    const old = stoppedRun();
+    delete old.accountEmail;
+    const db = store(old);
+    const invite = vi.fn(async () => {});
+    const run = manager(client({ invite }), db);
+    await expect(run.resume()).rejects.toThrow(/predates account verification/);
+    expect(invite).not.toHaveBeenCalled();
+    expect(db.read()?.status).toBe('stopped');
+  });
+
+  it('stops before the next POST if the signed-in account changes during a run', async () => {
+    const db = store();
+    let email = 'owner@x.io';
+    const invite = vi.fn(async () => {
+      email = 'other@x.io';
+    });
+    const run = manager(client({ whoami: async () => ({ email }), invite }), db);
+    const two = planArtifact({
+      artifact,
+      desired: [invitee, { email: 'b@x.io', access: 'view' }],
+      existing: [],
+    });
+    await run.start('A', [two], 'owner@x.io');
+    await run.waitForIdle();
+    expect(invite).toHaveBeenCalledTimes(1);
+    expect(db.read()).toMatchObject({
+      status: 'stopped',
+      items: [{ status: 'invited' }, { status: 'pending' }],
+    });
   });
 });

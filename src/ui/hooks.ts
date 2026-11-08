@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { EMPTY_CONFIG, loadStoredConfig, type Config, type ConfigChange } from '../core/config';
+import { loadStoredConfig, type Config, type ConfigChange } from '../core/config';
 import { send } from '../lib/messages';
 import { loadRun, type RunState, watchConfig, watchRun } from '../lib/storage';
 
@@ -11,7 +11,14 @@ export function useConfig(): [Config | null, (change: ConfigChange) => Promise<C
     let updates = 0;
     const unwatch = watchConfig((value) => {
       updates++;
-      if (mounted) setConfig(value ? loadStoredConfig(value) : structuredClone(EMPTY_CONFIG));
+      if (!mounted) return;
+      try {
+        setConfig(loadStoredConfig(value));
+        setError('');
+      } catch (err) {
+        setConfig(null);
+        setError(err instanceof Error ? err.message : String(err));
+      }
     });
     const initial = updates;
     void send('config-get', {}).then(
