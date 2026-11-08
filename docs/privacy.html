@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ArtiShare privacy policy</title>
+    <meta name="description" content="What data the ArtiShare Chrome extension handles and where it goes." />
+    <link rel="icon" href="images/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="site.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap">
+        <a class="brand" href="./"><img src="images/icon.svg" alt="" />ArtiShare</a>
+        <nav aria-label="Site">
+          <a href="./#how-it-works">How it works</a>
+          <a href="./#support">Support</a>
+          <a href="privacy.html" aria-current="page">Privacy</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section class="hero prose">
+        <h1>Privacy policy</h1>
+        <p class="updated">Last updated: 8 November 2026</p>
+        <p>
+          ArtiShare is a Chrome extension that invites saved lists of email addresses to claude.ai artifacts.
+          This page says what data it handles and where that data goes.
+        </p>
+
+        <h2>What ArtiShare stores</h2>
+        <p>
+          ArtiShare stores two things in Chrome's local extension storage (<code>chrome.storage.local</code>)
+          on your own computer:
+        </p>
+        <ul>
+          <li>
+            <strong>Your lists.</strong> Each list has a name, the email addresses you typed into it, and the
+            permission to give (view, comment or edit).
+          </li>
+          <li>
+            <strong>The latest invitation run.</strong> This holds the artifacts you shared, plus each
+            invite's email address, permission and result, so you can resume a run that stopped.
+          </li>
+        </ul>
+        <p>
+          This data isn't synced to your Google account and isn't sent to the developer. If you remove the
+          extension, Chrome deletes it.
+        </p>
+
+        <h2>What ArtiShare sends, and to whom</h2>
+        <p>ArtiShare talks only to <strong>claude.ai</strong>. It doesn't contact any other server.</p>
+        <p>
+          It sends its requests from inside your open claude.ai tab, signed in as you, just like the Share
+          menu does. It uses those requests to:
+        </p>
+        <ul>
+          <li>
+            read your claude.ai account (your email address and the organizations you belong to), and your
+            last active organization, so it knows where your artifacts are;
+          </li>
+          <li>read who already has access to the artifacts you pick;</li>
+          <li>send an invitation to each email address you choose to share with.</li>
+        </ul>
+        <p>
+          Your account details are used only while the extension is open, and they aren't saved. The email
+          addresses you invite go to claude.ai, which emails the invitations. From there, claude.ai's own
+          <a href="https://www.anthropic.com/legal/privacy">privacy policy</a> applies.
+        </p>
+
+        <h2>What ArtiShare doesn't do</h2>
+        <ul>
+          <li>It has no analytics, tracking or advertising.</li>
+          <li>It doesn't sell or share your data with anyone.</li>
+          <li>It doesn't use your data for anything except sending the invitations you ask for.</li>
+          <li>It doesn't load or run code from anywhere outside the extension.</li>
+        </ul>
+
+        <h2>Not affiliated with Anthropic</h2>
+        <p>
+          ArtiShare is an independent tool. It isn't made, endorsed or supported by Anthropic, the company
+          behind Claude and claude.ai.
+        </p>
+
+        <h2>Contact</h2>
+        <p>
+          If you have a question about this policy, open an issue at
+          <a href="https://github.com/vantung220902/ArtiShare/issues"
+            >github.com/vantung220902/ArtiShare/issues</a
+          >.
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <span>ArtiShare is an independent tool. It isn't made, endorsed or supported by Anthropic.</span>
+        <nav aria-label="Footer">
+          <a href="./">Home</a>
+          <a href="https://github.com/vantung220902/ArtiShare">Source</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>
