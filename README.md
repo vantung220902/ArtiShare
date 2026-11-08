@@ -140,8 +140,19 @@ You only need this section to change or publish the extension.
 
 ### Publish a new version
 
+There are two builds. They differ only in the manifest's `key`.
+
+| Build                    | Command                 | Output                                         | `key` |
+| ------------------------ | ----------------------- | ---------------------------------------------- | ----- |
+| Zip for the shared drive | `npm run release`       | `.output/artishare-<version>-chrome.zip`       | Yes   |
+| Chrome Web Store         | `npm run release:store` | `.output/artishare-<version>-chrome-store.zip` | No    |
+
+Both scripts first run `npm run check`, which covers the typecheck, lint, format check and tests.
+
+**Zip for the shared drive**
+
 1. Bump `version` in `package.json`.
-2. Run the release script. It runs the typecheck, lint, format check and tests, builds, and writes `.output/artishare-<version>-chrome.zip`.
+2. Run the release script.
 3. Upload the zip to the shared drive and tell the team to update.
 
 ```bash
@@ -154,7 +165,29 @@ npm run release
 
 The manifest's `key` in `wxt.config.ts` pins the extension ID. Without it, Chrome derives the ID from the folder path, so unzipping an update into a different folder would look like a new extension and lose everyone's saved lists. Don't remove or change the key.
 
-A Chrome Web Store listing would give one-click installs and automatic updates. Registering as a Chrome Web Store developer costs $5 once.
+**Chrome Web Store**
+
+1. Bump `version` in `package.json`. The store refuses an upload that isn't a higher version than the last one.
+2. Run the store release script.
+3. In the [Developer Dashboard](https://chrome.google.com/webstore/devconsole), open ArtiShare. Upload the zip on the **Package** tab, then submit it for review.
+
+```bash
+npm run release:store
+```
+
+The store rejects a manifest with `key` and gives the extension its own ID, so `release:store` sets `ARTISHARE_STORE=true`, which leaves the key out of the build. Because the IDs differ, lists saved in the shared-drive version don't carry over to the store version. The listing text, privacy answers and images are in [store/listing.md](store/listing.md). The privacy policy is [PRIVACY.md](PRIVACY.md).
+
+**Icons.** The PNGs in `public/icon/` are rendered from [store/icon.svg](store/icon.svg). WXT adds them to the manifest on its own. To change the icon, edit the SVG, then render the PNGs again with [librsvg](https://gitlab.gnome.org/GNOME/librsvg) and ImageMagick:
+
+```bash
+for s in 16 32 48; do rsvg-convert -w $s -h $s store/icon.svg -o public/icon/$s.png; done
+```
+
+```bash
+rsvg-convert -w 96 -h 96 store/icon.svg | magick - -background none -gravity center -extent 128x128 public/icon/128.png
+```
+
+The 128 px icon has 16 px of transparent padding, as the store asks.
 
 ### Develop
 
