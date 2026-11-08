@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { type Ref, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import {
   type Config,
   type ConfigChange,
@@ -12,17 +12,34 @@ import type { AccessLevel } from '../core/types';
 import { AccessSelect } from './AccessSelect';
 import { EmailInput } from './EmailInput';
 
+/** What a new-list form holds before it is saved: its valid addresses and permission. */
+export interface ListDraft {
+  emails: string[];
+  access: AccessLevel;
+}
+
+/** Lets a parent save the form's draft, e.g. when the user moves on without clicking Save list. */
+export interface ListFormHandle {
+  /** Whether the user has typed a name or addresses. */
+  hasDraft: () => boolean;
+  /** Saves like the Save button. Resolves to null when validation or the save fails; the form shows why. */
+  submit: () => Promise<{ list: EmailList; config: Config } | null>;
+}
+
 interface Props {
+  ref?: Ref<ListFormHandle>;
   config: Config;
   save: (change: ConfigChange) => Promise<Config>;
   /** The list to edit. Without it, the form creates a new list. */
   list?: EmailList;
   onSaved?: (list: EmailList) => void;
   onCancel?: () => void;
+  /** Reports the unsaved draft of a new list as it is typed, or null when the form is empty. */
+  onDraftChange?: (draft: ListDraft | null) => void;
 }
 
 /** Name, addresses and permission for one saved list. Used to create lists and to edit them. */
-export function ListForm({ config, save, list, onSaved, onCancel }: Props) {
+export function ListForm({ ref, config, save, list, onSaved, onCancel, onDraftChange }: Props) {
   const [baseline, setBaseline] = useState<EmailList | null>(list ?? null);
   const [name, setName] = useState(list?.name ?? '');
   const [text, setText] = useState(list?.emails.join('\n') ?? '');
@@ -78,18 +95,32 @@ export function ListForm({ config, save, list, onSaved, onCancel }: Props) {
   }, [list, baseline, dirty, awaitingSaved]);
   // oxlint-enable react/set-state-in-effect
 
+  const hasDraft = !!name.trim() || !!text.trim();
+
+  // A new list's draft, so the parent can count its people before it is saved.
+  const draft = useMemo(
+    () => (list || !hasDraft ? null : { emails: parseEmails(text).valid, access }),
+    [list, hasDraft, text, access],
+  );
+  useEffect(() => onDraftChange?.(draft), [draft, onDraftChange]);
+
+  const fail = (message: string) => {
+    setError(message);
+
+    return null;
+  };
+
   const submit = async () => {
     const trimmed = name.trim();
     const { valid, invalid } = parseEmails(text);
-    if (!trimmed) return setError('Give the list a name.');
-    if (conflict) return setError('This list changed in another window. Reload the saved version first.');
-    if (isNameTaken(config, trimmed, baseline?.id))
-      return setError(`A list called "${trimmed}" already exists.`);
+    if (!trimmed) return fail('Give the list a name.');
+    if (conflict) return fail('This list changed in another window. Reload the saved version first.');
+    if (isNameTaken(config, trimmed, baseline?.id)) return fail(`A list called "${trimmed}" already exists.`);
     if (invalid.length)
-      return setError(
+      return fail(
         `Fix or remove the invalid addresses: ${invalid.slice(0, 3).join(', ')}${invalid.length > 3 ? '…' : ''}`,
       );
-    if (!valid.length) return setError('Add at least one email address.');
+    if (!valid.length) return fail('Add at least one email address.');
 
     const next = baseline
       ? { ...baseline, name: trimmed, emails: valid, access }
@@ -97,7 +128,7 @@ export function ListForm({ config, save, list, onSaved, onCancel }: Props) {
     setBusy(true);
 
     try {
-      await save({ type: 'save-list', list: next, expected: baseline });
+      const saved = await save({ type: 'save-list', list: next, expected: baseline });
 
       if (!baseline) {
         setName('');
@@ -113,12 +144,16 @@ export function ListForm({ config, save, list, onSaved, onCancel }: Props) {
 
       setError('');
       onSaved?.(next);
+
+      return { list: next, config: saved };
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      return fail(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
     }
   };
+
+  useImperativeHandle(ref, () => ({ hasDraft: () => hasDraft, submit }));
 
   const remove = async () => {
     if (!baseline || conflict || !window.confirm(`Delete the list "${baseline.name}"?`)) return;
