@@ -12,8 +12,6 @@ ArtiShare is a Chrome extension. You save groups of email addresses as **lists**
   <img src="docs/images/done.png" width="250" alt="Finished run: every invite sent">
 </p>
 
-> **Status:** reading who has access works against claude.ai. Sending an invite uses the same request as the Share menu ([docs/claude-share-api.md](docs/claude-share-api.md)), but it hasn't been tested on a live artifact yet. Try it on a throwaway artifact first.
-
 ## Contents
 
 - [How it works](#how-it-works)
