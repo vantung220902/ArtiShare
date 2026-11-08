@@ -88,4 +88,17 @@ describe('planArtifact', () => {
     expect(plan.toInvite.map((i) => i.email)).toEqual(['tung@gmail.com']);
     expect(plan.sameInbox).toEqual([{ email: 'tung+03@gmail.com', as: 'tung@gmail.com' }]);
   });
+
+  it('uses the highest requested access across Gmail aliases of one inbox', () => {
+    const plan = planArtifact({
+      artifact,
+      desired: [
+        { email: 'tung+tag@gmail.com', access: 'view' },
+        { email: 'tung@gmail.com', access: 'edit' },
+      ],
+      existing: [],
+    });
+    expect(plan.toInvite).toEqual([{ email: 'tung+tag@gmail.com', access: 'edit' }]);
+    expect(plan.sameInbox).toEqual([{ email: 'tung@gmail.com', as: 'tung+tag@gmail.com' }]);
+  });
 });

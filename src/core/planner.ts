@@ -1,6 +1,6 @@
 import type { Invitee } from './config';
 import { inboxKey } from './emails';
-import type { ArtifactRef, Sharee } from './types';
+import { ACCESS_LEVELS, type ArtifactRef, type Sharee } from './types';
 
 export interface ArtifactPlan {
   artifact: ArtifactRef;
@@ -34,7 +34,7 @@ export interface PlanInput {
 export function planArtifact({ artifact, desired, existing, selfEmail }: PlanInput): ArtifactPlan {
   const existingByInbox = new Map(existing.map((s) => [inboxKey(s.email), s]));
   const self = selfEmail ? inboxKey(selfEmail) : undefined;
-  const planned = new Map<string, string>();
+  const planned = new Map<string, Invitee>();
   const plan: ArtifactPlan = { artifact, toInvite: [], alreadyShared: [], self: [], sameInbox: [] };
 
   for (const { email, access } of desired) {
@@ -57,10 +57,13 @@ export function planArtifact({ artifact, desired, existing, selfEmail }: PlanInp
       });
     } else if (planned.has(key)) {
       // Inviting both would leave only the last one invited.
-      plan.sameInbox.push({ email, as: planned.get(key)! });
+      const first = planned.get(key)!;
+      plan.sameInbox.push({ email, as: first.email });
+      if (ACCESS_LEVELS.indexOf(access) > ACCESS_LEVELS.indexOf(first.access)) first.access = access;
     } else {
-      planned.set(key, email);
-      plan.toInvite.push({ email, access });
+      const invite = { email, access };
+      planned.set(key, invite);
+      plan.toInvite.push(invite);
     }
   }
 

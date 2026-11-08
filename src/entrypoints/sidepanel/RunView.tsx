@@ -39,6 +39,7 @@ export function RunView({ run }: { run: RunState }) {
             {RUN_STATUS_LABELS[run.status]}
           </span>
         </div>
+        {run.accountEmail && <p className="hint">Previewed as {run.accountEmail}</p>}
         <div className={run.status === 'running' ? 'progress running' : 'progress'}>
           <div style={{ width: `${pct}%` }} />
         </div>
@@ -49,9 +50,14 @@ export function RunView({ run }: { run: RunState }) {
           {s.pending > 0 && <span className="chip">{s.pending} left</span>}
         </div>
         {run.reason && <p className="alert warn">{run.reason}</p>}
+        {run.status === 'stopped' && s.pending > 0 && !run.accountEmail && (
+          <p className="alert warn">
+            This run predates account verification. Start a new share to recheck existing invitations.
+          </p>
+        )}
         <div className="row">
           {run.status === 'running' && <button onClick={() => act('stop')}>Stop</button>}
-          {run.status === 'stopped' && s.pending > 0 && (
+          {run.status === 'stopped' && s.pending > 0 && run.accountEmail && (
             <button className="primary" onClick={() => act('resume')}>
               Resume
             </button>

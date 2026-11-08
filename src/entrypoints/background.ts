@@ -1,10 +1,10 @@
 import { createApiShareClient } from '../claude/apiShareClient';
 import { createFakeShareClient } from '../claude/fakeShareClient';
-import type { Account, ShareClient } from '../claude/shareClient';
+import type { ShareClient } from '../claude/shareClient';
 import { createConfigController } from '../lib/configController';
 import { planArtifact } from '../core/planner';
 import { abortableSleep } from '../core/runner';
-import type { Envelope, Messages, PreviewResult, Reply } from '../lib/messages';
+import type { Envelope, Messages, PreviewResponse, PreviewResult, Reply } from '../lib/messages';
 import { createRunManager } from '../lib/runManager';
 import { loadConfig, loadRun, saveConfig, saveRun } from '../lib/storage';
 
@@ -14,8 +14,6 @@ const configController = createConfigController(loadConfig, saveConfig);
 
 /** Pause between invites (plus up to half again of random jitter), to stay clear of rate limits. */
 const INVITE_DELAY_MS = 800;
-
-let account: Account | null = null;
 
 /**
  * MV3 service workers are shut down after ~30s without extension API activity. Long backoffs
@@ -43,14 +41,8 @@ const runManager = createRunManager({
   sleep: keepAliveSleep,
 });
 
-async function whoami(): Promise<Account> {
-  account ??= await client.whoami();
-
-  return account;
-}
-
-async function preview(req: Messages['preview']['req']): Promise<PreviewResult[]> {
-  const me = await whoami().catch(() => null);
+async function preview(req: Messages['preview']['req']): Promise<PreviewResponse> {
+  const me = await client.whoami();
   const results: PreviewResult[] = [];
 
   for (const artifact of req.artifacts) {
@@ -58,14 +50,14 @@ async function preview(req: Messages['preview']['req']): Promise<PreviewResult[]
       const existing = await client.listSharees(artifact);
       results.push({
         artifact,
-        plan: planArtifact({ artifact, desired: req.invites, existing, selfEmail: me?.email }),
+        plan: planArtifact({ artifact, desired: req.invites, existing, selfEmail: me.email }),
       });
     } catch (err) {
       results.push({ artifact, error: (err as Error).message });
     }
   }
 
-  return results;
+  return { account: me, results };
 }
 
 async function handle(msg: Envelope): Promise<unknown> {
@@ -75,13 +67,11 @@ async function handle(msg: Envelope): Promise<unknown> {
     case 'config-change':
       return configController.change(msg.change);
     case 'whoami':
-      account = null;
-
-      return whoami();
+      return client.whoami();
     case 'preview':
       return preview(msg);
     case 'start':
-      await runManager.start(msg.label, msg.plans);
+      await runManager.start(msg.label, msg.plans, msg.accountEmail);
 
       return null;
     case 'stop':

@@ -40,13 +40,16 @@ const V1Schema = z.object({
   lists: z.record(z.string(), z.array(z.string())).default({}),
 });
 
-/** Reads the stored config, upgrading the 0.1.0 format. Anything unreadable gives an empty config. */
+/** Reads the stored config, upgrading the 0.1.0 format without overwriting unreadable data. */
 export function loadStoredConfig(raw: unknown): Config {
+  if (raw == null) return structuredClone(EMPTY_CONFIG);
   const current = ConfigSchema.safeParse(raw);
   if (current.success) return current.data;
 
   const v1 = V1Schema.safeParse(raw);
-  if (!v1.success) return structuredClone(EMPTY_CONFIG);
+  if (!v1.success) {
+    throw new Error('Saved lists have an unsupported or damaged format. They were not changed.');
+  }
   const lists = Object.entries(v1.data.lists)
     .filter(([name]) => name.trim())
     .map(([name, emails]) => createList(name, emails, v1.data.defaults.access));
