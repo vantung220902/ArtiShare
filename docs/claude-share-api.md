@@ -27,6 +27,9 @@ invitation's id.
   For example `2PUa7qFdoBcApzhmHVvA4K` → `0b3c7e2a-1f4d-4a8e-9c2b-5d6e7f8a9b0c`.
   See `artifactUuid()` in `src/core/artifactUrl.ts`.
 - `claude.ai/code/artifact/{uuid}`: already the UUID (not yet checked against a live code artifact).
+- `claude.ai/chat/{chat}?artifact={uuid}` (an artifact open beside a chat): `{uuid}` is the
+  artifact's UUID, accepted as-is by `/api/frame/...` (checked November 2026). The extension
+  turns it into the matching `claude.ai/artifact/{id}` link.
 - Organization: the `lastActiveOrg` cookie (readable from page script) is the org selected in
   claude.ai. `GET /api/account` lists all of the user's orgs under `memberships[].organization.uuid`.
   An artifact in a different org answers `403` for the wrong `org`, so the client tries the active

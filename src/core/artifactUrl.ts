@@ -10,6 +10,7 @@ const BARE_ID_RE = /^(?=.*\d)(?=.*[A-Za-z])[A-Za-z0-9]{20,24}$/;
  * Parses an artifact reference. Accepts:
  *  - https://claude.ai/artifact/{id}
  *  - https://claude.ai/code/artifact/{uuid}
+ *  - https://claude.ai/chat/{chat}?artifact={uuid} (an artifact open beside a chat)
  *  - either form without the scheme, with a query string or hash
  *  - a bare id or uuid
  */
@@ -37,6 +38,13 @@ export function parseArtifactRef(input: string): ArtifactRef | null {
 
     if (parts[0] === 'code' && parts[1] === 'artifact' && parts[2] && UUID_RE.test(parts[2])) {
       return make('code-artifact', parts[2].toLowerCase());
+    }
+
+    // A chat with an artifact panel open names the artifact's API uuid in ?artifact=.
+    const chatArtifact = url.searchParams.get('artifact');
+
+    if (parts[0] === 'chat' && chatArtifact && UUID_RE.test(chatArtifact)) {
+      return make('artifact', uuidToBase58(chatArtifact));
     }
 
     return null;
@@ -76,6 +84,19 @@ export function artifactUuid(ref: ArtifactRef): string | null {
   const hex = n.toString(16).padStart(32, '0');
 
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+/** The claude.ai/artifact/{id} id for an artifact UUID: the inverse of `artifactUuid()`. */
+function uuidToBase58(uuid: string): string {
+  let n = BigInt(`0x${uuid.replace(/-/g, '')}`);
+  let out = '';
+
+  while (n > 0n) {
+    out = BASE58.charAt(Number(n % 58n)) + out;
+    n /= 58n;
+  }
+
+  return out || '1';
 }
 
 export interface ParsedArtifacts {

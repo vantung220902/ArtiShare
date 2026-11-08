@@ -22,6 +22,23 @@ describe('parseArtifactRef', () => {
     });
   });
 
+  it('parses a chat link with an open artifact into its claude.ai/artifact link', () => {
+    const chat = 'https://claude.ai/chat/525fbb5c-c437-4680-bfdb-09332bdf678a';
+    const ref = parseArtifactRef(`${chat}?artifact=${UUID.toUpperCase()}`);
+    expect(ref).toEqual({
+      id: '2PUa7qFdoBcApzhmHVvA4K',
+      kind: 'artifact',
+      url: 'https://claude.ai/artifact/2PUa7qFdoBcApzhmHVvA4K',
+    });
+    expect(artifactUuid(ref!)).toBe(UUID);
+    expect(parseArtifactRef(`claude.ai/chat/abc?artifact=${UUID}`)?.id).toBe('2PUa7qFdoBcApzhmHVvA4K');
+  });
+
+  it('round-trips uuids with leading zero bytes through chat links', () => {
+    const small = '00000000-0000-4000-8000-000000000001';
+    expect(artifactUuid(parseArtifactRef(`https://claude.ai/chat/x?artifact=${small}`)!)).toBe(small);
+  });
+
   it('accepts bare ids and uuids', () => {
     expect(parseArtifactRef(ID)?.kind).toBe('artifact');
     expect(parseArtifactRef(UUID)?.kind).toBe('code-artifact');
@@ -30,6 +47,8 @@ describe('parseArtifactRef', () => {
   it('rejects other hosts, other paths and plain words', () => {
     expect(parseArtifactRef(`https://evil.example/artifact/${ID}`)).toBeNull();
     expect(parseArtifactRef('https://claude.ai/chat/123')).toBeNull();
+    expect(parseArtifactRef('https://claude.ai/chat/123?artifact=not-a-uuid')).toBeNull();
+    expect(parseArtifactRef(`https://claude.ai/project/123?artifact=${UUID}`)).toBeNull();
     expect(parseArtifactRef('artifacts')).toBeNull();
     expect(parseArtifactRef('')).toBeNull();
   });
