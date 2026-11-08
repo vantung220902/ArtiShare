@@ -102,7 +102,18 @@ export function App() {
 
       {/* Both tabs stay mounted so switching doesn't lose what you've typed. */}
       <div id="panel-share" role="tabpanel" aria-labelledby="tab-share" hidden={tab !== 'share'}>
-        {run ? <RunView run={run} /> : <ShareView config={config} save={save} />}
+        {run ? (
+          <RunView run={run} />
+        ) : (
+          <ShareView
+            config={config}
+            save={save}
+            onAccount={(next) => {
+              setAccount(next);
+              setAccountError('');
+            }}
+          />
+        )}
       </div>
       <div id="panel-lists" role="tabpanel" aria-labelledby="tab-lists" hidden={tab !== 'lists'}>
         <ListsView config={config} save={save} />

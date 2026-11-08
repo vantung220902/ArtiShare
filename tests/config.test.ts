@@ -53,9 +53,19 @@ describe('loadStoredConfig', () => {
     expect(c.lists[0]?.access).toBe('view');
   });
 
-  it('falls back to an empty config for anything else', () => {
-    for (const raw of [undefined, null, 'yaml', { version: 3 }, { version: 2, lists: 'nope' }]) {
-      expect(loadStoredConfig(raw)).toEqual(EMPTY_CONFIG);
+  it('starts empty only when there is no saved config', () => {
+    expect(loadStoredConfig(undefined)).toEqual(EMPTY_CONFIG);
+    expect(loadStoredConfig(null)).toEqual(EMPTY_CONFIG);
+  });
+
+  it('refuses damaged or newer data so a save cannot overwrite it', () => {
+    for (const raw of [
+      'yaml',
+      { version: 3 },
+      { version: 2, lists: 'nope' },
+      { version: 2, lists: [acme, { id: 'bad', name: '', emails: [], access: 'view' }] },
+    ]) {
+      expect(() => loadStoredConfig(raw)).toThrow(/unsupported or damaged/);
     }
   });
 });

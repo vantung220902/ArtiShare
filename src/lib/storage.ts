@@ -8,6 +8,8 @@ export interface RunState {
   id: string;
   label: string;
   createdAt: number;
+  /** Optional only for runs saved by an older extension version. */
+  accountEmail?: string;
   status: 'running' | 'stopped' | 'completed';
   reason?: string;
   items: RunItem[];
