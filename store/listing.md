@@ -69,18 +69,18 @@ ArtiShare does one thing: it invites saved lists of email addresses to the user'
 
 **Permission justifications:**
 
-| Permission                 | Justification                                                                                                                                                                                  |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `storage`                  | Saves the user's lists (name, email addresses and permission) and the progress of the current invitation run on the device, so the lists are there next time and a stopped run can be resumed. |
-| `sidePanel`                | The whole interface is a side panel that opens next to claude.ai when the user clicks the toolbar icon.                                                                                        |
-| `scripting`                | Runs ArtiShare's requests inside the user's open claude.ai tab, so they use the user's own claude.ai session, just as the Share menu does. It's used only on claude.ai tabs.                   |
-| Host `https://claude.ai/*` | Needed to run those requests in claude.ai tabs, and to read the address of the current claude.ai tab for the "Current tab" button. The extension doesn't access any other site.                |
+| Permission                 | Justification                                                                                                                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `storage`                  | Saves the user's lists (name, email addresses and permission), the current run's progress, and the signed-in account email used to verify a resumed run.                        |
+| `sidePanel`                | The whole interface is a side panel that opens next to claude.ai when the user clicks the toolbar icon.                                                                         |
+| `scripting`                | Runs ArtiShare's requests inside the user's open claude.ai tab, so they use the user's own claude.ai session, just as the Share menu does. It's used only on claude.ai tabs.    |
+| Host `https://claude.ai/*` | Needed to run those requests in claude.ai tabs, and to read the address of the current claude.ai tab for the "Current tab" button. The extension doesn't access any other site. |
 
 **Remote code:** No, I am not using remote code. All JavaScript is bundled in the package.
 
 **Data usage.** Tick these:
 
-- **Personally identifiable information.** These are the email addresses in the user's lists, and the user's own claude.ai email address, which is read to skip it.
+- **Personally identifiable information.** These are the email addresses in the user's lists, and the user's own claude.ai email address, which is used to skip it and verify a resumed run.
 - **Website content.** This is the list of who already has access to each artifact, read from claude.ai before inviting.
 
 Leave the other categories unticked. Then tick all three certifications:
