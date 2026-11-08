@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { parseArtifactList, parseArtifactRef } from '../../core/artifactUrl';
 import { type Config, defaultListIds, type Invitee, resolveInvites } from '../../core/config';
 import { ACCESS_LABELS, type AccessLevel, type ArtifactRef } from '../../core/types';
 import { type PreviewResult, send } from '../../lib/messages';
 import { BackIcon, PlusIcon, SendIcon } from '../../ui/icons';
 import { ListBadge } from '../../ui/ListBadge';
-import { ListForm } from '../../ui/ListForm';
+import { type ListDraft, ListForm, type ListFormHandle } from '../../ui/ListForm';
 import { ArtifactLink, EmailGroup } from './viewComponents';
 import { byName, people, plural, type Save } from './viewUtils';
 
@@ -29,6 +29,8 @@ export function ShareView({ config, save }: { config: Config; save: Save }) {
   const [preview, setPreview] = useState<{ draft: Draft; results: PreviewResult[] } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [draft, setDraft] = useState<ListDraft | null>(null);
+  const form = useRef<ListFormHandle>(null);
 
   // Start from the artifact you're looking at.
   useEffect(() => {
@@ -42,8 +44,13 @@ export function ShareView({ config, save }: { config: Config; save: Save }) {
 
   const lists = byName(config.lists);
   const artifacts = parseArtifactList(artifactText);
-  const invites = useMemo(() => resolveInvites(config, selected), [config, selected]);
   const showForm = creating || lists.length === 0;
+  const invites = useMemo(() => resolveInvites(config, selected), [config, selected]);
+  // The button counts an unsaved new list too, since Preview saves it first.
+  const draftList = showForm && draft ? { id: 'draft', name: '', ...draft } : null;
+  const previewCount = draftList
+    ? resolveInvites({ ...config, lists: [...config.lists, draftList] }, [...selected, draftList.id]).length
+    : invites.length;
 
   const toggle = (id: string, on: boolean) =>
     setSelected((ids) => (on ? [...ids, id] : ids.filter((x) => x !== id)));
@@ -60,17 +67,30 @@ export function ShareView({ config, save }: { config: Config; save: Save }) {
     setError('');
     if (!artifacts.refs.length) return setError('Add at least one artifact.');
     if (artifacts.invalid.length) return setError(`Not artifact links: ${artifacts.invalid.join(', ')}`);
-    if (!invites.length) return setError('Tick a list, or create one.');
-    const label = lists
-      .filter((l) => selected.includes(l.id))
+    let current = { config, selected, invites };
+
+    // A new list typed but not saved is meant to be shared with: save it first, like Save list would.
+    if (showForm && form.current?.hasDraft()) {
+      setBusy(true);
+      const saved = await form.current.submit();
+      setBusy(false);
+      // The form shows why it could not save.
+      if (!saved) return;
+      const ids = [...selected, saved.list.id];
+      current = { config: saved.config, selected: ids, invites: resolveInvites(saved.config, ids) };
+    }
+
+    if (!current.invites.length) return setError('Tick a list, or create one.');
+    const label = byName(current.config.lists)
+      .filter((l) => current.selected.includes(l.id))
       .map((l) => l.name)
       .join(', ');
-    const draft: Draft = { label, artifacts: artifacts.refs, invites };
+    const next: Draft = { label, artifacts: artifacts.refs, invites: current.invites };
     setBusy(true);
 
     try {
-      const results = await send('preview', { artifacts: draft.artifacts, invites: draft.invites });
-      setPreview({ draft, results });
+      const results = await send('preview', { artifacts: next.artifacts, invites: next.invites });
+      setPreview({ draft: next, results });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -129,6 +149,7 @@ export function ShareView({ config, save }: { config: Config; save: Save }) {
         {showForm ? (
           <div className="subcard">
             <ListForm
+              ref={form}
               config={config}
               save={save}
               onSaved={(list) => {
@@ -136,6 +157,7 @@ export function ShareView({ config, save }: { config: Config; save: Save }) {
                 setCreating(false);
               }}
               onCancel={lists.length ? () => setCreating(false) : undefined}
+              onDraftChange={setDraft}
             />
           </div>
         ) : (
@@ -149,7 +171,7 @@ export function ShareView({ config, save }: { config: Config; save: Save }) {
       <button className="primary block" onClick={runPreview} disabled={busy}>
         {busy
           ? 'Checking current access…'
-          : `Preview ${people(invites.length)} × ${plural(artifacts.refs.length, 'artifact')}`}
+          : `Preview ${people(previewCount)} × ${plural(artifacts.refs.length, 'artifact')}`}
       </button>
       <p className="hint center">
         Preview only reads who already has access. Nothing is sent until you confirm.
