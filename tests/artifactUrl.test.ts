@@ -60,6 +60,13 @@ describe('parseArtifactList', () => {
     expect(r.refs.map((x) => x.id)).toEqual([ID, UUID]);
     expect(r.invalid).toEqual(['https://example.com/x']);
   });
+
+  it('keeps one job when base58 and UUID links identify the same artifact', () => {
+    const refs = parseArtifactList(
+      `https://claude.ai/artifact/2PUa7qFdoBcApzhmHVvA4K\nhttps://claude.ai/code/artifact/${UUID}`,
+    ).refs;
+    expect(refs.map((ref) => ref.id)).toEqual(['2PUa7qFdoBcApzhmHVvA4K']);
+  });
 });
 
 describe('artifactUuid', () => {

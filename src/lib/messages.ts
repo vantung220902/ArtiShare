@@ -9,13 +9,18 @@ export interface PreviewResult {
   error?: string;
 }
 
+export interface PreviewResponse {
+  account: Account;
+  results: PreviewResult[];
+}
+
 export interface Messages {
   'config-get': { req: Record<string, never>; res: Config };
   'config-change': { req: { change: ConfigChange }; res: Config };
   whoami: { req: Record<string, never>; res: Account };
-  preview: { req: { artifacts: ArtifactRef[]; invites: Invitee[] }; res: PreviewResult[] };
+  preview: { req: { artifacts: ArtifactRef[]; invites: Invitee[] }; res: PreviewResponse };
   /** `label` names the run in the side panel, e.g. the lists it came from. */
-  start: { req: { label: string; plans: ArtifactPlan[] }; res: null };
+  start: { req: { label: string; plans: ArtifactPlan[]; accountEmail: string }; res: null };
   stop: { req: Record<string, never>; res: null };
   resume: { req: Record<string, never>; res: null };
   clear: { req: Record<string, never>; res: null };

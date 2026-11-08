@@ -225,8 +225,17 @@ export function errorFromResponse(res: PageResponse, context: string): ShareErro
 
   if (res.status === 429) {
     const secs = Number(res.retryAfter);
+    const dateMs = res.retryAfter ? Date.parse(res.retryAfter) - Date.now() : NaN;
 
-    return new ShareError(msg, 'rate-limited', Number.isFinite(secs) && secs > 0 ? secs * 1000 : undefined);
+    return new ShareError(
+      msg,
+      'rate-limited',
+      Number.isFinite(secs) && secs > 0
+        ? secs * 1000
+        : Number.isFinite(dateMs) && dateMs > 0
+          ? dateMs
+          : undefined,
+    );
   }
 
   if (res.status >= 500) return new ShareError(msg, 'server');

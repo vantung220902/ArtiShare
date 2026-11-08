@@ -109,6 +109,8 @@ Invites go out one at a time from the background, with a short pause between the
 
 - **Stop** pauses the run. **Resume** continues where it left off.
 - If the browser restarts mid-run, the run is kept and can be resumed.
+- A run stays tied to the claude.ai account used for Preview. If you switch accounts, sign back in as that account before resuming.
+- A stopped run saved by an older version without account verification cannot resume. Start a new share; Preview will recheck who has already been invited.
 - When it's done, click **New share** to start again.
 
 ## Good to know
@@ -116,7 +118,7 @@ Invites go out one at a time from the background, with a short pause between the
 - **Runs recheck email invitations before sending.** Addresses already in Claude's invitation list are skipped. On Team and Enterprise plans, check direct organization-member access in Claude separately.
 - **Two lists, one person.** If someone is in two ticked lists, they get the higher of the two permissions.
 - **Your own address is skipped**, since you own the artifact.
-- **Rate limits are handled.** The run backs off and retries when claude.ai asks it to slow down, and it stops after repeated failures instead of hammering the server.
+- **Rate limits are handled.** The run backs off and retries when claude.ai asks it to slow down. If the limit persists, it stops with that address pending so you can resume later.
 
 ## Limits
 

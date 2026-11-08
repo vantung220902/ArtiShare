@@ -50,4 +50,20 @@ describe('config controller', () => {
     ]);
     expect(read().defaultSelection).toEqual({ mode: 'some', listIds: [a.id, b.id] });
   });
+
+  it('reads storage again before changing it, preserving edits from another context', async () => {
+    let saved = structuredClone(EMPTY_CONFIG);
+    const controller = createConfigController(
+      async () => structuredClone(saved),
+      async (next) => {
+        saved = structuredClone(next);
+      },
+    );
+    await controller.get();
+    const external = createList('External', ['external@x.io'], 'view');
+    saved = { ...saved, lists: [external] };
+    const local = createList('Local', ['local@x.io'], 'view');
+    await controller.change({ type: 'save-list', list: local, expected: null });
+    expect(saved.lists.map((list) => list.name)).toEqual(['External', 'Local']);
+  });
 });

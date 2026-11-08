@@ -104,7 +104,7 @@ export interface ParsedArtifacts {
   invalid: string[];
 }
 
-/** Parses one reference per line (or whitespace/comma separated), de-duplicating by id. */
+/** Parses one reference per line (or whitespace/comma separated), de-duplicating by artifact UUID. */
 export function parseArtifactList(text: string | readonly string[]): ParsedArtifacts {
   const tokens = typeof text === 'string' ? text.split(/[\s,]+/) : text;
   const refs: ArtifactRef[] = [];
@@ -121,7 +121,8 @@ export function parseArtifactList(text: string | readonly string[]): ParsedArtif
       continue;
     }
 
-    const key = `${ref.kind}:${ref.id}`;
+    // The base58 and UUID URLs can identify the same artifact and must not create two jobs.
+    const key = artifactUuid(ref) ?? `${ref.kind}:${ref.id}`;
     if (seen.has(key)) continue;
     seen.add(key);
     refs.push(ref);
