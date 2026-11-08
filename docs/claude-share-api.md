@@ -74,6 +74,12 @@ to organization members. Personal Pro, Max, and Ultra plans do not have this dir
 Errors: wrong org or no permission → `403` (`{"type":"error","error":{"type":"permission_error",…},"code":"permission_denied"}`);
 unknown artifact → `404` (`not found`, plain text).
 
+One invitation per person: claude.ai treats Gmail `+tag` aliases as the same person. Inviting
+`name+tag@gmail.com` replaces a pending invitation to `name@gmail.com` (and the other way round),
+so the list only ever shows the latest address (checked November 2026). The extension matches
+addresses with `inboxKey()` in `src/core/emails.ts`. Dots in Gmail addresses and `+tag` on other
+domains have not been checked.
+
 Role names map to the Share menu's labels: `reader` = Can view, `commenter` = Commenter,
 `editor` = Can edit.
 

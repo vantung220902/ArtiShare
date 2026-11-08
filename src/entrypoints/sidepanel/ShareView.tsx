@@ -229,6 +229,12 @@ function Preview({ draft, results, onBack }: { draft: Draft; results: PreviewRes
                   </div>
                 </div>
                 {r.plan.self.length > 0 && <p className="hint">Your own address is skipped.</p>}
+                {r.plan.sameInbox.map((s) => (
+                  <p key={s.email} className="hint">
+                    {s.email} is skipped: claude.ai treats it as the same person as {s.as}, and keeps one
+                    invitation per person.
+                  </p>
+                ))}
                 <EmailGroup
                   title="Will be invited"
                   emails={r.plan.toInvite.map((i) => `${i.email} · ${ACCESS_LABELS[i.access]}`)}
@@ -239,7 +245,7 @@ function Preview({ draft, results, onBack }: { draft: Draft; results: PreviewRes
                     (s) =>
                       `${s.email} · ${s.access in ACCESS_LABELS ? ACCESS_LABELS[s.access as AccessLevel] : s.access}${
                         s.status === 'pending' ? ' (pending)' : ''
-                      }`,
+                      }${s.as ? ` · invited as ${s.as}` : ''}`,
                   )}
                 />
               </>

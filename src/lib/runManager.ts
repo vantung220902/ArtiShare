@@ -1,5 +1,6 @@
 import type { ShareClient } from '../claude/shareClient';
 import { type RunItem, runInvites, summarize, type RunOptions } from '../core/runner';
+import { inboxKey } from '../core/emails';
 import type { ArtifactPlan } from '../core/planner';
 import type { RunState } from './storage';
 
@@ -58,10 +59,10 @@ export function createRunManager({ client, load, save, delayMs, jitterMs, sleep 
     for (const group of groups.values()) {
       const artifact = group[0]!.artifact;
       const existing = await client.listSharees(artifact);
-      const shared = new Set(existing.map((person) => person.email.toLowerCase()));
+      const shared = new Set(existing.map((person) => inboxKey(person.email)));
 
       for (const item of group) {
-        if (shared.has(item.email.toLowerCase())) {
+        if (shared.has(inboxKey(item.email))) {
           item.status = 'skipped';
           item.error = 'Already has access or a pending invitation; no invitation repeated.';
         } else {

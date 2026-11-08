@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { domainOf, isValidEmail, mergeEmails, normalizeEmail, parseEmails } from '../src/core/emails';
+import {
+  domainOf,
+  inboxKey,
+  isValidEmail,
+  mergeEmails,
+  normalizeEmail,
+  parseEmails,
+} from '../src/core/emails';
 
 describe('normalizeEmail', () => {
   it('trims, lowercases and strips wrappers', () => {
@@ -74,5 +81,14 @@ describe('domainOf', () => {
   it('returns the lowercased domain', () => {
     expect(domainOf('a@NimbleHQ.co')).toBe('nimblehq.co');
     expect(domainOf('nodomain')).toBe('');
+  });
+});
+
+describe('inboxKey', () => {
+  it('drops the +tag of Gmail addresses only', () => {
+    expect(inboxKey('Tung+03@Gmail.com')).toBe('tung@gmail.com');
+    expect(inboxKey('tung+x@googlemail.com')).toBe('tung@googlemail.com');
+    expect(inboxKey('t.ung@gmail.com')).toBe('t.ung@gmail.com');
+    expect(inboxKey('tung+03@acme.com')).toBe('tung+03@acme.com');
   });
 });

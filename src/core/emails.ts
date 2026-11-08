@@ -69,6 +69,21 @@ export function parseEmails(text: string): ParsedEmails {
   return { valid, invalid, duplicates: [...dupes] };
 }
 
+const PLUS_ALIAS_DOMAINS = new Set(['gmail.com', 'googlemail.com']);
+
+/**
+ * The key claude.ai keeps one invitation per. It treats Gmail "+tag" aliases as the same person:
+ * inviting name+tag@gmail.com replaces a pending invitation to name@gmail.com, and the other way round
+ * (checked November 2026). Other domains, and dots in Gmail addresses, are compared as written.
+ */
+export function inboxKey(email: string): string {
+  const lower = email.trim().toLowerCase();
+  const at = lower.lastIndexOf('@');
+  if (at === -1 || !PLUS_ALIAS_DOMAINS.has(lower.slice(at + 1))) return lower;
+
+  return `${lower.slice(0, at).replace(/\+.*$/, '')}@${lower.slice(at + 1)}`;
+}
+
 /** Merges several address lists into one normalized, de-duplicated list (first-seen order). */
 export function mergeEmails(...lists: readonly (readonly string[])[]): string[] {
   const out: string[] = [];
