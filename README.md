@@ -175,7 +175,9 @@ The manifest's `key` in `wxt.config.ts` pins the extension ID. Without it, Chrom
 npm run release:store
 ```
 
-The store rejects a manifest with `key` and gives the extension its own ID, so `release:store` sets `ARTISHARE_STORE=true`, which leaves the key out of the build. Because the IDs differ, lists saved in the shared-drive version don't carry over to the store version. The listing text, privacy answers and images are in [store/listing.md](store/listing.md). The privacy policy is [PRIVACY.md](PRIVACY.md).
+The store rejects a manifest with `key` and gives the extension its own ID, so `release:store` sets `ARTISHARE_STORE=true`, which leaves the key out of the build. Because the IDs differ, lists saved in the shared-drive version don't carry over to the store version. The listing text, privacy answers and images are in [store/listing.md](store/listing.md). The privacy policy is [docs/privacy.html](docs/privacy.html).
+
+**Website.** GitHub Pages publishes the `docs/` folder on `develop` at https://vantung220902.github.io/ArtiShare/. It's the listing's homepage (`index.html`, with a support section) and privacy policy (`privacy.html`). Everything in `docs/` becomes public there, and `.nojekyll` makes Pages serve the files as they are.
 
 **Icons.** The PNGs in `public/icon/` are rendered from [store/icon.svg](store/icon.svg). WXT adds them to the manifest on its own. To change the icon, edit the SVG, then render the PNGs again with [librsvg](https://gitlab.gnome.org/GNOME/librsvg) and ImageMagick:
 

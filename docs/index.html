@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ArtiShare: invite lists of people to claude.ai artifacts</title>
+    <meta
+      name="description"
+      content="ArtiShare is a Chrome extension that invites saved lists of email addresses to your claude.ai artifacts in a few clicks."
+    />
+    <link rel="icon" href="images/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="site.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap">
+        <a class="brand" href="./"><img src="images/icon.svg" alt="" />ArtiShare</a>
+        <nav aria-label="Site">
+          <a href="#how-it-works">How it works</a>
+          <a href="#support">Support</a>
+          <a href="privacy.html">Privacy</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section class="hero">
+        <span class="eyebrow">Chrome extension for claude.ai</span>
+        <h1>Share a claude.ai artifact with a whole group in a few clicks.</h1>
+        <p class="lede">
+          Save the email addresses you share with often as lists, each with its own permission. Then paste one
+          or more artifact links, tick the lists, and ArtiShare sends the invitations. You don't add people
+          one by one in the Share menu, and you don't have to make the artifact public.
+        </p>
+
+        <ul class="shots">
+          <li>
+            <figure>
+              <img
+                src="images/share.png"
+                alt="Share tab: artifact links and the lists to share with"
+                width="800"
+                height="1000"
+              />
+              <figcaption>Pick artifacts and lists.</figcaption>
+            </figure>
+          </li>
+          <li>
+            <figure>
+              <img
+                src="images/preview.png"
+                alt="Preview: who will be invited and who already has access"
+                width="800"
+                height="1000"
+              />
+              <figcaption>Preview who gets invited. Nothing is sent yet.</figcaption>
+            </figure>
+          </li>
+          <li>
+            <figure>
+              <img src="images/done.png" alt="Finished run: every invite sent" width="800" height="1000" />
+              <figcaption>Follow each invite as it goes out.</figcaption>
+            </figure>
+          </li>
+        </ul>
+      </section>
+
+      <section id="how-it-works" aria-labelledby="how-heading">
+        <h2 id="how-heading">How it works</h2>
+        <ol class="steps">
+          <li>
+            <span
+              >Open <strong>claude.ai</strong> in Chrome, sign in, and click the ArtiShare icon to open the
+              side panel.</span
+            >
+          </li>
+          <li>
+            <span
+              >In <strong>Lists</strong>, give a list a name, paste the email addresses and pick a permission:
+              can view, can comment or can edit.</span
+            >
+          </li>
+          <li>
+            <span
+              >In <strong>Share</strong>, add artifact links (or the claude.ai tab you're on) and tick the
+              lists to share with.</span
+            >
+          </li>
+          <li>
+            <span
+              >Click <strong>Preview</strong> to see who will be invited and who already has an invitation.
+              Then click <strong>Send</strong>.</span
+            >
+          </li>
+        </ol>
+
+        <h3>Good to know</h3>
+        <ul>
+          <li>Your own address is skipped, and so is anyone who already has an invitation.</li>
+          <li>If someone is in two lists, they get the higher of the two permissions.</li>
+          <li>
+            Invites go out one at a time. When claude.ai asks it to slow down, the run waits and retries. You
+            can stop a run and resume it later.
+          </li>
+          <li>
+            Your lists stay in your browser. ArtiShare talks only to claude.ai, from your own signed-in tab,
+            and has no analytics. Read the <a href="privacy.html">privacy policy</a>.
+          </li>
+        </ul>
+      </section>
+
+      <section id="support" aria-labelledby="support-heading">
+        <h2 id="support-heading">Support</h2>
+        <p>
+          Something not working?
+          <a href="https://github.com/vantung220902/ArtiShare/issues/new">Open an issue on GitHub</a>. Please
+          include:
+        </p>
+        <ul>
+          <li>the ArtiShare version, shown at the bottom of the side panel;</li>
+          <li>what you clicked, and what you expected to happen;</li>
+          <li>the reason shown next to any invite marked <em>Failed</em>.</li>
+        </ul>
+        <p>Issues are public, so leave out artifact links and other people's email addresses.</p>
+
+        <h3>Common problems</h3>
+        <div class="card">
+          <ul>
+            <li>
+              <strong>"Not signed in" or "You are signed out of claude.ai."</strong> Open claude.ai in the
+              same Chrome profile and sign in with the account that owns the artifact, then try again.
+            </li>
+            <li>
+              <strong>"The signed-in account changed."</strong> A run stays tied to the claude.ai account you
+              used for Preview. Sign back in as that account, then click <strong>Resume</strong>.
+            </li>
+            <li>
+              <strong>An artifact stops partway.</strong> claude.ai allows at most 50 people from outside your
+              organization per artifact, and pending invitations count toward it.
+            </li>
+            <li>
+              <strong>The run stops with invites still pending.</strong> Your account has reached claude.ai's
+              daily invitation limit. Click <strong>Resume</strong> the next day.
+            </li>
+            <li>
+              <strong>An artifact can't be shared at all.</strong> claude.ai doesn't share artifacts that
+              connect to other websites by email. On Enterprise plans, an admin must first turn on email
+              invitations outside your organization.
+            </li>
+          </ul>
+        </div>
+        <p class="after-card">
+          Email sharing on claude.ai is in beta and has no public API. ArtiShare uses the same requests as the
+          Share menu, so a change on claude.ai's side can break it. If invites suddenly start failing, please
+          open an issue.
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <span>ArtiShare is an independent tool. It isn't made, endorsed or supported by Anthropic.</span>
+        <nav aria-label="Footer">
+          <a href="privacy.html">Privacy</a>
+          <a href="https://github.com/vantung220902/ArtiShare">Source</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

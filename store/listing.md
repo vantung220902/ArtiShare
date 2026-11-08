@@ -2,6 +2,8 @@
 
 Copy for the [Developer Dashboard](https://chrome.google.com/webstore/devconsole). The fields are in dashboard order. Images are in [`images/`](images/) and the icon source is [`icon.svg`](icon.svg).
 
+The homepage, support and privacy URLs point at the GitHub Pages site built from [`docs/`](../docs/), not at github.com. The store's URL check timed out on github.com repo pages.
+
 ## Package
 
 Upload `.output/artishare-<version>-chrome-store.zip`. To build it, run `npm run release:store`. Each upload needs a higher `version` in `package.json` than the last one.
@@ -53,9 +55,9 @@ ArtiShare is an independent tool. It isn't made, endorsed or supported by Anthro
 | Small promo tile   | [`images/promo-tile-440x280.png`](images/promo-tile-440x280.png)                                                                                                                                       |
 | Marquee promo tile | Leave empty. It's optional.                                                                                                                                                                            |
 
-**Homepage URL:** https://github.com/vantung220902/ArtiShare
+**Homepage URL:** https://vantung220902.github.io/ArtiShare/
 
-**Support URL:** https://github.com/vantung220902/ArtiShare/issues
+**Support URL:** https://vantung220902.github.io/ArtiShare/#support
 
 ## Privacy tab
 
@@ -87,7 +89,7 @@ Leave the other categories unticked. Then tick all three certifications:
 - I do not use or transfer user data for purposes that are unrelated to my item's single purpose.
 - I do not use or transfer user data to determine creditworthiness or for lending purposes.
 
-**Privacy policy URL:** https://github.com/vantung220902/ArtiShare/blob/develop/PRIVACY.md
+**Privacy policy URL:** https://vantung220902.github.io/ArtiShare/privacy.html
 
 ## Distribution tab
 
