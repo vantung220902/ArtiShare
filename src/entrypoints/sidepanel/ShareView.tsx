@@ -29,8 +29,11 @@ export function ShareView({
   save,
   onAccount,
   focusArtifacts = false,
+  onArtifactsFocused,
 }: {
   focusArtifacts?: boolean;
+  /** Called once the focus asked for by `focusArtifacts` is done, so a later mount doesn't repeat it. */
+  onArtifactsFocused?: () => void;
   config: Config;
   save: Save;
   onAccount: (account: Account) => void;
@@ -50,7 +53,9 @@ export function ShareView({
   const previousListIds = useRef(new Set(config.lists.map((list) => list.id)));
 
   useEffect(() => {
-    if (focusArtifacts) document.getElementById('artifacts')?.focus();
+    if (!focusArtifacts) return;
+    document.getElementById('artifacts')?.focus();
+    onArtifactsFocused?.();
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- only when the form mounts
   }, []);
 

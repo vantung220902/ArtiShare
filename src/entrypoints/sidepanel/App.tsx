@@ -109,6 +109,7 @@ export function App() {
         ) : (
           <ShareView
             focusArtifacts={focusArtifacts}
+            onArtifactsFocused={() => setFocusArtifacts(false)}
             config={config}
             save={save}
             onAccount={(next) => {

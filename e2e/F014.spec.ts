@@ -49,3 +49,29 @@ test('the copy button says "Couldn\'t copy" when the clipboard refuses', async (
   await row.getByRole('button', { name: 'Copy link' }).click();
   await expect(row.getByRole('button', { name: "Couldn't copy" })).toBeVisible();
 });
+
+// The fallback copies through a hidden field it has to focus; the button must get focus back.
+test('a copy through the fallback leaves keyboard focus on the copy button', async ({ panel }) => {
+  const share = panel.getByRole('tabpanel', { name: 'Share' });
+  await share.getByLabel('List name').fill('Fallback team');
+  await share.getByLabel('Email addresses').fill('ana@example.com');
+  await share.getByLabel(/Artifacts/).fill('https://claude.ai/artifact/CopyFallbackArtifact1');
+  await share.getByRole('button', { name: /^Preview/ }).click();
+  await expect(share.getByText('Will be invited').first()).toBeVisible();
+
+  // Only the async API refuses; execCommand('copy') still works.
+  await panel.evaluate(() => {
+    Object.defineProperty(navigator.clipboard, 'writeText', {
+      configurable: true,
+      value: () => Promise.reject(new DOMException('Document is not focused', 'NotAllowedError')),
+    });
+  });
+
+  const row = share.locator('.artifact-row');
+  await row.getByRole('button', { name: 'Copy link' }).focus();
+  await panel.keyboard.press('Enter');
+  const copied = row.getByRole('button', { name: 'Copied' });
+  await expect(copied).toBeVisible();
+  await expect(copied).toBeFocused();
+  await expect(share.locator('textarea[style*="opacity"]')).toHaveCount(0);
+});

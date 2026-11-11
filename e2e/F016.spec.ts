@@ -70,4 +70,13 @@ test('Start a new share after a finished run opens a fresh Share form without a 
   await share.getByRole('button', { name: /^Send \d+ invitations?$/ }).click();
   await expect(share.getByText('Done', { exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(share.getByRole('link', { name: /FreshFormArtifact002/ })).toBeVisible();
+
+  // The focus belongs to that one click: a run cleared some other way (here, as another window
+  // would) brings back the Share form without moving the cursor into Artifacts.
+  const shareTab = panel.getByRole('tab', { name: 'Share' });
+  await shareTab.focus();
+  await panel.evaluate(() => chrome.runtime.sendMessage({ type: 'clear' }));
+  await expect(artifacts).toBeVisible();
+  await expect(artifacts).not.toBeFocused();
+  await expect(shareTab).toBeFocused();
 });
