@@ -231,7 +231,7 @@
         "docs/claude-share-api.md lists the claude.ai/cowork/{session}?artifact={uuid} link form",
         "npm run check passes (Prettier formats the Markdown)"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }

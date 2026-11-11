@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F018 · README and API notes describe the new behaviour
+
+- **Did:** `README.md`: 'Make a list' says `*` marks required fields (only Email addresses) next to the existing optional-name text; 'Pick artifacts' marks Artifacts required and says pasted links and + Current tab both work for plain, chat and cowork `?artifact=` links; the Preview and Watch it run sections mention the copy button (Copied / Couldn't copy); the run section describes the finished message, 'Start a new share' with focus in Artifacts, and the confirmation for a stopped run with invites left. 'New share' is now 'Start a new share' in the flowchart and the text. `docs/claude-share-api.md` lists the `claude.ai/cowork/{session}?artifact={uuid}` form beside the chat form.
+- **Verified:** `harness/init.sh` at start; `npm run format` then `npm run check` (108 unit tests, Prettier clean). No code changed, so `npm run e2e` was not re-run after the edit. feature-verifier: PASS (checked each claim against the source and ran `npm run check` itself).
+- **State:** F018 passes. F011 is the only feature still false, blocked on a human.
+- **Next:** A human should settle F011: reword the `not-an-email` step to an address with an `@` (e.g. `not@an-email`; code and spec are green), then a session can flip it after a verifier PASS. Nothing else is left; then the branch can be merged into `develop` through a PR.
+- **Notes:** The API doc says the chat form was checked in November 2026 and that the cowork form is parsed the same way; the cowork link has not been checked against live claude.ai by this harness. The README screenshots weren't regenerated.
+
 ### 2026-11-11 · F017 · A stopped run with invites left asks before it is discarded
 
 - **Did:** Added `e2e/F017.spec.ts` only; no source change, since `RunView.startNew` already confirms when `pending > 0`. The spec removes the fixture's accept-all dialog handler and records dialogs itself. Five addresses, Send, Stop after the first invite: asserts Stopped, '… left', Resume primary and Start a new share not primary. Dismiss: the dialog says 'Discard this run?', the stopped run and Resume stay (also after a panel reload). Accept: fresh Share form, Artifacts empty and focused. Then a run of five `fail*` addresses stops after the last one (five failures in a row) with nothing pending and no Resume; Start a new share goes straight to the form with no dialog.
