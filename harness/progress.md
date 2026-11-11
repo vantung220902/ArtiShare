@@ -4,6 +4,13 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F011 · Still blocked on a human (nothing built)
+
+- **Did:** Nothing in the code. Re-checked why F011 can't be flipped: step 3 says to enter `ana@example.com` and `not-an-email` and expect 'Fix or remove the invalid addresses: not-an-email'. `parseEmails` (`src/core/emails.ts`) ignores any token without an `@` on purpose (names and CSV headers), so `not-an-email` is not reported and that list saves. Only a token with an `@` that isn't a valid address (e.g. `not@an-email`) is listed as invalid.
+- **Verified:** `harness/init.sh`: baseline OK (`npm run check`, 19 e2e specs pass, including `e2e/F011.spec.ts`). No verifier run: the step as written can't be made to pass without changing either the parser or the step.
+- **State:** F011 passes false. 17 of 18 features pass; the feature list was not touched.
+- **Next:** A human decides: reword the step to `not@an-email` (then a session only needs a feature-verifier PASS and to flip `passes`), or change the parser to report tokens without `@`, which would break the CSV/name handling. Otherwise the branch is ready to merge into `develop` through a PR.
+
 ### 2026-11-11 · F018 · README and API notes describe the new behaviour
 
 - **Did:** `README.md`: 'Make a list' says `*` marks required fields (only Email addresses) next to the existing optional-name text; 'Pick artifacts' marks Artifacts required and says pasted links and + Current tab both work for plain, chat and cowork `?artifact=` links; the Preview and Watch it run sections mention the copy button (Copied / Couldn't copy); the run section describes the finished message, 'Start a new share' with focus in Artifacts, and the confirmation for a stopped run with invites left. 'New share' is now 'Start a new share' in the flowchart and the text. `docs/claude-share-api.md` lists the `claude.ai/cowork/{session}?artifact={uuid}` form beside the chat form.
