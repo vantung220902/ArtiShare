@@ -15,6 +15,8 @@ export function App() {
   const [tab, setTab] = useState<Tab>('share');
   const [account, setAccount] = useState<Account | null>(null);
   const [accountError, setAccountError] = useState('');
+  // Set by "Start a new share", so the fresh Share form is ready to type in. Not on a plain panel open.
+  const [focusArtifacts, setFocusArtifacts] = useState(false);
 
   const refreshAccount = () => {
     // oxlint-disable-next-line react/set-state-in-effect -- also a click handler; clears the old error before re-checking
@@ -103,9 +105,11 @@ export function App() {
       {/* Both tabs stay mounted so switching doesn't lose what you've typed. */}
       <div id="panel-share" role="tabpanel" aria-labelledby="tab-share" hidden={tab !== 'share'}>
         {run ? (
-          <RunView run={run} />
+          <RunView run={run} onStartNew={setFocusArtifacts} />
         ) : (
           <ShareView
+            focusArtifacts={focusArtifacts}
+            onArtifactsFocused={() => setFocusArtifacts(false)}
             config={config}
             save={save}
             onAccount={(next) => {

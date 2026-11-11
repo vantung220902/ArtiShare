@@ -7,6 +7,7 @@ import { type PreviewResult, send } from '../../lib/messages';
 import { BackIcon, PlusIcon, SendIcon } from '../../ui/icons';
 import { ListBadge } from '../../ui/ListBadge';
 import { type ListDraft, ListForm, type ListFormHandle } from '../../ui/ListForm';
+import { RequiredMark } from '../../ui/RequiredMark';
 import { ArtifactLink, EmailGroup } from './viewComponents';
 import { byName, people, plural, type Save } from './viewUtils';
 
@@ -27,7 +28,12 @@ export function ShareView({
   config,
   save,
   onAccount,
+  focusArtifacts = false,
+  onArtifactsFocused,
 }: {
+  focusArtifacts?: boolean;
+  /** Called once the focus asked for by `focusArtifacts` is done, so a later mount doesn't repeat it. */
+  onArtifactsFocused?: () => void;
   config: Config;
   save: Save;
   onAccount: (account: Account) => void;
@@ -45,6 +51,13 @@ export function ShareView({
   const [draft, setDraft] = useState<ListDraft | null>(null);
   const form = useRef<ListFormHandle>(null);
   const previousListIds = useRef(new Set(config.lists.map((list) => list.id)));
+
+  useEffect(() => {
+    if (!focusArtifacts) return;
+    document.getElementById('artifacts')?.focus();
+    onArtifactsFocused?.();
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- only when the form mounts
+  }, []);
 
   // Start from the artifact you're looking at.
   useEffect(() => {
@@ -98,9 +111,10 @@ export function ShareView({
     let current = { config, selected, invites };
 
     // A new list typed but not saved is meant to be shared with: save it first, like Save list would.
-    if (showForm && form.current?.hasDraft()) {
+    // An empty form with nobody ticked is submitted too, so it says what's missing, as Save list does.
+    if (showForm && (form.current?.hasDraft() || !invites.length)) {
       setBusy(true);
-      const saved = await form.current.submit();
+      const saved = await form.current?.submit();
       setBusy(false);
       // The form shows why it could not save.
       if (!saved) return;
@@ -137,7 +151,9 @@ export function ShareView({
       <section className="card stack">
         <div className="row spread">
           <label htmlFor="artifacts" className="title">
-            Artifacts {artifacts.refs.length > 0 && <span className="count">{artifacts.refs.length}</span>}
+            Artifacts
+            <RequiredMark />{' '}
+            {artifacts.refs.length > 0 && <span className="count">{artifacts.refs.length}</span>}
           </label>
           <button className="pill" onClick={addCurrentTab}>
             <PlusIcon size={13} /> Current tab
@@ -145,6 +161,7 @@ export function ShareView({
         </div>
         <textarea
           id="artifacts"
+          aria-required="true"
           rows={3}
           value={artifactText}
           onChange={(e) => setArtifactText(e.target.value)}

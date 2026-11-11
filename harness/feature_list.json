@@ -1,5 +1,238 @@
 {
-  "goal": null,
-  "branch": null,
-  "features": []
+  "goal": "Fix the Current tab button for claude.ai/cowork artifact links, make list names optional (named after their addresses) with required fields marked, add a copy button to artifact links, and make starting a new share after a run obvious.",
+  "branch": "harness/share-ux-fixes",
+  "features": [
+    {
+      "id": "F001",
+      "category": "functional",
+      "description": "A claude.ai/cowork link with an artifact open (…/cowork/{session}?artifact={uuid}#…) is accepted as an artifact in the Share tab",
+      "steps": [
+        "Open the side panel of the fake build and go to the Share tab",
+        "Paste https://claude.ai/cowork/cse_01ExampleCoworkSession00?artifact=c0ffee00-1234-4abc-8def-000000000001#example into Artifacts",
+        "See the Artifacts count show 1 and no 'Not artifact links' hint",
+        "Tick a list and click Preview",
+        "See one artifact card whose link is the matching https://claude.ai/artifact/{base58 id} link (the same id a claude.ai/chat/…?artifact= link with that uuid gives), with its To invite numbers"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F002",
+      "category": "edge-case",
+      "description": "A cowork link and the claude.ai/artifact link for the same artifact count as one artifact, and cowork links without a valid artifact uuid are rejected",
+      "steps": [
+        "In the Share tab, paste the cowork link from F001 and, on the next line, the claude.ai/artifact link it maps to",
+        "See the Artifacts count show 1, and Preview shows one artifact card",
+        "Replace the text with https://claude.ai/cowork/cse_01ExampleCoworkSession00 (no ?artifact=)",
+        "See the hint 'Not artifact links: …' naming that link",
+        "Replace it with https://claude.ai/cowork/cse_01ExampleCoworkSession00?artifact=not-a-uuid and see the same hint"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F003",
+      "category": "functional",
+      "description": "+ Current tab adds the artifact open in a claude.ai/cowork tab, and opening the panel on such a tab fills it in",
+      "steps": [
+        "Open https://claude.ai/cowork/cse_01ExampleCoworkSession00?artifact=c0ffee00-1234-4abc-8def-000000000001#example in the active tab (in e2e, serve the page with a route so nothing reaches claude.ai)",
+        "Open the side panel: see Artifacts already filled with the matching https://claude.ai/artifact/{id} link",
+        "Clear Artifacts and click + Current tab",
+        "See the same link added once, with no error; click + Current tab again and see it is not added twice"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F004",
+      "category": "error-handling",
+      "description": "+ Current tab on a cowork session with no artifact open explains why nothing was added",
+      "steps": [
+        "Make https://claude.ai/cowork/cse_01ExampleCoworkSession00 (no ?artifact=) the active tab",
+        "Type a valid artifact link into Artifacts, then click + Current tab",
+        "See the error 'The current tab is not a claude.ai artifact.'",
+        "See the Artifacts text unchanged"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F005",
+      "category": "ux",
+      "description": "Required fields are marked with *, and the list name is labelled as optional",
+      "steps": [
+        "In the Lists tab, click New list",
+        "See the label 'Email addresses *' and the label 'List name (optional)'; the * is visual only and the addresses field is marked required for screen readers (aria-required)",
+        "Open an existing list from the Lists tab and see the same labels",
+        "In the Share tab, see the label 'Artifacts *', and the same labels in the inline + New list form"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F006",
+      "category": "functional",
+      "description": "A new list saved without a name is named after its addresses: one address → that address; two → 'a & b'; more → 'a & b +N emails'",
+      "steps": [
+        "In the Lists tab, click New list, leave the name empty, enter ana@example.com and click Save list",
+        "See a list named 'ana@example.com' with 1 person",
+        "Make another list with no name and ana@example.com, bo@example.com",
+        "See a list named 'ana@example.com & bo@example.com'",
+        "Make a list with no name and four addresses cy@example.com, di@example.com, ed@example.com, fi@example.com",
+        "See a list named 'cy@example.com & di@example.com +2 emails' (with three addresses it reads '+1 email')",
+        "The addresses used are the first ones in the order they were entered, after duplicates are dropped"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F007",
+      "category": "ux",
+      "description": "The name field keeps its normal placeholder; the automatic name is filled in only once the list is saved",
+      "steps": [
+        "In the Lists tab, click New list and leave the name empty",
+        "See the name placeholder 'List name, e.g. Acme clients'",
+        "Type ana@example.com and bo@example.com into Email addresses",
+        "See the name placeholder stay 'List name, e.g. Acme clients' (it does not preview the automatic name)",
+        "Click Save list, open the new list and see its name field filled with 'ana@example.com & bo@example.com'",
+        "Type a name instead: it is the name that gets saved"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F008",
+      "category": "edge-case",
+      "description": "An automatic name never clashes with an existing list, and a name of only spaces counts as empty",
+      "steps": [
+        "Save a list with no name and ana@example.com: it is named 'ana@example.com'",
+        "Save another list with no name and ana@example.com",
+        "See it saved as 'ana@example.com (2)' with no 'already exists' error; a third becomes 'ana@example.com (3)'",
+        "Save a list whose name is only spaces, with bo@example.com",
+        "See it named 'bo@example.com'",
+        "Typing an existing list's name by hand still shows 'A list called \"…\" already exists.'"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F009",
+      "category": "functional",
+      "description": "Clearing the name of an existing list and saving names it after its addresses",
+      "steps": [
+        "Make a list named 'Design team' with ana@example.com and bo@example.com",
+        "Open it in the Lists tab, clear the name and click Save",
+        "See the list renamed 'ana@example.com & bo@example.com' with no 'Give the list a name.' error",
+        "Its addresses and permission are unchanged"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F010",
+      "category": "functional",
+      "description": "In the Share tab, an unnamed new list typed in the inline form is saved with its automatic name when you click Preview",
+      "steps": [
+        "In the Share tab, add an artifact link and click + New list",
+        "Leave the name empty, enter ana@example.com and bo@example.com",
+        "Click Preview",
+        "See the preview header label 'ana@example.com & bo@example.com', and the Lists tab now has a list with that name, ticked in Share with"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F011",
+      "category": "error-handling",
+      "description": "A list with neither a name nor addresses, or with invalid addresses, still can't be saved",
+      "steps": [
+        "In the Lists tab, click New list and click Save list with everything empty",
+        "See 'Add at least one email address.' and no list created",
+        "Leave the name empty and enter ana@example.com and not@an-email, then click Save list",
+        "See 'Fix or remove the invalid addresses: not@an-email' and no list created",
+        "In the Share tab, the same empty or invalid inline form makes Preview show the same message and not preview"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F012",
+      "category": "functional",
+      "description": "Each artifact link in the Preview has a copy button that copies the link",
+      "steps": [
+        "Make a list, add an artifact link in the Share tab and click Preview",
+        "See a copy button (accessible name 'Copy link') beside each artifact's link",
+        "Click it",
+        "The clipboard holds that artifact's full https://claude.ai/artifact/… link, and the button shows a check with the name 'Copied' for about 2 seconds, then goes back to 'Copy link'",
+        "Clicking the link text itself still opens the artifact in a new tab",
+        "Copying needs no new manifest permission (no clipboardWrite), so updating the extension shows no new permission prompt"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F013",
+      "category": "functional",
+      "description": "Each artifact link in the run view has the same copy button, while the run is going and after it has finished",
+      "steps": [
+        "Send invites to two artifacts",
+        "While the run is running, click the copy button beside the first artifact and see the clipboard hold its link and the button show 'Copied'",
+        "When the run is Done, click the copy button beside the second artifact",
+        "See the clipboard hold the second artifact's link"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F014",
+      "category": "error-handling",
+      "description": "If the clipboard refuses, the copy button says it couldn't copy instead of failing silently",
+      "steps": [
+        "Make the clipboard write fail (in e2e, make navigator.clipboard.writeText reject)",
+        "In the Preview, click the copy button beside an artifact",
+        "See the button show 'Couldn't copy' (accessible name and tooltip) for a moment, then return to 'Copy link'",
+        "The panel keeps working: the link can still be opened, and Send still works"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F015",
+      "category": "ux",
+      "description": "When a run finishes, the run view says it's finished and offers one obvious primary 'Start a new share' button",
+      "steps": [
+        "Send invites to a list with ana@example.com and fail@example.com and wait for Done",
+        "At the top of the run card, see a message saying the share is finished, with what happened (e.g. '1 invited, 1 failed')",
+        "See a primary (filled), full-width 'Start a new share' button in the run card; no other button competes with it",
+        "Reload the panel and see the same finished view and button"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F016",
+      "category": "functional",
+      "description": "'Start a new share' after a finished run goes straight to a fresh Share form, without a confirmation",
+      "steps": [
+        "Finish a run as in F015, with the Lists tab's default selection set to one list",
+        "Click 'Start a new share'",
+        "See no confirmation dialog",
+        "See the Share form: Artifacts empty (or the current tab's artifact if it is one), Share with ticked per the default selection, no preview, no leftover error, and focus in the Artifacts field",
+        "Add an artifact link, Preview and Send, and see a new run start"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F017",
+      "category": "edge-case",
+      "description": "A stopped run with invites left asks before it is discarded, and Cancel keeps it resumable",
+      "steps": [
+        "Send invites to a list of several addresses and click Stop while some are still pending",
+        "See the run Stopped with Resume and a 'Start a new share' button (Resume is the primary one)",
+        "Click 'Start a new share' and dismiss the confirmation: the stopped run stays, with Resume",
+        "Click 'Start a new share' again and accept: see the fresh Share form as in F016",
+        "A stopped run with nothing left goes to the Share form without a confirmation"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F018",
+      "category": "docs",
+      "description": "The README describes the optional list name, the required-field markers, cowork links, the copy button and 'Start a new share'",
+      "steps": [
+        "Read README 'Use it': Make a list says the name is optional and how the automatic name is made; fields marked * are required",
+        "Pick artifacts says links from a chat or a cowork session with the artifact open work, as do + Current tab",
+        "Check the preview / Watch it run mention the copy button beside each artifact link",
+        "Watch it run and the How it works flowchart say 'Start a new share'",
+        "docs/claude-share-api.md lists the claude.ai/cowork/{session}?artifact={uuid} link form",
+        "npm run check passes (Prettier formats the Markdown)"
+      ],
+      "passes": true
+    }
+  ]
 }

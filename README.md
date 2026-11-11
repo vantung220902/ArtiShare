@@ -37,7 +37,7 @@ flowchart TD
     H -- Yes --> I[<b>Send</b> and confirm]
     I --> J[Invites go out<br/>one at a time]
     J --> K{How did<br/>it end?}
-    K -- Done --> L([New share])
+    K -- Done --> L([Start a new share])
     K -- Stopped --> M[<b>Resume</b> later]
     M --> J
 ```
@@ -64,9 +64,9 @@ Open claude.ai and sign in, then click the ArtiShare icon. The side panel has tw
 
 ### 1. Make a list
 
-In the **Lists** tab, click **New list**:
+In the **Lists** tab, click **New list**. A `*` after a label marks a field you must fill in; here that's only **Email addresses**.
 
-- **Name** it, for example _Design team_.
+- **Name** it, for example _Design team_. The name is optional: left empty, the list is named after its addresses (`ana@acme.com & bo@acme.com +2 emails`). Once the list is saved, that name is filled into its name field, where you can change it. If another list already has that name, a number is added (`ana@acme.com (2)`); a name you type yourself must be unique.
 - **Paste the addresses** in any shape: one per line, comma-separated, `Name <a@b.com>`, or cells copied from a spreadsheet. The counter shows how many are valid. Duplicates are dropped and invalid addresses are flagged.
 - **Pick the permission** everyone on this list gets: _Can view_, _Commenter_ or _Can edit_.
 
@@ -85,7 +85,7 @@ You can still tick or untick any list each time you share.
 
 In the **Share** tab:
 
-- **Artifacts:** if the current tab is an artifact, its link is already filled in. Add more links (one per line), or open another artifact and click **+ Current tab**.
+- **Artifacts** (required, marked `*`): if the current tab is an artifact, its link is already filled in. Add more links (one per line), or open another artifact and click **+ Current tab**. Both work for a plain `claude.ai/artifact/…` link and for any claude.ai page with an artifact open, such as a chat (`claude.ai/chat/…?artifact=…`) or a cowork session (`claude.ai/cowork/…?artifact=…`).
 - **Share with:** tick the lists to invite. Need a new group? Click **+ New list** to make one without leaving the tab.
 
 Click **Preview**. The button shows how many people and artifacts are involved.
@@ -94,7 +94,7 @@ Click **Preview**. The button shows how many people and artifacts are involved.
 
 Preview only **reads** who already has access to each artifact. Nothing is sent yet.
 
-For each artifact you see:
+Each artifact's link has a **copy** button beside it that copies the link to the clipboard (it shows _Copied_ for a moment, or _Couldn't copy_ if the browser refuses). For each artifact you see:
 
 - **To invite:** the people who will get an invitation, with their permission.
 - **Already have access:** people who are skipped, and their access stays as it is.
@@ -105,13 +105,13 @@ If something looks wrong, click **Back** and change it. When it's right, click *
 
 ### 5. Watch it run
 
-Invites go out one at a time from the background, with a short pause between them, so you can close the side panel or keep working. Each address moves from _Pending_ to _Invited_ (or _Failed_ / _Skipped_, with the reason).
+Invites go out one at a time from the background, with a short pause between them, so you can close the side panel or keep working. Each address moves from _Pending_ to _Invited_ (or _Failed_ / _Skipped_, with the reason). The artifact links here have the same copy button, while the run is going and after.
 
 - **Stop** pauses the run. **Resume** continues where it left off.
 - If the browser restarts mid-run, the run is kept and can be resumed.
 - A run stays tied to the claude.ai account used for Preview. If you switch accounts, sign back in as that account before resuming.
 - A stopped run saved by an older version without account verification cannot resume. Start a new share; Preview will recheck who has already been invited.
-- When it's done, click **New share** to start again.
+- When it's done, the panel says so (_Share finished: …_). Click **Start a new share** for a fresh Share form with the cursor in **Artifacts**. If you stopped a run that still has invites left, you're asked before it's discarded.
 
 ## Good to know
 

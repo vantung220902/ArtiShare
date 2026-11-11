@@ -3,11 +3,13 @@ import {
   type Config,
   createList,
   defaultListIds,
+  defaultListName,
   EMPTY_CONFIG,
   isNameTaken,
   loadStoredConfig,
   removeList,
   resolveInvites,
+  uniqueListName,
   upsertList,
 } from '../src/core/config';
 
@@ -22,6 +24,22 @@ const config = (overrides: Partial<Config> = {}): Config => ({
   ...EMPTY_CONFIG,
   lists: [acme, qa],
   ...overrides,
+});
+
+describe('uniqueListName', () => {
+  it('keeps a free name and numbers a taken one from 2', () => {
+    expect(uniqueListName(config(), 'Other')).toBe('Other');
+    expect(uniqueListName(config(), 'Acme')).toBe('Acme (2)');
+    expect(uniqueListName(config(), 'acme')).toBe('acme (2)');
+
+    const withTwo = config({ lists: [acme, { ...acme, id: 'a2', name: 'Acme (2)' }] });
+    expect(uniqueListName(withTwo, 'Acme')).toBe('Acme (3)');
+  });
+
+  it('ignores the list being edited and leaves an empty name empty', () => {
+    expect(uniqueListName(config(), 'Acme', 'acme')).toBe('Acme');
+    expect(uniqueListName(config(), '')).toBe('');
+  });
 });
 
 describe('loadStoredConfig', () => {
@@ -81,6 +99,14 @@ describe('list editing', () => {
     expect(isNameTaken(config(), ' acme ')).toBe(true);
     expect(isNameTaken(config(), 'ACME', 'acme')).toBe(false);
     expect(isNameTaken(config(), 'Other')).toBe(false);
+  });
+
+  it('names a list after its first two addresses and counts the rest', () => {
+    expect(defaultListName([])).toBe('');
+    expect(defaultListName(['a@x.io'])).toBe('a@x.io');
+    expect(defaultListName(['a@x.io', 'b@x.io'])).toBe('a@x.io & b@x.io');
+    expect(defaultListName(['a@x.io', 'b@x.io', 'c@x.io'])).toBe('a@x.io & b@x.io +1 email');
+    expect(defaultListName(['a@x.io', 'b@x.io', 'c@x.io', 'd@x.io'])).toBe('a@x.io & b@x.io +2 emails');
   });
 
   it('adds new lists and replaces existing ones', () => {

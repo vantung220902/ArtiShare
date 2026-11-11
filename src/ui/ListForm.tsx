@@ -3,14 +3,17 @@ import {
   type Config,
   type ConfigChange,
   createList,
+  defaultListName,
   type EmailList,
   isNameTaken,
   sameList,
+  uniqueListName,
 } from '../core/config';
 import { parseEmails } from '../core/emails';
 import type { AccessLevel } from '../core/types';
 import { AccessSelect } from './AccessSelect';
 import { EmailInput } from './EmailInput';
+import { RequiredMark } from './RequiredMark';
 
 /** What a new-list form holds before it is saved: its valid addresses and permission. */
 export interface ListDraft {
@@ -111,9 +114,11 @@ export function ListForm({ ref, config, save, list, onSaved, onCancel, onDraftCh
   };
 
   const submit = async () => {
-    const trimmed = name.trim();
     const { valid, invalid } = parseEmails(text);
-    if (!trimmed) return fail('Give the list a name.');
+    const named = name.trim();
+    // An empty (or all-space) name is allowed: the list is named after its addresses, with a
+    // number added if another list already has that name. Only a name typed by hand can clash.
+    const trimmed = named || uniqueListName(config, defaultListName(valid), baseline?.id);
     if (conflict) return fail('This list changed in another window. Reload the saved version first.');
     if (isNameTaken(config, trimmed, baseline?.id)) return fail(`A list called "${trimmed}" already exists.`);
     if (invalid.length)
@@ -170,7 +175,7 @@ export function ListForm({ ref, config, save, list, onSaved, onCancel, onDraftCh
 
   return (
     <div className="stack">
-      <label htmlFor={nameId}>List name</label>
+      <label htmlFor={nameId}>List name (optional)</label>
       <input
         id={nameId}
         type="text"
@@ -178,8 +183,11 @@ export function ListForm({ ref, config, save, list, onSaved, onCancel, onDraftCh
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
-      <label htmlFor={emailId}>Email addresses</label>
-      <EmailInput id={emailId} value={text} onChange={setText} rows={list ? 6 : 4} />
+      <label htmlFor={emailId}>
+        Email addresses
+        <RequiredMark />
+      </label>
+      <EmailInput id={emailId} value={text} onChange={setText} rows={list ? 6 : 4} required />
       <div className="row nowrap">
         <label htmlFor={accessId} className="field-label">
           Permission
