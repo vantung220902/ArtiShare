@@ -85,7 +85,7 @@ You can still tick or untick any list each time you share.
 
 In the **Share** tab:
 
-- **Artifacts** (required, marked `*`): if the current tab is an artifact, its link is already filled in. Add more links (one per line), or open another artifact and click **+ Current tab**. Both work for a plain `claude.ai/artifact/…` link and for an artifact open beside a chat (`claude.ai/chat/…?artifact=…`) or in a cowork session (`claude.ai/cowork/…?artifact=…`).
+- **Artifacts** (required, marked `*`): if the current tab is an artifact, its link is already filled in. Add more links (one per line), or open another artifact and click **+ Current tab**. Both work for a plain `claude.ai/artifact/…` link and for any claude.ai page with an artifact open, such as a chat (`claude.ai/chat/…?artifact=…`) or a cowork session (`claude.ai/cowork/…?artifact=…`).
 - **Share with:** tick the lists to invite. Need a new group? Click **+ New list** to make one without leaving the tab.
 
 Click **Preview**. The button shows how many people and artifacts are involved.

@@ -5,14 +5,13 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const SHORT_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
 // A bare id (no URL) must look unmistakably like one, so words in pasted text are not taken as ids.
 const BARE_ID_RE = /^(?=.*\d)(?=.*[A-Za-z])[A-Za-z0-9]{20,24}$/;
-const SESSION_PAGES = new Set(['chat', 'cowork']);
 
 /**
  * Parses an artifact reference. Accepts:
  *  - https://claude.ai/artifact/{id}
  *  - https://claude.ai/code/artifact/{uuid}
- *  - https://claude.ai/chat/{chat}?artifact={uuid} (an artifact open beside a chat)
- *  - https://claude.ai/cowork/{session}?artifact={uuid} (an artifact open in a cowork session)
+ *  - any other claude.ai page with ?artifact={uuid}, e.g. claude.ai/chat/{chat}?artifact={uuid}
+ *    or claude.ai/cowork/{session}?artifact={uuid} (an artifact open beside a chat or session)
  *  - either form without the scheme, with a query string or hash
  *  - a bare id or uuid
  */
@@ -42,11 +41,12 @@ export function parseArtifactRef(input: string): ArtifactRef | null {
       return make('code-artifact', parts[2].toLowerCase());
     }
 
-    // A chat or cowork session with an artifact panel open names the artifact's API uuid in
-    // ?artifact=. Other pages (e.g. projects) are left out until their ids are confirmed.
+    // A page with an artifact panel open names the artifact's API uuid in ?artifact=. Any page
+    // is accepted, not a list of known ones, so new claude.ai pages (cowork was one) work without
+    // a release. A uuid that isn't an artifact fails at Preview with "Artifact not found".
     const openArtifact = url.searchParams.get('artifact');
 
-    if (SESSION_PAGES.has(parts[0] ?? '') && openArtifact && UUID_RE.test(openArtifact)) {
+    if (openArtifact && UUID_RE.test(openArtifact)) {
       return make('artifact', uuidToBase58(openArtifact));
     }
 
