@@ -38,7 +38,7 @@
         "Clear Artifacts and click + Current tab",
         "See the same link added once, with no error; click + Current tab again and see it is not added twice"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F004",

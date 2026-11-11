@@ -4,6 +4,17 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F003 · + Current tab and panel open on a cowork tab
+
+- **Did:** No source change: F001's parser already makes `currentTabArtifact()` work for cowork URLs. Added `e2e/F003.spec.ts`: it serves a cowork page with `context.route` (nothing reaches claude.ai), brings that tab to the front, reloads the panel and checks Artifacts is filled with the matching `claude.ai/artifact/…` link. Then it clears the field, clicks + Current tab (link added once, no error) and clicks again (raw textarea text is still the single link).
+- **Verified:** `harness/init.sh` at start; `npm run check` (105 unit tests) and `npm run e2e` (4 specs) pass; F003 passes 8/8 with `--repeat-each=8`. Mutation check: with `addCurrentTab` temporarily always appending, F003 fails ('Received +1'); reverted. feature-verifier: PASS on the third run (the first FAIL found the double-click check vacuous; the second had no Bash and gave no real verdict).
+- **State:** F003 passes. 15 features left.
+- **Next:** F004 (+ Current tab on a cowork session with no `?artifact=` shows 'The current tab is not a claude.ai artifact.' and leaves the text unchanged). Reuse the route + `bringToFront()` + `panel.reload()` pattern from `e2e/F003.spec.ts`; the source probably already does it.
+- **Notes:**
+  - `addCurrentTab` awaits `chrome.tabs.query` before it sets state, so an assertion right after the click passes against the old value. Round-trip your own `chrome.tabs.query` and a `requestAnimationFrame` first (see F003), and assert the raw textarea value, not the de-duplicated `.count`.
+  - The panel is a normal tab in e2e, so it only sees the claude.ai tab as active if you bring that tab to front and then reload the panel.
+  - The verifier agent can be denied Bash and mutating source; if it says so, send it the command output or ask again.
+
 ### 2026-11-11 · F002 · Dedupe cowork links, reject bad ones
 
 - **Did:** No source change: F001's parser already de-duplicates by artifact uuid and rejects cowork links without a valid `?artifact=` uuid. Added two unit tests to `tests/artifactUrl.test.ts` (cowork + `claude.ai/artifact` link count once; bare and `not-a-uuid` cowork links land in `invalid`) and the e2e spec `e2e/F002.spec.ts` (count 1 and one preview card for both links; the `Not artifact links: …` hint for each bad link).
