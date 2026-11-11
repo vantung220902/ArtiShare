@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F017 · A stopped run with invites left asks before it is discarded
+
+- **Did:** Added `e2e/F017.spec.ts` only; no source change, since `RunView.startNew` already confirms when `pending > 0`. The spec removes the fixture's accept-all dialog handler and records dialogs itself. Five addresses, Send, Stop after the first invite: asserts Stopped, '… left', Resume primary and Start a new share not primary. Dismiss: the dialog says 'Discard this run?', the stopped run and Resume stay (also after a panel reload). Accept: fresh Share form, Artifacts empty and focused. Then a run of five `fail*` addresses stops after the last one (five failures in a row) with nothing pending and no Resume; Start a new share goes straight to the form with no dialog.
+- **Verified:** `harness/init.sh` at start; `npm run check` (108 unit tests) and `npm run e2e` (19 specs) pass; the F017 spec also passed with `--repeat-each=4`. feature-verifier: first run had Bash denied (FAIL for lack of evidence only); second ran both suites itself and returned PASS.
+- **State:** F017 passes. F011 still false (blocked on a human). 1 feature left besides F011: F018.
+- **Next:** A human should still settle F011 (reword `not-an-email` to an address with an `@`; code and spec are green). Otherwise take F018: the README and `docs/claude-share-api.md` updates (optional list name and automatic name, `*` markers, cowork links and + Current tab, copy button, 'Start a new share' replacing 'New share' in the text and the flowchart around lines ~40 and ~114). Finish with `npm run check` for Prettier.
+- **Notes:** A 'stopped with nothing left' run is reachable in the fake with five `fail*` addresses (the consecutive-failure stop fires on the last item). A second dialog listener doesn't override the fixture's accept: use `panel.removeAllListeners('dialog')` first.
+
 ### 2026-11-11 · F016 · 'Start a new share' after a finished run opens a fresh Share form with focus in Artifacts
 
 - **Did:** The fresh form itself already worked (clearing the run unmounts `RunView` and remounts `ShareView`, which starts empty with the default selection and the current tab's artifact); the missing piece was focus. `App` (`src/entrypoints/sidepanel/App.tsx`) holds `focusArtifacts`, set by `RunView`'s new `onStartNew` prop before the clear is sent (and reset if the clear fails); `ShareView` takes `focusArtifacts` and focuses `#artifacts` when it mounts. A plain panel open doesn't steal focus. `RunView.act` now returns whether it succeeded. New `e2e/F016.spec.ts`: two lists with only Alpha ticked by default, Beta ticked by hand for the run, finish a run, click Start a new share; asserts no dialog, Artifacts empty and focused, Alpha ticked / Beta not, no alert/preview/finished message, then a second run completes.

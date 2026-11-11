@@ -217,7 +217,7 @@
         "Click 'Start a new share' again and accept: see the fresh Share form as in F016",
         "A stopped run with nothing left goes to the Share form without a confirmation"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F018",
