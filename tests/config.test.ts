@@ -3,6 +3,7 @@ import {
   type Config,
   createList,
   defaultListIds,
+  defaultListName,
   EMPTY_CONFIG,
   isNameTaken,
   loadStoredConfig,
@@ -81,6 +82,14 @@ describe('list editing', () => {
     expect(isNameTaken(config(), ' acme ')).toBe(true);
     expect(isNameTaken(config(), 'ACME', 'acme')).toBe(false);
     expect(isNameTaken(config(), 'Other')).toBe(false);
+  });
+
+  it('names a list after its first two addresses and counts the rest', () => {
+    expect(defaultListName([])).toBe('');
+    expect(defaultListName(['a@x.io'])).toBe('a@x.io');
+    expect(defaultListName(['a@x.io', 'b@x.io'])).toBe('a@x.io & b@x.io');
+    expect(defaultListName(['a@x.io', 'b@x.io', 'c@x.io'])).toBe('a@x.io & b@x.io +1 email');
+    expect(defaultListName(['a@x.io', 'b@x.io', 'c@x.io', 'd@x.io'])).toBe('a@x.io & b@x.io +2 emails');
   });
 
   it('adds new lists and replaces existing ones', () => {

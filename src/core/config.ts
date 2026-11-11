@@ -61,6 +61,20 @@ export function createList(name: string, emails: readonly string[], access: Acce
   return { id: crypto.randomUUID(), name: name.trim(), emails: mergeEmails(emails), access };
 }
 
+/**
+ * The name a list gets when the user leaves it empty: its first two addresses, plus a count of
+ * the rest. `emails` must already be deduplicated, so the count matches the people in the list.
+ */
+export function defaultListName(emails: readonly string[]): string {
+  const [first, second] = emails;
+  if (!first) return '';
+  if (!second) return first;
+
+  const more = emails.length - 2;
+
+  return `${first} & ${second}${more > 0 ? ` +${more} ${more === 1 ? 'email' : 'emails'}` : ''}`;
+}
+
 /** Whether another list (not `exceptId`) already uses `name`, ignoring case. */
 export function isNameTaken(config: Config, name: string, exceptId?: string): boolean {
   const key = name.trim().toLowerCase();
