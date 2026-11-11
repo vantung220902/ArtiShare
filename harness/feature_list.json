@@ -26,7 +26,7 @@
         "See the hint 'Not artifact links: …' naming that link",
         "Replace it with https://claude.ai/cowork/cse_01DaqAfCToHd3TK71TZvnXNn?artifact=not-a-uuid and see the same hint"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F003",
