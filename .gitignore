@@ -7,3 +7,24 @@ dist/
 
 # Demo video (HyperFrames), kept local
 video/
+
+# Playwright end-to-end runs
+test-results/
+playwright-report/
+
+# Long-running harness session transcripts (harness/run.sh)
+harness/logs/
+
+# Claude Code: commit only the slash commands and agents. Settings
+# (settings.json, settings.local.json) and anything else Claude Code writes stay local.
+.claude/*
+!.claude/commands/
+!.claude/agents/
+
+# Secrets: never commit. .env.fake is public and needed by the fake build.
+.env
+.env.*
+!.env.fake
+*.pem
+*.key
+*.p12
