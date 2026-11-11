@@ -19,6 +19,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "e2e": "npm run build:fake && playwright test",
     "postinstall": "wxt prepare",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
@@ -32,6 +33,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "@types/chrome": "^0.3.7",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
