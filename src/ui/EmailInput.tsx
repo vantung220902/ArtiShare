@@ -6,10 +6,12 @@ interface Props {
   onChange: (text: string) => void;
   rows?: number;
   placeholder?: string;
+  /** Marks the field required for screen readers; the label draws the visible *. */
+  required?: boolean;
 }
 
 /** Textarea for addresses with live validation. Accepts any pasted shape, including CSV text. */
-export function EmailInput({ id, value, onChange, rows = 5, placeholder }: Props) {
+export function EmailInput({ id, value, onChange, rows = 5, placeholder, required }: Props) {
   const parsed = parseEmails(value);
 
   return (
@@ -17,6 +19,7 @@ export function EmailInput({ id, value, onChange, rows = 5, placeholder }: Props
       <textarea
         id={id}
         rows={rows}
+        aria-required={required || undefined}
         value={value}
         placeholder={placeholder ?? 'One per line, or paste a comma-separated list or a CSV export'}
         onChange={(e) => onChange(e.target.value)}
