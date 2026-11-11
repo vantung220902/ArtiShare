@@ -34,6 +34,25 @@ describe('parseArtifactRef', () => {
     expect(parseArtifactRef(`claude.ai/chat/abc?artifact=${UUID}`)?.id).toBe('2PUa7qFdoBcApzhmHVvA4K');
   });
 
+  it('parses a cowork link with an open artifact like a chat link, ignoring the hash', () => {
+    const uuid = 'e86b11e3-af91-40ad-8816-8deb3031e303';
+    const cowork = `https://claude.ai/cowork/cse_01DaqAfCToHd3TK71TZvnXNn?artifact=${uuid}#6767e92a-ac5`;
+    const ref = parseArtifactRef(cowork);
+    expect(ref).toEqual({
+      id: 'VhbnVTrGFVnm271Ufg8VcW',
+      kind: 'artifact',
+      url: 'https://claude.ai/artifact/VhbnVTrGFVnm271Ufg8VcW',
+    });
+    expect(ref).toEqual(parseArtifactRef(`https://claude.ai/chat/abc?artifact=${uuid}`));
+    expect(artifactUuid(ref!)).toBe(uuid);
+    expect(parseArtifactRef(`claude.ai/cowork/cse_x?artifact=${uuid.toUpperCase()}`)?.id).toBe(ref!.id);
+  });
+
+  it('rejects cowork links without a valid open artifact', () => {
+    expect(parseArtifactRef('https://claude.ai/cowork/cse_01DaqAfCToHd3TK71TZvnXNn')).toBeNull();
+    expect(parseArtifactRef('https://claude.ai/cowork/cse_x?artifact=not-a-uuid')).toBeNull();
+  });
+
   it('round-trips uuids with leading zero bytes through chat links', () => {
     const small = '00000000-0000-4000-8000-000000000001';
     expect(artifactUuid(parseArtifactRef(`https://claude.ai/chat/x?artifact=${small}`)!)).toBe(small);
