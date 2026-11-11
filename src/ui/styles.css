@@ -715,6 +715,9 @@ button.link:hover:not(:disabled) {
 button.copy-btn.copied {
   color: var(--accent-ink);
 }
+button.copy-btn.failed {
+  color: var(--err);
+}
 
 details > summary {
   list-style: none;
