@@ -635,6 +635,13 @@ button.link:hover:not(:disabled) {
   color: var(--warn);
 }
 
+/* <output> is inline by default. */
+.alert.ok {
+  display: block;
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
 .chip {
   display: inline-flex;
   align-items: center;
