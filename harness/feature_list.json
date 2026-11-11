@@ -82,13 +82,14 @@
     {
       "id": "F007",
       "category": "ux",
-      "description": "While the name is empty, the name field's placeholder shows the name the list will get",
+      "description": "The name field keeps its normal placeholder; the automatic name is filled in only once the list is saved",
       "steps": [
         "In the Lists tab, click New list and leave the name empty",
         "See the name placeholder 'List name, e.g. Acme clients'",
         "Type ana@example.com and bo@example.com into Email addresses",
-        "See the name placeholder change to 'ana@example.com & bo@example.com'",
-        "Type a name: it replaces the placeholder and is the name that gets saved"
+        "See the name placeholder stay 'List name, e.g. Acme clients' (it does not preview the automatic name)",
+        "Click Save list, open the new list and see its name field filled with 'ana@example.com & bo@example.com'",
+        "Type a name instead: it is the name that gets saved"
       ],
       "passes": true
     },

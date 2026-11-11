@@ -4,6 +4,13 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F007 · The name placeholder stays fixed; the automatic name appears once saved (reworked at the user's request)
+
+- **Did:** The user asked to drop the live preview of the automatic name in the List name placeholder and keep the normal one. F007's description and steps were changed to match (with the user's approval). `src/ui/ListForm.tsx`: the placeholder is always 'List name, e.g. Acme clients'; saving with an empty name still uses the automatic name, which then shows in the list's name field. `e2e/F007.spec.ts` rewritten; README 'Make a list' updated.
+- **Verified:** `npm run check` (108 unit tests) and `npm run e2e` (19 specs) pass. feature-verifier: PASS (also checked the Share tab's inline form, a reload, and that nothing else previews the name).
+- **State:** F007 passes. All 18 features pass.
+- **Next:** Open a PR from `harness/share-ux-fixes` into `develop`. A human should still try Preview on a real cowork artifact link.
+
 ### 2026-11-11 · F011 · Empty or invalid lists can't be saved (step reworded by the user)
 
 - **Did:** The user approved rewording F011's steps from `not-an-email` to `not@an-email`, since `parseEmails` ignores tokens without an `@` on purpose (names, CSV headers). No code change: `ListForm.submit` and `ShareView.runPreview` already refuse empty and invalid lists, and `e2e/F011.spec.ts` already used `not@an-email`.
