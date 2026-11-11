@@ -3,9 +3,9 @@ import { expect, test } from './fixtures';
 // F001: a claude.ai/cowork link with an artifact open is accepted in the Share tab and previews
 // as the matching claude.ai/artifact link.
 const COWORK =
-  'https://claude.ai/cowork/cse_01DaqAfCToHd3TK71TZvnXNn?artifact=e86b11e3-af91-40ad-8816-8deb3031e303#6767e92a-ac5';
-// The base58 form of e86b11e3-…-8deb3031e303, the same id a claude.ai/chat/…?artifact= link gives.
-const ARTIFACT = 'claude.ai/artifact/VhbnVTrGFVnm271Ufg8VcW';
+  'https://claude.ai/cowork/cse_01ExampleCoworkSession00?artifact=c0ffee00-1234-4abc-8def-000000000001#example';
+// The base58 form of c0ffee00-…-000000000001, the same id a claude.ai/chat/…?artifact= link gives.
+const ARTIFACT = 'claude.ai/artifact/QqHHsBLXBfYKJD5NqJ8PeY';
 
 test('a cowork link with an open artifact previews as that artifact', async ({ panel }) => {
   await panel.getByRole('tab', { name: /Lists/ }).click();

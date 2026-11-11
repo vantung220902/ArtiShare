@@ -172,7 +172,7 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 - **Verified:** `harness/init.sh` at start; `npm run check` (103 unit tests) and `npm run e2e` (2 specs) pass. feature-verifier: PASS.
 - **State:** F001 passes. 17 features left.
 - **Next:** F002 (dedupe a cowork link with its `claude.ai/artifact` link, reject bad cowork links in the UI). The parser already does both, so F002 is mostly its e2e spec.
-- **Notes:** The uuid `e86b11e3-af91-40ad-8816-8deb3031e303` encodes to `VhbnVTrGFVnm271Ufg8VcW`. `project/` pages stay rejected. + Current tab uses the same parser, so F003 should mostly need its e2e spec (route a claude.ai page; nothing may reach claude.ai).
+- **Notes:** The uuid `c0ffee00-1234-4abc-8def-000000000001` encodes to `QqHHsBLXBfYKJD5NqJ8PeY`. `project/` pages stay rejected. + Current tab uses the same parser, so F003 should mostly need its e2e spec (route a claude.ai page; nothing may reach claude.ai).
 
 ### 2026-11-11 · plan · Share UX fixes
 

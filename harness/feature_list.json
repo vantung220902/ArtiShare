@@ -8,7 +8,7 @@
       "description": "A claude.ai/cowork link with an artifact open (…/cowork/{session}?artifact={uuid}#…) is accepted as an artifact in the Share tab",
       "steps": [
         "Open the side panel of the fake build and go to the Share tab",
-        "Paste https://claude.ai/cowork/cse_01DaqAfCToHd3TK71TZvnXNn?artifact=e86b11e3-af91-40ad-8816-8deb3031e303#6767e92a-ac5 into Artifacts",
+        "Paste https://claude.ai/cowork/cse_01ExampleCoworkSession00?artifact=c0ffee00-1234-4abc-8def-000000000001#example into Artifacts",
         "See the Artifacts count show 1 and no 'Not artifact links' hint",
         "Tick a list and click Preview",
         "See one artifact card whose link is the matching https://claude.ai/artifact/{base58 id} link (the same id a claude.ai/chat/…?artifact= link with that uuid gives), with its To invite numbers"
@@ -22,9 +22,9 @@
       "steps": [
         "In the Share tab, paste the cowork link from F001 and, on the next line, the claude.ai/artifact link it maps to",
         "See the Artifacts count show 1, and Preview shows one artifact card",
-        "Replace the text with https://claude.ai/cowork/cse_01DaqAfCToHd3TK71TZvnXNn (no ?artifact=)",
+        "Replace the text with https://claude.ai/cowork/cse_01ExampleCoworkSession00 (no ?artifact=)",
         "See the hint 'Not artifact links: …' naming that link",
-        "Replace it with https://claude.ai/cowork/cse_01DaqAfCToHd3TK71TZvnXNn?artifact=not-a-uuid and see the same hint"
+        "Replace it with https://claude.ai/cowork/cse_01ExampleCoworkSession00?artifact=not-a-uuid and see the same hint"
       ],
       "passes": true
     },
@@ -33,7 +33,7 @@
       "category": "functional",
       "description": "+ Current tab adds the artifact open in a claude.ai/cowork tab, and opening the panel on such a tab fills it in",
       "steps": [
-        "Open https://claude.ai/cowork/cse_01DaqAfCToHd3TK71TZvnXNn?artifact=e86b11e3-af91-40ad-8816-8deb3031e303#6767e92a-ac5 in the active tab (in e2e, serve the page with a route so nothing reaches claude.ai)",
+        "Open https://claude.ai/cowork/cse_01ExampleCoworkSession00?artifact=c0ffee00-1234-4abc-8def-000000000001#example in the active tab (in e2e, serve the page with a route so nothing reaches claude.ai)",
         "Open the side panel: see Artifacts already filled with the matching https://claude.ai/artifact/{id} link",
         "Clear Artifacts and click + Current tab",
         "See the same link added once, with no error; click + Current tab again and see it is not added twice"
@@ -45,7 +45,7 @@
       "category": "error-handling",
       "description": "+ Current tab on a cowork session with no artifact open explains why nothing was added",
       "steps": [
-        "Make https://claude.ai/cowork/cse_01DaqAfCToHd3TK71TZvnXNn (no ?artifact=) the active tab",
+        "Make https://claude.ai/cowork/cse_01ExampleCoworkSession00 (no ?artifact=) the active tab",
         "Type a valid artifact link into Artifacts, then click + Current tab",
         "See the error 'The current tab is not a claude.ai artifact.'",
         "See the Artifacts text unchanged"
