@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F005 · Required fields marked with *, list name labelled optional
+
+- **Did:** New `src/ui/RequiredMark.tsx` (a red, `aria-hidden` ` *`; `.required-mark` in `styles.css`). `ListForm` labels are now `List name (optional)` and `Email addresses *`; `EmailInput` takes a `required` prop that sets `aria-required` on the textarea. `ShareView`'s Artifacts label gets the mark and its textarea `aria-required`. The inline + New list form and the Lists tab (new and existing) share `ListForm`, so they all change together. Added `e2e/F005.spec.ts`.
+- **Verified:** `harness/init.sh` at start; `npm run check` (105 unit tests) and `npm run e2e` (6 specs) pass. feature-verifier: PASS.
+- **State:** F005 passes. 13 features left. The README doesn't mention these labels, so it is unchanged.
+- **Next:** F006 (a list saved without a name is named after its addresses). `ListForm.submit` still fails with 'Give the list a name.' for an empty name, even though the label now says optional: F006 is what makes that true. Also check `isNameTaken` for the generated names.
+- **Notes:** The Artifacts label's text is `Artifacts *` followed by a space before the count badge, so assert it with `toHaveText` (normalises whitespace), not `textContent`. F002's `label[for="artifacts"] .count` selector still works.
+
 ### 2026-11-11 · F004 · + Current tab on a cowork session without an artifact
 
 - **Did:** No source change: `addCurrentTab` already sets 'The current tab is not a claude.ai artifact.' and returns before touching the text when the parser rejects the tab's URL. Added `e2e/F004.spec.ts`: serves a bare cowork session page (no `?artifact=`) with `context.route`, brings it to the front, reloads the panel (Artifacts stays empty, no alert), types a valid artifact link, clicks + Current tab, then asserts the `p.alert` text and that the raw textarea value is still the typed link.

@@ -94,6 +94,10 @@ label {
   font-weight: 600;
   font-size: 13px;
 }
+/* The * after a required field's label. Decorative: the field itself carries aria-required. */
+.required-mark {
+  color: var(--err);
+}
 
 .panel {
   padding: 14px 14px 20px;

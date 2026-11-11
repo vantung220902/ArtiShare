@@ -11,6 +11,7 @@ import { parseEmails } from '../core/emails';
 import type { AccessLevel } from '../core/types';
 import { AccessSelect } from './AccessSelect';
 import { EmailInput } from './EmailInput';
+import { RequiredMark } from './RequiredMark';
 
 /** What a new-list form holds before it is saved: its valid addresses and permission. */
 export interface ListDraft {
@@ -170,7 +171,7 @@ export function ListForm({ ref, config, save, list, onSaved, onCancel, onDraftCh
 
   return (
     <div className="stack">
-      <label htmlFor={nameId}>List name</label>
+      <label htmlFor={nameId}>List name (optional)</label>
       <input
         id={nameId}
         type="text"
@@ -178,8 +179,11 @@ export function ListForm({ ref, config, save, list, onSaved, onCancel, onDraftCh
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
-      <label htmlFor={emailId}>Email addresses</label>
-      <EmailInput id={emailId} value={text} onChange={setText} rows={list ? 6 : 4} />
+      <label htmlFor={emailId}>
+        Email addresses
+        <RequiredMark />
+      </label>
+      <EmailInput id={emailId} value={text} onChange={setText} rows={list ? 6 : 4} required />
       <div className="row nowrap">
         <label htmlFor={accessId} className="field-label">
           Permission

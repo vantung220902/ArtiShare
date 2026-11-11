@@ -62,7 +62,7 @@
         "Open an existing list from the Lists tab and see the same labels",
         "In the Share tab, see the label 'Artifacts *', and the same labels in the inline + New list form"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F006",
