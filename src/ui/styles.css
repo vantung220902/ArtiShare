@@ -690,6 +690,12 @@ button.link:hover:not(:disabled) {
   color: var(--accent-ink);
 }
 
+.artifact-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
 .artifact-link {
   display: flex;
   align-items: center;
@@ -704,6 +710,9 @@ button.link:hover:not(:disabled) {
   color: var(--accent-ink);
 }
 .artifact-link:hover {
+  color: var(--accent-ink);
+}
+button.copy-btn.copied {
   color: var(--accent-ink);
 }
 

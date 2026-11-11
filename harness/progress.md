@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F012 · Copy button beside each artifact link in the Preview
+
+- **Did:** `ArtifactLink` (`src/entrypoints/sidepanel/viewComponents.tsx`) is now an `.artifact-row` holding the unchanged link plus a new `CopyLinkButton` (`aria-label`/title 'Copy link', 'Copied' with a check icon for 2 s, then back; timer cleared on unmount). It copies with `navigator.clipboard.writeText` from the click, falling back to `execCommand('copy')`, so the manifest is unchanged (no clipboardWrite). `CopyIcon`/`CheckIcon` in `src/ui/icons.tsx`, `.artifact-row` and `.copy-btn.copied` in `styles.css`. `e2e/F012.spec.ts`: two artifacts, each button copies its own link (checked by pasting into a probe textarea), 'Copied' state and check icon, revert timing, link `href`/`target=_blank`, and no clipboard permission in the built manifest.
+- **Verified:** `harness/init.sh` at start; `npm run check` (108 unit tests) and `npm run e2e` (14 specs) pass. feature-verifier: the first run had Bash denied and gave no verdict; the second (with my command output in the prompt) ran both suites itself and returned PASS.
+- **State:** F012 passes. F011 is still false (blocked, see the entry below). Because the run view shares `ArtifactLink`, it already shows the copy button, so F013 probably needs only an e2e spec (and a check of the run view layout).
+- **Next:** A human should settle F011 (reword the `not-an-email` step to an address with an `@`, or decide otherwise). Otherwise take F013: add `e2e/F013.spec.ts` for the run view, while the run is going and after it finishes.
+- **Notes:** E2E runs against `.output/chrome-mv3-fake`, so run `npm run e2e` (which rebuilds), not bare `npx playwright test`, or you test a stale bundle. Playwright can't grant clipboard permission to a `chrome-extension://` origin and `readText` needs one, so the spec pastes with Ctrl/Cmd+V into a probe textarea; wait for 'Copied' before pasting, since the copy is async. A failed copy silently leaves the button as 'Copy link'.
+
 ### 2026-11-11 · F011 · Empty or invalid lists still can't be saved (BLOCKED on a human decision)
 
 - **Did:** `ShareView.runPreview` now also submits the inline form when it is showing, empty, and nothing is ticked, so Preview shows 'Add at least one email address.' (before, it said 'Tick a list, or create one.' because an empty form is not a draft). Added `e2e/F011.spec.ts`: empty Save list → 'Add at least one email address.'; `ana@example.com` + `not@an-email` → 'Fix or remove the invalid addresses: not@an-email'; no list created; the same two cases through Preview in the Share tab, which doesn't preview and saves nothing.

@@ -155,7 +155,7 @@
         "Clicking the link text itself still opens the artifact in a new tab",
         "Copying needs no new manifest permission (no clipboardWrite), so updating the extension shows no new permission prompt"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F013",
