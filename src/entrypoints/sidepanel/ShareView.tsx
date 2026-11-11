@@ -99,9 +99,10 @@ export function ShareView({
     let current = { config, selected, invites };
 
     // A new list typed but not saved is meant to be shared with: save it first, like Save list would.
-    if (showForm && form.current?.hasDraft()) {
+    // An empty form with nobody ticked is submitted too, so it says what's missing, as Save list does.
+    if (showForm && (form.current?.hasDraft() || !invites.length)) {
       setBusy(true);
-      const saved = await form.current.submit();
+      const saved = await form.current?.submit();
       setBusy(false);
       // The form shows why it could not save.
       if (!saved) return;
