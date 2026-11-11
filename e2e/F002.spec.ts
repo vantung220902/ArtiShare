@@ -2,9 +2,9 @@ import { expect, test } from './fixtures';
 
 // F002: a cowork link and the claude.ai/artifact link for the same artifact count as one artifact,
 // and cowork links without a valid artifact uuid are rejected.
-const SESSION = 'https://claude.ai/cowork/cse_01DaqAfCToHd3TK71TZvnXNn';
-const COWORK = `${SESSION}?artifact=e86b11e3-af91-40ad-8816-8deb3031e303#6767e92a-ac5`;
-const ARTIFACT = 'claude.ai/artifact/VhbnVTrGFVnm271Ufg8VcW';
+const SESSION = 'https://claude.ai/cowork/cse_01ExampleCoworkSession00';
+const COWORK = `${SESSION}?artifact=c0ffee00-1234-4abc-8def-000000000001#example`;
+const ARTIFACT = 'claude.ai/artifact/QqHHsBLXBfYKJD5NqJ8PeY';
 
 test('a cowork link and its artifact link are one artifact; bad cowork links are rejected', async ({
   panel,

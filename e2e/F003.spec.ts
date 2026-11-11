@@ -3,8 +3,8 @@ import { expect, test } from './fixtures';
 // F003: + Current tab adds the artifact open in a claude.ai/cowork tab, and opening the panel on
 // such a tab fills it in.
 const COWORK =
-  'https://claude.ai/cowork/cse_01DaqAfCToHd3TK71TZvnXNn?artifact=e86b11e3-af91-40ad-8816-8deb3031e303#6767e92a-ac5';
-const ARTIFACT = 'https://claude.ai/artifact/VhbnVTrGFVnm271Ufg8VcW';
+  'https://claude.ai/cowork/cse_01ExampleCoworkSession00?artifact=c0ffee00-1234-4abc-8def-000000000001#example';
+const ARTIFACT = 'https://claude.ai/artifact/QqHHsBLXBfYKJD5NqJ8PeY';
 
 test('the panel and + Current tab pick up the artifact open in a cowork tab', async ({ context, panel }) => {
   // Serve the page ourselves: nothing may reach claude.ai.

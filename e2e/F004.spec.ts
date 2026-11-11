@@ -1,8 +1,8 @@
 import { expect, test } from './fixtures';
 
 // F004: + Current tab on a cowork session with no artifact open explains why nothing was added.
-const SESSION = 'https://claude.ai/cowork/cse_01DaqAfCToHd3TK71TZvnXNn';
-const TYPED = 'https://claude.ai/artifact/VhbnVTrGFVnm271Ufg8VcW';
+const SESSION = 'https://claude.ai/cowork/cse_01ExampleCoworkSession00';
+const TYPED = 'https://claude.ai/artifact/QqHHsBLXBfYKJD5NqJ8PeY';
 
 test('+ Current tab on a cowork session without an artifact says so and adds nothing', async ({
   context,
