@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F013 · Copy button beside each artifact link in the run view
+
+- **Did:** Added `e2e/F013.spec.ts` only. It saves a list (ana + slow), previews two artifacts, sends 4 invitations, and while the run is Running clicks the first row's 'Copy link' (asserts 'Copied', that Running is still shown, the pasted clipboard equals the first link, and the link's `href`/`target=_blank`). After Done ('4 invited') it clicks the second row's button, asserts the pasted clipboard equals the second link and that it reverts to 'Copy link'. No source change: `RunView` already renders the shared `ArtifactLink` (F012).
+- **Verified:** `harness/init.sh` at start; `npm run check` (108 unit tests) and `npm run e2e` (15 specs) pass. feature-verifier: the first run had Bash denied and returned FAIL for lack of run evidence only (its static review found nothing wrong); the second ran both suites itself and returned PASS.
+- **State:** F013 passes. F011 is still false (blocked on a human, see below). 5 features left besides F011: F014–F018.
+- **Next:** A human should still settle F011 (reword the `not-an-email` step to an address with an `@`; code and spec are already committed and green). Otherwise take F014: make the copy button show 'Couldn't copy' when the clipboard write fails (today a failed copy silently stays 'Copy link'; see `CopyLinkButton` in `src/entrypoints/sidepanel/viewComponents.tsx`). In e2e, make `navigator.clipboard.writeText` reject; note the `execCommand('copy')` fallback also has to fail for the error state to show.
+- **Notes:** The 'Running' window relies on the fake's one-time 1 s rate-limit backoff for `slow@…`, so the spec uses a `slow` address on purpose. The verifier agent is often denied Bash on its first run: re-run it.
+
 ### 2026-11-11 · F012 · Copy button beside each artifact link in the Preview
 
 - **Did:** `ArtifactLink` (`src/entrypoints/sidepanel/viewComponents.tsx`) is now an `.artifact-row` holding the unchanged link plus a new `CopyLinkButton` (`aria-label`/title 'Copy link', 'Copied' with a check icon for 2 s, then back; timer cleared on unmount). It copies with `navigator.clipboard.writeText` from the click, falling back to `execCommand('copy')`, so the manifest is unchanged (no clipboardWrite). `CopyIcon`/`CheckIcon` in `src/ui/icons.tsx`, `.artifact-row` and `.copy-btn.copied` in `styles.css`. `e2e/F012.spec.ts`: two artifacts, each button copies its own link (checked by pasting into a probe textarea), 'Copied' state and check icon, revert timing, link `href`/`target=_blank`, and no clipboard permission in the built manifest.

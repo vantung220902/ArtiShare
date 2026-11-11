@@ -167,7 +167,7 @@
         "When the run is Done, click the copy button beside the second artifact",
         "See the clipboard hold the second artifact's link"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F014",
