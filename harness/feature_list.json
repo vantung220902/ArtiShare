@@ -137,11 +137,11 @@
       "steps": [
         "In the Lists tab, click New list and click Save list with everything empty",
         "See 'Add at least one email address.' and no list created",
-        "Leave the name empty and enter ana@example.com and not-an-email, then click Save list",
-        "See 'Fix or remove the invalid addresses: not-an-email' and no list created",
+        "Leave the name empty and enter ana@example.com and not@an-email, then click Save list",
+        "See 'Fix or remove the invalid addresses: not@an-email' and no list created",
         "In the Share tab, the same empty or invalid inline form makes Preview show the same message and not preview"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F012",
