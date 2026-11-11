@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F009 · Clearing the name of a saved list renames it after its addresses
+
+- **Did:** Added `e2e/F009.spec.ts` only: makes 'Design team' (ana + bo, Commenter), opens it in the Lists tab, clears the name, clicks Save, and asserts the new name `ana@example.com & bo@example.com`, no `.alert`, and that addresses, permission ('2 people · Commenter') and the list count are unchanged. No source change: `ListForm.submit` already does this (F006/F008, `baseline.id` is passed as `exceptId`).
+- **Verified:** `harness/init.sh` at start; `npm run check` (108 unit tests) and `npm run e2e` (10 specs) pass. feature-verifier: the first run returned FAIL only because Bash was denied (it found no fault in the feature); the second run could use Bash, ran both suites itself and returned PASS.
+- **State:** F009 passes. 9 features left.
+- **Next:** F010 (in the Share tab, an unnamed new list typed in the inline form is saved with its automatic name on Preview). Check how `ShareView` calls `form.submit()` and that the name numbering applies there.
+- **Notes:** The spec doesn't reload the panel to prove the rename persisted in storage; the card re-renders from the saved config after the `save-list` round trip.
+
 ### 2026-11-11 · F008 · An automatic name never clashes; a name of only spaces counts as empty
 
 - **Did:** `uniqueListName(config, base, exceptId)` in `src/core/config.ts` returns `base`, or `base (2)`, `base (3)`, … (first free, case-insensitive). `ListForm.submit` uses it only when the typed name is empty after trimming, so only hand-typed names can raise 'A list called "…" already exists.' (the 'Type a name to tell them apart.' hint from F006 is gone). Unit tests in `tests/config.test.ts`, new `e2e/F008.spec.ts` (`(2)`, `(3)`, spaces-only name, typed clash still errors), and README's "Name it" line mentions the numbering. `e2e/F006.spec.ts`'s last step asserted the old duplicate error; it now expects `ana@example.com (2)` (and 5 lists), since F008 supersedes it.

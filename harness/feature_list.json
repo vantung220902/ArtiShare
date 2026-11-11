@@ -116,7 +116,7 @@
         "See the list renamed 'ana@example.com & bo@example.com' with no 'Give the list a name.' error",
         "Its addresses and permission are unchanged"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F010",
