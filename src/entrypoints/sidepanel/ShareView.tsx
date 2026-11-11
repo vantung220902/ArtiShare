@@ -7,6 +7,7 @@ import { type PreviewResult, send } from '../../lib/messages';
 import { BackIcon, PlusIcon, SendIcon } from '../../ui/icons';
 import { ListBadge } from '../../ui/ListBadge';
 import { type ListDraft, ListForm, type ListFormHandle } from '../../ui/ListForm';
+import { RequiredMark } from '../../ui/RequiredMark';
 import { ArtifactLink, EmailGroup } from './viewComponents';
 import { byName, people, plural, type Save } from './viewUtils';
 
@@ -137,7 +138,9 @@ export function ShareView({
       <section className="card stack">
         <div className="row spread">
           <label htmlFor="artifacts" className="title">
-            Artifacts {artifacts.refs.length > 0 && <span className="count">{artifacts.refs.length}</span>}
+            Artifacts
+            <RequiredMark />{' '}
+            {artifacts.refs.length > 0 && <span className="count">{artifacts.refs.length}</span>}
           </label>
           <button className="pill" onClick={addCurrentTab}>
             <PlusIcon size={13} /> Current tab
@@ -145,6 +148,7 @@ export function ShareView({
         </div>
         <textarea
           id="artifacts"
+          aria-required="true"
           rows={3}
           value={artifactText}
           onChange={(e) => setArtifactText(e.target.value)}
