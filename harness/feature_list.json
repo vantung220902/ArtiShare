@@ -191,7 +191,7 @@
         "See a primary (filled), full-width 'Start a new share' button in the run card; no other button competes with it",
         "Reload the panel and see the same finished view and button"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F016",

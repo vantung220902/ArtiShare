@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F015 · A finished run says so and offers one primary 'Start a new share'
+
+- **Did:** `RunView` (`src/entrypoints/sidepanel/RunView.tsx`): when `status === 'completed'`, the run card starts with an `<output class="alert ok">` reading 'Share finished: 1 invited, 1 failed' (failed/skipped only when non-zero), and the chips row is hidden (the message carries the same counts). The old 'New share' button is now 'Start a new share' in every non-running state; it is `primary block` (filled, full width) only when finished, so a stopped run keeps Resume as its primary action. `.alert.ok` (with `display:block`, since `<output>` is inline) in `src/ui/styles.css`. New `e2e/F015.spec.ts`: ana + fail → Done; exact message text, first child of the card, one button in the card with class primary, nearly card-wide, background differs from a plain button; same after `panel.reload()`.
+- **Verified:** `harness/init.sh` at start; `npm run check` (108 unit tests) and `npm run e2e` (17 specs) pass. feature-verifier: first run had Bash denied (FAIL for lack of evidence only); second ran both suites itself and returned PASS.
+- **State:** F015 passes. F011 still false (blocked on a human). 3 features left besides F011: F016–F018.
+- **Next:** A human should still settle F011 (reword `not-an-email` to an address with an `@`; code and spec are green). Otherwise take F016: 'Start a new share' after a finished run must land on a fresh Share form with focus in the Artifacts field, Artifacts empty (or the current tab's artifact), Share with ticked per the default selection, no preview/error. Check what `clear` does in `runManager` and how `ShareView` resets on remount; focus is probably the missing piece.
+- **Notes:** Lint (jsx-a11y) rejects `role="status"` on a `<p>`, hence `<output>`. `startNew` already keeps the `window.confirm` only when invites are pending, which is F017's behaviour (its e2e is still to write). README still says 'New share' (README line ~40 flowchart and ~114); F018 covers it.
+
 ### 2026-11-11 · F014 · Copy button says "Couldn't copy" when the clipboard refuses
 
 - **Did:** `CopyLinkButton` (`src/entrypoints/sidepanel/viewComponents.tsx`) now has three states, idle / copied / failed. A rejected copy (both the async API and the `execCommand` fallback) shows a close icon with the accessible name and tooltip "Couldn't copy" for 2 s, then reverts to 'Copy link'; `.copy-btn.failed` in `src/ui/styles.css` colours it with `--err`. New `e2e/F014.spec.ts` makes `navigator.clipboard.writeText` reject and `document.execCommand` return false, then checks the Preview button (name, title, class, revert timing), that the link still has its `href`/`target=_blank`, that Send still completes ('2 invited'), and that the run view's button reports the failure too.
