@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F007 · The name placeholder previews the name the list will get
+
+- **Did:** `ListForm` computes `namePlaceholder` (`useMemo` over `defaultListName(parseEmails(text).valid)`, falling back to 'List name, e.g. Acme clients') and uses it as the name input's placeholder. README's "Name it" line mentions the preview. Added `e2e/F007.spec.ts` (empty form, one address, two, duplicates dropped, cleared, typed name saved). No new unit test: the logic is `defaultListName`, already covered.
+- **Verified:** `harness/init.sh` at start; `npm run check` (106 unit tests) and `npm run e2e` (8 specs) pass. feature-verifier: PASS on the second run (the first run had Bash denied and returned FAIL without judging the feature).
+- **State:** F007 passes. 11 features left.
+- **Next:** F008, the first failing feature in `harness/feature_list.json`.
+- **Notes:** The placeholder also previews on edits of an existing list (harmless, since clearing the name renames it after its addresses, see F006).
+
 ### 2026-11-11 · F006 · A list saved without a name is named after its addresses
 
 - **Did:** `defaultListName(emails)` in `src/core/config.ts` (one address → it; two → `a & b`; more → `a & b +N email(s)`, singular for 1). `ListForm.submit` parses the addresses first and uses that name when the name field is empty, so 'Give the list a name.' is gone. If the generated name is already taken the error adds 'Type a name to tell them apart.'. README's "Name it" line says the name is optional. Added a unit test in `tests/config.test.ts` and `e2e/F006.spec.ts`.

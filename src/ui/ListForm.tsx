@@ -99,6 +99,12 @@ export function ListForm({ ref, config, save, list, onSaved, onCancel, onDraftCh
 
   const hasDraft = !!name.trim() || !!text.trim();
 
+  // Shows the name an empty field will save as, so the fallback isn't a surprise.
+  const namePlaceholder = useMemo(
+    () => defaultListName(parseEmails(text).valid) || 'List name, e.g. Acme clients',
+    [text],
+  );
+
   // A new list's draft, so the parent can count its people before it is saved.
   const draft = useMemo(
     () => (list || !hasDraft ? null : { emails: parseEmails(text).valid, access }),
@@ -180,7 +186,7 @@ export function ListForm({ ref, config, save, list, onSaved, onCancel, onDraftCh
       <input
         id={nameId}
         type="text"
-        placeholder="List name, e.g. Acme clients"
+        placeholder={namePlaceholder}
         value={name}
         onChange={(e) => setName(e.target.value)}
       />

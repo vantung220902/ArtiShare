@@ -90,7 +90,7 @@
         "See the name placeholder change to 'ana@example.com & bo@example.com'",
         "Type a name: it replaces the placeholder and is the name that gets saved"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F008",
