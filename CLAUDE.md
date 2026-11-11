@@ -43,4 +43,4 @@ Large goals are built over many sessions, following Anthropic's [harness for lon
 
 ### Secrets
 
-`.claude/settings.json` (local only, not in git) keeps credentials away from sessions: `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB` strips API keys and tokens from the environment of every command Claude runs, `Read` deny rules block `.env` files, private keys and the credential files in your home folder, and `Bash` deny rules block printing the environment, keychain and token commands, `curl`/`wget` and `git push`. Sessions can't edit their own settings. Never put a real secret in `.env.fake` or any committed file.
+`.claude/settings.json` (local only, not in git) keeps credentials away from sessions: `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB` strips API keys and tokens from the environment of every command Claude runs, `Read` deny rules block `.env` files, private keys and the credential files in your home folder, and `Bash` deny rules block printing the environment, keychain and token commands, and `curl`/`wget`. Sessions can't edit their own settings. Never put a real secret in `.env.fake` or any committed file.
