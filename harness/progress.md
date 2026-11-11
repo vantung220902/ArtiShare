@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F016 · 'Start a new share' after a finished run opens a fresh Share form with focus in Artifacts
+
+- **Did:** The fresh form itself already worked (clearing the run unmounts `RunView` and remounts `ShareView`, which starts empty with the default selection and the current tab's artifact); the missing piece was focus. `App` (`src/entrypoints/sidepanel/App.tsx`) holds `focusArtifacts`, set by `RunView`'s new `onStartNew` prop before the clear is sent (and reset if the clear fails); `ShareView` takes `focusArtifacts` and focuses `#artifacts` when it mounts. A plain panel open doesn't steal focus. `RunView.act` now returns whether it succeeded. New `e2e/F016.spec.ts`: two lists with only Alpha ticked by default, Beta ticked by hand for the run, finish a run, click Start a new share; asserts no dialog, Artifacts empty and focused, Alpha ticked / Beta not, no alert/preview/finished message, then a second run completes.
+- **Verified:** `harness/init.sh` at start; `npm run check` (108 unit tests) and `npm run e2e` (18 specs) pass. feature-verifier: PASS (ran both suites itself).
+- **State:** F016 passes. F011 still false (blocked on a human). 2 features left besides F011: F017, F018.
+- **Next:** A human should still settle F011 (reword `not-an-email` to an address with an `@`; code and spec are green). Otherwise take F017: stopped run with pending invites asks before discarding, Cancel keeps it resumable, nothing-left skips the confirmation. `startNew` already has the confirm logic; mostly an e2e spec (dismiss the dialog with `page.once('dialog', d => d.dismiss())`; the `panel` fixture accepts dialogs by default).
+- **Notes:** In e2e, a controlled checkbox in the Lists tab only flips after the config save returns, so `locator.check()` fails ("did not change its state"); use `click()` then `expect(...).toBeChecked()`. Closed `<details>` list forms stay in the DOM, so labels match twice: filter `{ visible: true }`.
+
 ### 2026-11-11 · F015 · A finished run says so and offers one primary 'Start a new share'
 
 - **Did:** `RunView` (`src/entrypoints/sidepanel/RunView.tsx`): when `status === 'completed'`, the run card starts with an `<output class="alert ok">` reading 'Share finished: 1 invited, 1 failed' (failed/skipped only when non-zero), and the chips row is hidden (the message carries the same counts). The old 'New share' button is now 'Start a new share' in every non-running state; it is `primary block` (filled, full width) only when finished, so a stopped run keeps Resume as its primary action. `.alert.ok` (with `display:block`, since `<output>` is inline) in `src/ui/styles.css`. New `e2e/F015.spec.ts`: ana + fail → Done; exact message text, first child of the card, one button in the card with class primary, nearly card-wide, background differs from a plain button; same after `panel.reload()`.

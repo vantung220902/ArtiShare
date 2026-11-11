@@ -204,7 +204,7 @@
         "See the Share form: Artifacts empty (or the current tab's artifact if it is one), Share with ticked per the default selection, no preview, no leftover error, and focus in the Artifacts field",
         "Add an artifact link, Preview and Send, and see a new run start"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F017",

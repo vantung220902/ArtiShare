@@ -10,15 +10,21 @@ const RUN_STATUS_LABELS: Record<RunState['status'], string> = {
   stopped: 'Stopped',
 };
 
-export function RunView({ run }: { run: RunState }) {
+export function RunView({ run, onStartNew }: { run: RunState; onStartNew: (starting: boolean) => void }) {
   const [error, setError] = useState('');
   const s = summarize(run.items, run.reason);
   const done = run.items.length - s.pending;
   const pct = run.items.length ? Math.round((done / run.items.length) * 100) : 100;
   const act = (type: 'stop' | 'resume' | 'clear') =>
     send(type, {}).then(
-      () => setError(''),
-      (e: Error) => setError(e.message),
+      () => {
+        setError('');
+        return true;
+      },
+      (e: Error) => {
+        setError(e.message);
+        return false;
+      },
     );
 
   const finished = run.status === 'completed';
@@ -31,8 +37,10 @@ export function RunView({ run }: { run: RunState }) {
     .filter(Boolean)
     .join(', ');
   const startNew = () => {
-    if (s.pending === 0 || window.confirm('Discard this run? The remaining invites will not be sent.'))
-      void act('clear');
+    if (s.pending > 0 && !window.confirm('Discard this run? The remaining invites will not be sent.')) return;
+    // The Share form mounts as soon as the run is gone, so it has to know before the clear lands.
+    onStartNew(true);
+    void act('clear').then((cleared) => cleared || onStartNew(false));
   };
 
   const byArtifact = new Map<string, RunState['items']>();
