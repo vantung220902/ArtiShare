@@ -77,7 +77,7 @@
         "See a list named 'cy@example.com & di@example.com +2 emails' (with three addresses it reads '+1 email')",
         "The addresses used are the first ones in the order they were entered, after duplicates are dropped"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F007",

@@ -66,7 +66,7 @@ Open claude.ai and sign in, then click the ArtiShare icon. The side panel has tw
 
 In the **Lists** tab, click **New list**:
 
-- **Name** it, for example _Design team_.
+- **Name** it, for example _Design team_. The name is optional: left empty, the list is named after its addresses (`ana@acme.com & bo@acme.com +2 emails`).
 - **Paste the addresses** in any shape: one per line, comma-separated, `Name <a@b.com>`, or cells copied from a spreadsheet. The counter shows how many are valid. Duplicates are dropped and invalid addresses are flagged.
 - **Pick the permission** everyone on this list gets: _Can view_, _Commenter_ or _Can edit_.
 

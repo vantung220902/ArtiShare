@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F006 · A list saved without a name is named after its addresses
+
+- **Did:** `defaultListName(emails)` in `src/core/config.ts` (one address → it; two → `a & b`; more → `a & b +N email(s)`, singular for 1). `ListForm.submit` parses the addresses first and uses that name when the name field is empty, so 'Give the list a name.' is gone. If the generated name is already taken the error adds 'Type a name to tell them apart.'. README's "Name it" line says the name is optional. Added a unit test in `tests/config.test.ts` and `e2e/F006.spec.ts`.
+- **Verified:** `harness/init.sh` at start; `npm run check` (106 unit tests) and `npm run e2e` (7 specs) pass. feature-verifier: PASS.
+- **State:** F006 passes. 12 features left.
+- **Next:** F007 (the name field's placeholder shows the name the list will get). Reuse `defaultListName(parseEmails(text).valid)` in `ListForm`, falling back to 'List name, e.g. Acme clients' when there are no addresses.
+- **Notes:** The generated name applies to edits too: clearing the name of an existing list and saving renames it after its addresses (no test covers this; the feature text only speaks of new lists). In e2e, saved lists render the same labels inside `<details>`, so scope the new-list form with `div.card`, and match names exactly with `.pick-name` (`ana@example.com` is a substring of `ana@example.com & bo@example.com`).
+
 ### 2026-11-11 · F005 · Required fields marked with *, list name labelled optional
 
 - **Did:** New `src/ui/RequiredMark.tsx` (a red, `aria-hidden` ` *`; `.required-mark` in `styles.css`). `ListForm` labels are now `List name (optional)` and `Email addresses *`; `EmailInput` takes a `required` prop that sets `aria-required` on the textarea. `ShareView`'s Artifacts label gets the mark and its textarea `aria-required`. The inline + New list form and the Lists tab (new and existing) share `ListForm`, so they all change together. Added `e2e/F005.spec.ts`.

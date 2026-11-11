@@ -3,6 +3,7 @@ import {
   type Config,
   type ConfigChange,
   createList,
+  defaultListName,
   type EmailList,
   isNameTaken,
   sameList,
@@ -112,11 +113,15 @@ export function ListForm({ ref, config, save, list, onSaved, onCancel, onDraftCh
   };
 
   const submit = async () => {
-    const trimmed = name.trim();
     const { valid, invalid } = parseEmails(text);
-    if (!trimmed) return fail('Give the list a name.');
+    const named = name.trim();
+    // An empty name is allowed: the list is named after its addresses.
+    const trimmed = named || defaultListName(valid);
     if (conflict) return fail('This list changed in another window. Reload the saved version first.');
-    if (isNameTaken(config, trimmed, baseline?.id)) return fail(`A list called "${trimmed}" already exists.`);
+    if (isNameTaken(config, trimmed, baseline?.id))
+      return fail(
+        `A list called "${trimmed}" already exists.${named ? '' : ' Type a name to tell them apart.'}`,
+      );
     if (invalid.length)
       return fail(
         `Fix or remove the invalid addresses: ${invalid.slice(0, 3).join(', ')}${invalid.length > 3 ? '…' : ''}`,
