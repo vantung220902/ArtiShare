@@ -86,6 +86,22 @@ describe('parseArtifactList', () => {
     ).refs;
     expect(refs.map((ref) => ref.id)).toEqual(['2PUa7qFdoBcApzhmHVvA4K']);
   });
+
+  it('counts a cowork link and the claude.ai/artifact link for the same artifact once', () => {
+    const cowork =
+      'https://claude.ai/cowork/cse_01DaqAfCToHd3TK71TZvnXNn?artifact=e86b11e3-af91-40ad-8816-8deb3031e303#x';
+    const r = parseArtifactList(`${cowork}\nhttps://claude.ai/artifact/VhbnVTrGFVnm271Ufg8VcW`);
+    expect(r.refs.map((ref) => ref.id)).toEqual(['VhbnVTrGFVnm271Ufg8VcW']);
+    expect(r.invalid).toEqual([]);
+  });
+
+  it('reports cowork links without a valid artifact uuid as invalid', () => {
+    const bare = 'https://claude.ai/cowork/cse_01DaqAfCToHd3TK71TZvnXNn';
+    const bad = 'https://claude.ai/cowork/cse_01DaqAfCToHd3TK71TZvnXNn?artifact=not-a-uuid';
+    const r = parseArtifactList(`${bare}\n${bad}`);
+    expect(r.refs).toEqual([]);
+    expect(r.invalid).toEqual([bare, bad]);
+  });
 });
 
 describe('artifactUuid', () => {
