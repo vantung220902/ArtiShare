@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { CheckIcon, ChevronIcon, CopyIcon, LinkIcon } from '../../ui/icons';
+import { CheckIcon, ChevronIcon, CloseIcon, CopyIcon, LinkIcon } from '../../ui/icons';
 
 const COPIED_MS = 2000;
 
@@ -21,31 +21,48 @@ async function copyText(text: string) {
   }
 }
 
+type CopyState = 'idle' | 'copied' | 'failed';
+
+const COPY_LABEL: Record<CopyState, string> = {
+  idle: 'Copy link',
+  copied: 'Copied',
+  failed: "Couldn't copy",
+};
+
 function CopyLinkButton({ url }: { url: string }) {
-  const [copied, setCopied] = useState(false);
+  const [state, setState] = useState<CopyState>('idle');
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
 
+  // Both outcomes revert on their own, so the button is ready for another try.
+  const show = (next: CopyState) => {
+    setState(next);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setState('idle'), COPIED_MS);
+  };
+
   const copy = () => {
     void copyText(url).then(
-      () => {
-        setCopied(true);
-        clearTimeout(timer.current);
-        timer.current = setTimeout(() => setCopied(false), COPIED_MS);
-      },
-      () => setCopied(false),
+      () => show('copied'),
+      () => show('failed'),
     );
   };
 
   return (
     <button
       type="button"
-      className={`ghost icon-btn copy-btn${copied ? ' copied' : ''}`}
-      aria-label={copied ? 'Copied' : 'Copy link'}
-      title={copied ? 'Copied' : 'Copy link'}
+      className={`ghost icon-btn copy-btn${state === 'idle' ? '' : ` ${state}`}`}
+      aria-label={COPY_LABEL[state]}
+      title={COPY_LABEL[state]}
       onClick={copy}
     >
-      {copied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
+      {state === 'copied' ? (
+        <CheckIcon size={14} />
+      ) : state === 'failed' ? (
+        <CloseIcon size={14} />
+      ) : (
+        <CopyIcon size={14} />
+      )}
     </button>
   );
 }

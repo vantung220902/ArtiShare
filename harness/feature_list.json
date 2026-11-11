@@ -179,7 +179,7 @@
         "See the button show 'Couldn't copy' (accessible name and tooltip) for a moment, then return to 'Copy link'",
         "The panel keeps working: the link can still be opened, and Send still works"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F015",

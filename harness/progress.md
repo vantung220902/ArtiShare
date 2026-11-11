@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F014 · Copy button says "Couldn't copy" when the clipboard refuses
+
+- **Did:** `CopyLinkButton` (`src/entrypoints/sidepanel/viewComponents.tsx`) now has three states, idle / copied / failed. A rejected copy (both the async API and the `execCommand` fallback) shows a close icon with the accessible name and tooltip "Couldn't copy" for 2 s, then reverts to 'Copy link'; `.copy-btn.failed` in `src/ui/styles.css` colours it with `--err`. New `e2e/F014.spec.ts` makes `navigator.clipboard.writeText` reject and `document.execCommand` return false, then checks the Preview button (name, title, class, revert timing), that the link still has its `href`/`target=_blank`, that Send still completes ('2 invited'), and that the run view's button reports the failure too.
+- **Verified:** `harness/init.sh` at start; `npm run check` (108 unit tests) and `npm run e2e` (16 specs) pass. feature-verifier: PASS (ran both suites itself).
+- **State:** F014 passes. F011 is still false (blocked on a human). 4 features left besides F011: F015–F018.
+- **Next:** A human should still settle F011 (reword the `not-an-email` step to an address with an `@`; code and spec are green). Otherwise take F015: when a run finishes, the run view says it's finished and offers one primary full-width 'Start a new share' button (see `RunView` in `src/entrypoints/sidepanel/`).
+- **Notes:** The failure state reuses `CloseIcon`; no new icon. No unit test: the logic is UI state only, covered by e2e. The README doesn't mention the copy button yet; F018 covers that.
+
 ### 2026-11-11 · F013 · Copy button beside each artifact link in the run view
 
 - **Did:** Added `e2e/F013.spec.ts` only. It saves a list (ana + slow), previews two artifacts, sends 4 invitations, and while the run is Running clicks the first row's 'Copy link' (asserts 'Copied', that Running is still shown, the pasted clipboard equals the first link, and the link's `href`/`target=_blank`). After Done ('4 invited') it clicks the second row's button, asserts the pasted clipboard equals the second link and that it reverts to 'Copy link'. No source change: `RunView` already renders the shared `ArtifactLink` (F012).
