@@ -4,6 +4,16 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F004 · + Current tab on a cowork session without an artifact
+
+- **Did:** No source change: `addCurrentTab` already sets 'The current tab is not a claude.ai artifact.' and returns before touching the text when the parser rejects the tab's URL. Added `e2e/F004.spec.ts`: serves a bare cowork session page (no `?artifact=`) with `context.route`, brings it to the front, reloads the panel (Artifacts stays empty, no alert), types a valid artifact link, clicks + Current tab, then asserts the `p.alert` text and that the raw textarea value is still the typed link.
+- **Verified:** `harness/init.sh` at start; `npm run check` (105 unit tests) and `npm run e2e` (5 specs) pass. feature-verifier: PASS (it ran both commands itself).
+- **State:** F004 passes. 14 features left.
+- **Next:** F005 (required `*` markers, list name labelled `List name (optional)`, `aria-required` on the addresses field). Touches `src/ui/ListForm.tsx` and the Share tab's Artifacts label; `e2e/smoke.spec.ts` and earlier specs use substring `getByLabel('List name')` / `getByLabel('Email addresses')`, which should still match, but `getByLabel(/Artifacts/)` and `label[for="artifacts"] .count` in F002/F003 need to keep working with a `*` added.
+- **Notes:**
+  - The alert is `p.alert`; the assertion on it waits for the async tab query, so a following raw-text assertion runs after the handler has finished.
+  - Verifier's minor point, not fixed: the error text is the same for any non-artifact active tab, so F004 alone doesn't prove the cowork tab was the active one; F003's setup does.
+
 ### 2026-11-11 · F003 · + Current tab and panel open on a cowork tab
 
 - **Did:** No source change: F001's parser already makes `currentTabArtifact()` work for cowork URLs. Added `e2e/F003.spec.ts`: it serves a cowork page with `context.route` (nothing reaches claude.ai), brings that tab to the front, reloads the panel and checks Artifacts is filled with the matching `claude.ai/artifact/…` link. Then it clears the field, clicks + Current tab (link added once, no error) and clicks again (raw textarea text is still the single link).

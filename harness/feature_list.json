@@ -50,7 +50,7 @@
         "See the error 'The current tab is not a claude.ai artifact.'",
         "See the Artifacts text unchanged"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F005",
