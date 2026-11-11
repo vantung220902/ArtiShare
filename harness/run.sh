@@ -16,9 +16,12 @@ export CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1
 # With the scrub on, the CLI ignores --permission-mode and asks before each tool, which stalls a
 # session nobody is watching. So list what a /harness-work session needs; anything else is refused
 # (no push, no branch switching, no network), and settings.json deny rules still apply on top.
+# git branch and git stash are listed only in the forms /harness-work uses, so a session can't
+# delete or move a branch (git branch -D/-f) or throw away stashed work (git stash drop/clear).
 ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Agent,\
 Bash(harness/init.sh),Bash(npm run *),Bash(npx prettier *),Bash(npx vitest *),Bash(npx playwright *),\
-Bash(git status*),Bash(git diff*),Bash(git log*),Bash(git branch*),Bash(git add *),Bash(git commit *),Bash(git stash*),\
+Bash(git status*),Bash(git diff*),Bash(git log*),Bash(git branch --show-current),Bash(git add *),Bash(git commit *),\
+Bash(git stash),Bash(git stash push*),Bash(git stash list*),\
 Bash(pwd),Bash(ls *)"
 
 max=${1:-10}
