@@ -13,7 +13,7 @@
         "Tick a list and click Preview",
         "See one artifact card whose link is the matching https://claude.ai/artifact/{base58 id} link (the same id a claude.ai/chat/…?artifact= link with that uuid gives), with its To invite numbers"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F002",
