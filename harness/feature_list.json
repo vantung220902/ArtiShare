@@ -128,7 +128,7 @@
         "Click Preview",
         "See the preview header label 'ana@example.com & bo@example.com', and the Lists tab now has a list with that name, ticked in Share with"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F011",

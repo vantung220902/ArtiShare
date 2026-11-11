@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F010 · Preview saves an unnamed inline list under its automatic name
+
+- **Did:** Added `e2e/F010.spec.ts` only: saves 'Existing team' in the Lists tab (so the Share tab's inline form sits behind + New list), unticks it in Share, adds an artifact link, opens + New list, leaves the name empty, enters ana + bo, clicks Preview. Asserts the preview header (`.row .hint.truncate`) is `ana@example.com & bo@example.com`, no `.alert`, and after Back that the new list is the one ticked pick, 'Existing team' is not, and the Lists tab has 2 lists, the new one '2 people · Can view'. No source change: `ShareView.runPreview` already calls `form.submit()` for a draft, which applies the automatic name (F006/F008).
+- **Verified:** `harness/init.sh` at start; `npm run check` (108 unit tests) and `npm run e2e` (11 specs) pass. feature-verifier: PASS (ran both suites itself).
+- **State:** F010 passes. 8 features left.
+- **Next:** F011 (a list with neither a name nor addresses, or with invalid addresses, still can't be saved). Likely mostly an e2e spec; check the error messages in `ListForm.submit`.
+- **Notes:** With no saved lists the inline form is already shown in the Share tab and there is no + New list button, so the spec creates a list first.
+
 ### 2026-11-11 · F009 · Clearing the name of a saved list renames it after its addresses
 
 - **Did:** Added `e2e/F009.spec.ts` only: makes 'Design team' (ana + bo, Commenter), opens it in the Lists tab, clears the name, clicks Save, and asserts the new name `ana@example.com & bo@example.com`, no `.alert`, and that addresses, permission ('2 people · Commenter') and the list count are unchanged. No source change: `ListForm.submit` already does this (F006/F008, `baseline.id` is passed as `exceptId`).
