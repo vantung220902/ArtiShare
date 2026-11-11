@@ -13,6 +13,14 @@ cd "$(dirname "$0")/.."
 # Strip credentials (API keys, npm tokens, ...) from the environment of every command a session runs.
 export CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1
 
+# With the scrub on, the CLI ignores --permission-mode and asks before each tool, which stalls a
+# session nobody is watching. So list what a /harness-work session needs; anything else is refused
+# (no push, no branch switching, no network), and settings.json deny rules still apply on top.
+ALLOWED_TOOLS="Read,Edit,Write,Glob,Grep,Agent,\
+Bash(harness/init.sh),Bash(npm run *),Bash(npx prettier *),Bash(npx vitest *),Bash(npx playwright *),\
+Bash(git status*),Bash(git diff*),Bash(git log*),Bash(git branch*),Bash(git add *),Bash(git commit *),Bash(git stash*),\
+Bash(pwd),Bash(ls *)"
+
 max=${1:-10}
 mode=${PERMISSION_MODE:-auto}
 
@@ -47,7 +55,7 @@ for ((i = 1; i <= max; i++)); do
   log="harness/logs/$(date +%Y%m%d-%H%M%S)-session-$i.log"
   echo "== Session $i/$max · $left feature(s) left · log: $log"
 
-  args=(-p "/harness-work" --permission-mode "$mode")
+  args=(-p "/harness-work" --permission-mode "$mode" --allowedTools "$ALLOWED_TOOLS")
   [ -n "${MAX_BUDGET_USD:-}" ] && args+=(--max-budget-usd "$MAX_BUDGET_USD")
   [ -n "${MODEL:-}" ] && args+=(--model "$MODEL")
   claude "${args[@]}" 2>&1 | tee "$log" || true
