@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-11 · F011 · Empty or invalid lists still can't be saved (BLOCKED on a human decision)
+
+- **Did:** `ShareView.runPreview` now also submits the inline form when it is showing, empty, and nothing is ticked, so Preview shows 'Add at least one email address.' (before, it said 'Tick a list, or create one.' because an empty form is not a draft). Added `e2e/F011.spec.ts`: empty Save list → 'Add at least one email address.'; `ana@example.com` + `not@an-email` → 'Fix or remove the invalid addresses: not@an-email'; no list created; the same two cases through Preview in the Share tab, which doesn't preview and saves nothing.
+- **Verified:** `npm run check` (108 unit tests) and `npm run e2e` (12 specs) pass. I did not run the feature-verifier: it would rightly FAIL the literal step below.
+- **State:** F011 passes **false**. The code and spec are committed and green, but one step can't be met as written.
+- **Next:** A human decides about the step "enter ana@example.com and not-an-email … See 'Fix or remove the invalid addresses: not-an-email'". `parseEmails` (`src/core/emails.ts`) deliberately ignores every token without an `@` (CSV headers and names; tested in `tests/emails.test.ts`), so `not-an-email` is silently dropped and the list saves with just ana. Either reword the step to use an address with an `@` (e.g. `not@an-email`, which my spec uses), or decide that plain words should count as invalid, which would break pasting CSVs with headers. If the step is reworded, the next session can flip F011 to true after a verifier PASS (no more code needed); otherwise take F012.
+- **Notes:** The empty-form Preview error shows inside the inline form (its own `.alert`), not in the Share tab's alert. With saved lists ticked, an empty open form still previews them as before.
+
 ### 2026-11-11 · F010 · Preview saves an unnamed inline list under its automatic name
 
 - **Did:** Added `e2e/F010.spec.ts` only: saves 'Existing team' in the Lists tab (so the Share tab's inline form sits behind + New list), unticks it in Share, adds an artifact link, opens + New list, leaves the name empty, enters ana + bo, clicks Preview. Asserts the preview header (`.row .hint.truncate`) is `ana@example.com & bo@example.com`, no `.alert`, and after Back that the new list is the one ticked pick, 'Existing team' is not, and the Lists tab has 2 lists, the new one '2 people · Can view'. No source change: `ShareView.runPreview` already calls `form.submit()` for a draft, which applies the automatic name (F006/F008).
