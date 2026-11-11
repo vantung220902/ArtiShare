@@ -28,7 +28,9 @@ export function ShareView({
   config,
   save,
   onAccount,
+  focusArtifacts = false,
 }: {
+  focusArtifacts?: boolean;
   config: Config;
   save: Save;
   onAccount: (account: Account) => void;
@@ -46,6 +48,11 @@ export function ShareView({
   const [draft, setDraft] = useState<ListDraft | null>(null);
   const form = useRef<ListFormHandle>(null);
   const previousListIds = useRef(new Set(config.lists.map((list) => list.id)));
+
+  useEffect(() => {
+    if (focusArtifacts) document.getElementById('artifacts')?.focus();
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- only when the form mounts
+  }, []);
 
   // Start from the artifact you're looking at.
   useEffect(() => {
