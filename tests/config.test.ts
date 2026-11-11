@@ -9,6 +9,7 @@ import {
   loadStoredConfig,
   removeList,
   resolveInvites,
+  uniqueListName,
   upsertList,
 } from '../src/core/config';
 
@@ -23,6 +24,22 @@ const config = (overrides: Partial<Config> = {}): Config => ({
   ...EMPTY_CONFIG,
   lists: [acme, qa],
   ...overrides,
+});
+
+describe('uniqueListName', () => {
+  it('keeps a free name and numbers a taken one from 2', () => {
+    expect(uniqueListName(config(), 'Other')).toBe('Other');
+    expect(uniqueListName(config(), 'Acme')).toBe('Acme (2)');
+    expect(uniqueListName(config(), 'acme')).toBe('acme (2)');
+
+    const withTwo = config({ lists: [acme, { ...acme, id: 'a2', name: 'Acme (2)' }] });
+    expect(uniqueListName(withTwo, 'Acme')).toBe('Acme (3)');
+  });
+
+  it('ignores the list being edited and leaves an empty name empty', () => {
+    expect(uniqueListName(config(), 'Acme', 'acme')).toBe('Acme');
+    expect(uniqueListName(config(), '')).toBe('');
+  });
 });
 
 describe('loadStoredConfig', () => {

@@ -33,10 +33,8 @@ test('a list saved without a name is named after its addresses', async ({ panel 
   await expect(row('gus@example.com & hal@example.com +1 email')).toHaveCount(1);
   await expect(panel.getByRole('tab', { name: /Lists/ })).toContainText('4');
 
-  // The same addresses again would make the same name: say so instead of saving a twin.
+  // The same addresses again make the same name: F008 numbers it instead of failing.
   await save('ana@example.com');
-  await expect(lists.getByRole('alert').or(lists.locator('.alert'))).toContainText(
-    'A list called "ana@example.com" already exists',
-  );
-  await expect(panel.getByRole('tab', { name: /Lists/ })).toContainText('4');
+  await expect(row('ana@example.com (2)')).toHaveCount(1);
+  await expect(panel.getByRole('tab', { name: /Lists/ })).toContainText('5');
 });

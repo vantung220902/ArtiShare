@@ -7,6 +7,7 @@ import {
   type EmailList,
   isNameTaken,
   sameList,
+  uniqueListName,
 } from '../core/config';
 import { parseEmails } from '../core/emails';
 import type { AccessLevel } from '../core/types';
@@ -121,13 +122,11 @@ export function ListForm({ ref, config, save, list, onSaved, onCancel, onDraftCh
   const submit = async () => {
     const { valid, invalid } = parseEmails(text);
     const named = name.trim();
-    // An empty name is allowed: the list is named after its addresses.
-    const trimmed = named || defaultListName(valid);
+    // An empty (or all-space) name is allowed: the list is named after its addresses, with a
+    // number added if another list already has that name. Only a name typed by hand can clash.
+    const trimmed = named || uniqueListName(config, defaultListName(valid), baseline?.id);
     if (conflict) return fail('This list changed in another window. Reload the saved version first.');
-    if (isNameTaken(config, trimmed, baseline?.id))
-      return fail(
-        `A list called "${trimmed}" already exists.${named ? '' : ' Type a name to tell them apart.'}`,
-      );
+    if (isNameTaken(config, trimmed, baseline?.id)) return fail(`A list called "${trimmed}" already exists.`);
     if (invalid.length)
       return fail(
         `Fix or remove the invalid addresses: ${invalid.slice(0, 3).join(', ')}${invalid.length > 3 ? '…' : ''}`,
