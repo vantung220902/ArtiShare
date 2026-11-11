@@ -82,6 +82,19 @@ export function isNameTaken(config: Config, name: string, exceptId?: string): bo
   return config.lists.some((l) => l.id !== exceptId && l.name.toLowerCase() === key);
 }
 
+/**
+ * `base` if no other list uses it, otherwise `base (2)`, `base (3)`, … — the first free one.
+ * For names the user didn't type: they never see an "already exists" error for those.
+ */
+export function uniqueListName(config: Config, base: string, exceptId?: string): string {
+  if (!base) return base;
+
+  let name = base;
+  for (let n = 2; isNameTaken(config, name, exceptId); n++) name = `${base} (${n})`;
+
+  return name;
+}
+
 /** Adds `list`, or replaces the list with the same id. */
 export function upsertList(config: Config, list: EmailList): Config {
   const exists = config.lists.some((l) => l.id === list.id);

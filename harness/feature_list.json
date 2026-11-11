@@ -104,7 +104,7 @@
         "See it named 'bo@example.com'",
         "Typing an existing list's name by hand still shows 'A list called \"…\" already exists.'"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F009",
