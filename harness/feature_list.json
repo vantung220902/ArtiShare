@@ -164,7 +164,7 @@
         "Close and reopen the popup and open Manage access again: see that person at Can edit",
         "Preview the same artifact from Share: see them under Already have access at Can edit"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F014",

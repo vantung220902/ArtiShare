@@ -4,6 +4,17 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F013 · Changing a person's permission in Manage access saves it on claude.ai
+
+- **Did:** New message `change-access` (`src/lib/messages.ts`, handled in `background.ts` by `client.changeAccess`). `ManageView.tsx` now has a `PersonRow` per invitee: an `AccessSelect` (new optional `disabled` and `label` props) that is disabled while saving and shows the chosen value, then a short 'Saved' (`.saved`, 2.5 s) on that row only; on success the parent's list is updated in place. On failure it clears `saving`, so the select falls back to the old value, and the error shows as a `role="alert"` on the row (F015 will test and polish that). Rows without an `id` or with an unknown role stay a plain tag. Styles in `src/ui/styles.css`; README sentence updated. `e2e/F013.spec.ts`.
+- **Verified:** `npm run check` (175 unit tests) and `npm run e2e` (61 specs) pass. feature-verifier: PASS.
+- **State:** F013 passes. 5 features left (F014–F018). There is no Remove button yet.
+- **Next:** F014: a Remove button per row with an in-popup confirmation (reuse the F004 confirm component), a `remove-invite` message (background → `client.removeInvite(artifact, inviteId)`), and drop the row on success. Disable the row's controls while in flight.
+- **Notes:**
+  - The preview only lists people who are also in the addresses being sent, so an e2e that checks 'Existing email access' must include that address in the list.
+  - The failure path in `PersonRow` is written but has no e2e yet; F015 covers it.
+  - The fake's state is in the background worker's memory, which is what makes 'close and reopen' show the change in e2e.
+
 ### 2026-11-12 · F012 · A 'Manage access' link opens the list of people already invited
 
 - **Did:** New message `sharees` (`src/lib/messages.ts`, answered in `background.ts` by `client.listSharees`). New `src/entrypoints/popup/ManageView.tsx`: 'People with access', the artifact link with copy, a Back button, 'You (owner)' always first and not editable (the owner entry claude.ai sends, if any, is filtered out), then each invitee with address, Pending/Accepted and permission as plain text. It has a loading line and, for a failed read, the error with a Retry link (F015 will test and extend that). `App.tsx` reads the active tab's artifact once (`currentTabArtifact`, moved from `ShareView.tsx` to `viewUtils.ts`) and, when there is one, shows a quiet `button.link` 'Manage access' under the Share form or the run view. The form or run stays mounted but `hidden` while Manage access shows, so Back finds it exactly as it was. Styles `.people`, `.manage-link` in `styles.css`. README has a 'Who already has access' section. `e2e/F012.spec.ts` (3 tests): the Shared artifact (link position below Preview, not a tab or primary; the four rows; Back keeps the typed text), under a finished run view, and no link on a non-artifact page.
