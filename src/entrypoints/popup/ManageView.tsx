@@ -1,12 +1,88 @@
-import { useEffect, useState } from 'react';
-import { ACCESS_LABELS, type ArtifactRef, type Sharee } from '../../core/types';
+import { useEffect, useRef, useState } from 'react';
+import {
+  ACCESS_LABELS,
+  ACCESS_LEVELS,
+  type AccessLevel,
+  type ArtifactRef,
+  type Sharee,
+} from '../../core/types';
 import { send } from '../../lib/messages';
+import { AccessSelect } from '../../ui/AccessSelect';
 import { BackIcon } from '../../ui/icons';
 import { ArtifactLink } from './viewComponents';
 
 /** The label for what someone can do; claude.ai may send a role this extension doesn't know. */
 const accessLabel = (access: Sharee['access']) =>
   access in ACCESS_LABELS ? ACCESS_LABELS[access as keyof typeof ACCESS_LABELS] : 'Unknown';
+
+/** How long 'Saved' stays beside a row. */
+const SAVED_MS = 2_500;
+
+/** One invitee: their permission can be changed, and the row says whether that worked. */
+function PersonRow({
+  artifact,
+  person,
+  onChanged,
+}: {
+  artifact: ArtifactRef;
+  person: Sharee;
+  onChanged: (id: string, access: AccessLevel) => void;
+}) {
+  // The value being saved, or null when idle. While it is set the select shows it; if the save
+  // fails it clears and the select falls back to the permission claude.ai still has.
+  const [saving, setSaving] = useState<AccessLevel | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
+  const timer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  const change = (access: AccessLevel) => {
+    if (saving || !person.id || access === person.access) return;
+    window.clearTimeout(timer.current);
+    setSaved(false);
+    setError('');
+    setSaving(access);
+    send('change-access', { artifact, inviteId: person.id, access }).then(
+      () => {
+        onChanged(person.id!, access);
+        setSaving(null);
+        setSaved(true);
+        timer.current = window.setTimeout(() => setSaved(false), SAVED_MS);
+      },
+      (e: Error) => {
+        setSaving(null);
+        setError(e.message);
+      },
+    );
+  };
+
+  const editable = person.id !== undefined && (ACCESS_LEVELS as readonly string[]).includes(person.access);
+
+  return (
+    <li>
+      <div className="grow">
+        <div className="email">{person.email}</div>
+        <div className="hint">{person.status === 'pending' ? 'Pending' : 'Accepted'}</div>
+        {error && (
+          <div className="alert" role="alert">
+            {error}
+          </div>
+        )}
+      </div>
+      {saved && <output className="saved">Saved</output>}
+      {editable ? (
+        <AccessSelect
+          label={`Permission for ${person.email}`}
+          value={saving ?? (person.access as AccessLevel)}
+          disabled={saving !== null}
+          onChange={change}
+        />
+      ) : (
+        <span className="tag">{accessLabel(person.access)}</span>
+      )}
+    </li>
+  );
+}
 
 /** Who is already invited to one artifact. Reads from claude.ai each time it opens, never from a copy. */
 export function ManageView({ artifact, onBack }: { artifact: ArtifactRef; onBack: () => void }) {
@@ -63,13 +139,14 @@ export function ManageView({ artifact, onBack }: { artifact: ArtifactRef; onBack
               </div>
             </li>
             {people.map((p) => (
-              <li key={p.id ?? p.email}>
-                <div className="grow">
-                  <div className="email">{p.email}</div>
-                  <div className="hint">{p.status === 'pending' ? 'Pending' : 'Accepted'}</div>
-                </div>
-                <span className="tag">{accessLabel(p.access)}</span>
-              </li>
+              <PersonRow
+                key={p.id ?? p.email}
+                artifact={artifact}
+                person={p}
+                onChanged={(id, access) =>
+                  setPeople((all) => all && all.map((x) => (x.id === id ? { ...x, access } : x)))
+                }
+              />
             ))}
           </ul>
         )}

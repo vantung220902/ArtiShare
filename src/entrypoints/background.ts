@@ -72,6 +72,10 @@ async function handle(msg: Envelope): Promise<unknown> {
       return preview(msg);
     case 'sharees':
       return client.listSharees(msg.artifact);
+    case 'change-access':
+      await client.changeAccess(msg.artifact, msg.inviteId, msg.access);
+
+      return null;
     case 'start':
       await runManager.start(msg.label, msg.plans, msg.accountEmail);
 
