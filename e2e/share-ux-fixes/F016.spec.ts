@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F016: 'Start a new share' after a finished run goes straight to a fresh Share form.
 test('Start a new share after a finished run opens a fresh Share form without a confirmation', async ({

@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F015: a finished run says so, and offers one obvious primary 'Start a new share' button.
 test('a finished run shows a finished message and one primary Start a new share button', async ({

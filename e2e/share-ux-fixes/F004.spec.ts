@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F004: + Current tab on a cowork session with no artifact open explains why nothing was added.
 const SESSION = 'https://claude.ai/cowork/cse_01ExampleCoworkSession00';

@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F003: + Current tab adds the artifact open in a claude.ai/cowork tab, and opening the panel on
 // such a tab fills it in.

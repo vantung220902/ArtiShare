@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F005: required fields carry a visual * (hidden from screen readers) and aria-required; the
 // list name is labelled optional. Checked in a new list, an existing list and the Share tab.

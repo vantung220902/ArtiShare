@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F002: a cowork link and the claude.ai/artifact link for the same artifact count as one artifact,
 // and cowork links without a valid artifact uuid are rejected.

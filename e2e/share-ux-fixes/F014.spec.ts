@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F014: when the clipboard refuses, the copy button says so instead of failing silently.
 test('the copy button says "Couldn\'t copy" when the clipboard refuses', async ({ panel }) => {

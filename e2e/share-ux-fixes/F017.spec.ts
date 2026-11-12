@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F017: a stopped run with invites left asks before it is discarded; with nothing left it doesn't.
 test('a stopped run with invites left asks before Start a new share, and Cancel keeps it', async ({

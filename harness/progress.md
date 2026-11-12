@@ -4,6 +4,22 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · Planning · Popup instead of side panel, and Manage access
+
+- **Did:** Planned a new goal on `harness/popup-and-manage-access` (from `develop`), replacing the finished share-ux-fixes list (all 18 passed and merged in PR 13). 18 features, F001–F018. Nothing built.
+- **Goal:** Turn the side panel into a toolbar popup laid out like other extensions' popups, keep drafts and runs safe when it closes, and add a secondary 'Manage access' view to change or remove people already invited to the artifact you're on.
+- **Decisions (from the user):**
+  - **Popup only.** No side panel, no 'Open in side panel' or 'open in a tab' fallback. Drop the `sidePanel` permission and `setPanelBehavior` in `background.ts`; keep the manifest `key` untouched. WXT makes `src/entrypoints/popup/` the `default_popup`; moving `sidepanel/` there is the expected route.
+  - **Manage access is secondary.** The user wants it available "when the user is at the artifact page", but "not a core feature so don't confuse user about it". So: a small link shown only when the active tab is an artifact, never a third tab or a primary button.
+- **Research (popup patterns):** Grammarly (the user's reference screenshot), 1Password, Bitwarden: a narrow popup (~360–400 px, Chrome caps popups at 800×600) with a fixed header (brand, account), a scrolling body, and a footer; settings that need room go elsewhere, but the user chose popup only. Two popup traps drive F004–F009: a popup closes (and its JS stops) as soon as it loses focus, and `window.alert`/`confirm` in a popup can take focus and close it. Hence in-popup confirmations, and drafts, the preview and the open tab saved to storage (`chrome.storage.session` is a reasonable home for drafts; the run is already in `chrome.storage.local`).
+- **Housekeeping:** The previous goal's specs moved from `e2e/F0xx.spec.ts` to `e2e/share-ux-fixes/` so the new F001–F018 specs don't collide with them. They are regression tests: keep them passing.
+- **Risky areas:**
+  - F001 moves every e2e spec to the popup page. The `panel` fixture can keep its name; only the URL changes. The current-tab trick in F003's spec (bring the claude.ai page to front, reload the panel tab) should keep working.
+  - F008: Preview is a `send('preview')` round trip; if the popup closes, the reply is lost. The background probably has to store the preview (or the popup re-sends it on open).
+  - F011: PATCH/DELETE `/api/frame/invite/{uuid}/{inviteId}` come from reading the Share menu's code (`docs/claude-share-api.md`), not from a live check. Error messages in F011's steps are the target wording. `Sharee` has no invitation id today; `listSharees` has to carry it. A human must try change and remove on a real artifact before release; sessions must never call the real endpoints.
+  - F010 adds fake rules (`Shared` artifacts seeded with three invitees, `locked…` refuses change/removal, `Missing` fails to list). Keep the rules comment at the top of `fakeShareClient.ts` and the README list in step.
+- **Next:** `/harness-work` takes F001.
+
 ### 2026-11-11 · F007 · The name placeholder stays fixed; the automatic name appears once saved (reworked at the user's request)
 
 - **Did:** The user asked to drop the live preview of the automatic name in the List name placeholder and keep the normal one. F007's description and steps were changed to match (with the user's approval). `src/ui/ListForm.tsx`: the placeholder is always 'List name, e.g. Acme clients'; saving with an empty name still uses the automatic name, which then shows in the list's name field. `e2e/F007.spec.ts` rewritten; README 'Make a list' updated.

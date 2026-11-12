@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F008: an automatic name never clashes; a name of only spaces counts as empty.
 test('an automatic name is numbered when taken, and a typed name that clashes still errors', async ({
