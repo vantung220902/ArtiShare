@@ -189,7 +189,7 @@
         "Open Manage access on an artifact whose id contains 'Forbidden': see the people listed, and any change shows 'Only the owner can change access'",
         "Open Manage access on an artifact whose id contains 'Missing': see the error ('Artifact not found' or similar) with a Retry button instead of an empty list; Retry asks again"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F016",

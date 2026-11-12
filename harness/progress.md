@@ -4,6 +4,18 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F015 · Manage access explains refused changes and removals, and a list that can't load
+
+- **Did:** No source change: F013/F014 had already built the row error (`role="alert"`, controls re-enabled, select back to the old value) and F012 the load error with Retry. Added `e2e/F015.spec.ts` (4 tests): the `locked…` change and removal errors on the row with other rows still working and the row kept after reopening; a `ForbiddenSharedArtifact1` artifact listing people while a change and a removal both say 'Only the owner can change access'; a `Missing` artifact showing 'Artifact not found' with Retry and no list, where Retry goes back to loading and fails again, and Back still works. README: one sentence on the errors, and the line that said ArtiShare 'never removes anyone' now says it does so only on Remove + confirm.
+- **Verified:** `npm run check` (175 unit tests) and `npm run e2e` (66 specs) pass; the new spec passed 3× in a row. feature-verifier: PASS.
+- **State:** F015 passes. 3 features left (F016–F018).
+- **Next:** F016: edge cases in Manage access: 'Only you have access.' with a hint that Share invites people when nobody is invited, a Refresh button (new, there is none yet) that re-reads the list, one request per action under repeated clicks (rows already disable while in flight; check the confirm path too), and a note when a run is sending to this artifact.
+- **Notes:**
+  - To get seeded people and a refusal at once use an id containing both words, e.g. `ForbiddenSharedArtifact1`.
+  - `retry.click()` returns before React re-renders, so a test asserting the loading line must wait for it (the spec uses a MutationObserver flag plus `waitForFunction`); the fake answers in 150 ms, too fast to poll.
+  - The e2e lint forbids `import('…')` type annotations; use `import type`.
+  - Shell heredocs and compound `sed … && …` commands are refused; use Edit/Write.
+
 ### 2026-11-12 · F014 · Removing a person's invitation in Manage access asks first, then removes it
 
 - **Did:** New message `remove-invite` (`src/lib/messages.ts`, handled in `background.ts` by `client.removeInvite`). `PersonRow` in `src/entrypoints/popup/ManageView.tsx` has a Remove button (aria-label `Remove <email>`, shown for any row with an `id`) that asks through `useConfirm` ('Remove <email> from this artifact?' / 'Their invitation will stop working.', danger), then disables the row's select and button (`busy`) while in flight and drops the row via `onRemoved`. On failure it re-enables the row and shows the error on it (the `role="alert"` already used for changes; F015 tests it). Style `.people li > button`; README sentence added. `e2e/F014.spec.ts`.
