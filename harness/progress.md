@@ -4,6 +4,13 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F017 · Still blocked on the three `.claude/` edits (nothing changed)
+
+- **Did:** Nothing in the code or docs. Re-tried the edit to `.claude/commands/harness-work.md:23`; the permission was refused again, so the other two were not tried and no workaround (shell `sed`) was used, since sessions are not meant to edit their own config.
+- **Verified:** Only that `grep -rIi 'side panel'` still finds exactly the three `.claude/` lines above (plus `docs/claude-share-api.md`, `video/`, `harness/`, `e2e/F001.spec.ts`). The verifier was not run: step 4 of F017 would fail.
+- **State:** F017 `passes: false`. F018 is untouched and also still `false`; it is next in order, but it is not started because F017 is first.
+- **Next:** A human makes the three edits listed in the entry below (or lets a session edit `.claude/`), then a session runs the verifier for F017 and flips `passes`.
+
 ### 2026-11-12 · F017 · Docs describe the popup and Manage access (partly done, blocked on `.claude/` edits)
 
 - **Did:** README: flowchart, Install step 5, update note, Use it, 'the popup says so', Develop project layout now say popup; the Manage access section is headed 'Optional: Manage access'. `store/listing.md`: description and test steps say popup, the `sidePanel` permission row is gone, the single-purpose text mentions managing existing invitations, the description has a Manage access bullet and says closing the popup doesn't stop a run. `docs/index.html`: no 'side panel', plus a Manage access line under Good to know. `CLAUDE.md` layout says popup and `popup/`. Icon SVG comments and `docs/site.css` say popup.
