@@ -5,11 +5,13 @@
 ArtiShare is a Chrome extension. You save groups of email addresses as **lists** once. After that you can invite a list (or several) to one or more artifacts at once, without adding each person through the Share menu and without making the artifact public.
 
 <p align="center">
-  <img src="docs/images/share.png" width="250" alt="Share tab: pick artifacts and lists">
+  <img src="docs/images/share.png" width="190" alt="The popup's Share tab: pick artifacts and lists">
   &nbsp;
-  <img src="docs/images/preview.png" width="250" alt="Preview: who will be invited and who already has access">
+  <img src="docs/images/preview.png" width="190" alt="Preview in the popup: who will be invited and who already has access">
   &nbsp;
-  <img src="docs/images/done.png" width="250" alt="Finished run: every invite sent">
+  <img src="docs/images/done.png" width="190" alt="Finished run in the popup: every invite sent">
+  &nbsp;
+  <img src="docs/images/manage.png" width="190" alt="Manage access in the popup: the people already invited to an artifact, each with a permission and a Remove button">
 </p>
 
 ## Contents
@@ -211,13 +213,14 @@ npm run typecheck
 npm run lint       # Oxlint, type-aware (config in .oxlintrc.json)
 npm run format     # Prettier, rewrites files in place (format:check only checks)
 npm run build:fake # fake build in .output/chrome-mv3-fake
+npm run screenshots # rebuilds the fake build and rewrites docs/images and store/images
 ```
 
 Linting uses [Oxlint](https://oxc.rs/docs/guide/usage/linter) rather than ESLint, because typescript-eslint doesn't support TypeScript 7 yet. Its type-aware rules run on `oxlint-tsgolint`, which is built on TypeScript 7.
 
 The dev server listens on port **47613** (set in `wxt.config.ts`). If that port is busy, WXT moves to the next free one. The built extension uses no port; it only talks to claude.ai over HTTPS.
 
-**Fake mode** lets you click through the whole flow safely. The screenshots in this README come from it. Its fake claude.ai behaves like this:
+**Fake mode** lets you click through the whole flow safely. The screenshots in this README and the store listing come from it (`scripts/screenshots.spec.ts`, using made-up addresses and artifact ids). Its fake claude.ai behaves like this:
 
 - an artifact whose ID contains `Forbidden` rejects every invite, permission change and removal
 - an artifact whose ID contains `Shared` starts with three people invited: `viewer@example.com` (accepted, Can view), `commenter@example.com` (pending, Commenter) and `locked@example.com`, who joined the organization, so their permission can't be changed or removed

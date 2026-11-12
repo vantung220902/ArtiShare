@@ -4,6 +4,18 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F018 · README and store screenshots show the popup
+
+- **Did:** F017 is still blocked on a human (the three `.claude/` edits; an edit to `.claude/commands/harness-work.md` was refused again), so this session took F018 as the log allows. New `scripts/screenshots.spec.ts` (+ `scripts/playwright.config.ts`, `npm run screenshots`) drives the fake build's popup at 380×600, 2x, with made-up addresses and ids (`Ex4mple…`), and writes `docs/images/share|preview|done|manage.png` (760 px wide) and `store/images/screenshot-1-share|2-preview|3-done.png` (1280×800, headline left, popup in a frame right, rendered in a separate 1x browser). README: four images with alt text naming the popup (manage.png is new), a `npm run screenshots` line under Develop, the fake-mode sentence mentions the script. `e2e/F018.spec.ts` checks the PNG sizes, the README tags and alt text, and that the generator only uses made-up ids and addresses. `e2e/node-shims.d.ts` declares the few `node:fs`/`node:url` calls, because the project has no `@types/node`.
+- **Verified:** `npm run check` (175 unit tests) and `npm run e2e` (74 specs incl. F018's 4) pass; I looked at every image. feature-verifier: PASS (it could not run commands, so it read files and viewed the images).
+- **State:** F018 passes. F017 still `passes: false`, blocked on the three `.claude/` edits: `.claude/commands/harness-work.md:23` ('in the side panel and asserts' → 'in the popup and asserts'), `.claude/commands/harness-plan.md:27` ('in the side panel of the fake build' → 'in the popup of the fake build'), `.claude/agents/feature-verifier.md:20` ('from the side panel through' → 'from the popup through'). 1 feature left.
+- **Next:** A human makes those three edits, then a session runs the verifier for F017 and flips `passes`.
+- **Notes:**
+  - The Share screenshots are scrolled to the bottom so the Preview button shows (the form is taller than a 600 px popup); the top shows a cut-off bit of the Artifacts box.
+  - Don't run `npm run screenshots` casually: it rewrites the PNGs (they are not byte-identical between runs).
+  - A freshly saved list starts unticked in Share; tick it before Preview.
+  - Heredocs and `python3 -` are refused here; use Edit/Write.
+
 ### 2026-11-12 · F017 · Still blocked on the three `.claude/` edits (nothing changed)
 
 - **Did:** Nothing in the code or docs. Re-tried the edit to `.claude/commands/harness-work.md:23`; the permission was refused again, so the other two were not tried and no workaround (shell `sed`) was used, since sessions are not meant to edit their own config.

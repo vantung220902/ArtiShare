@@ -225,7 +225,7 @@
         "Regenerate store/images/screenshot-1-share.png, -2-preview.png and -3-done.png at the store's 1280×800 with the popup shown",
         "See the README's images and alt text match, and no screenshot shows real email addresses or real artifact ids"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }
