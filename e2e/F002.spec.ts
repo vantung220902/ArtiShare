@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { openRealPopup } from './realPopup';
 
 // F002: the popup is 380 px wide and at most 600 px tall; the header and tabs stay at the top, only
 // the content scrolls, the footer stays at the bottom, and there is no close button.
@@ -144,51 +145,15 @@ test('the real action popup is 380 px wide, at most 600 px tall, with no horizon
   context,
   panel,
 }) => {
-  const browser = context.browser();
-  expect(browser, 'a browser handle is needed to reach the popup target').not.toBeNull();
-
   // Saved lists make the content tall enough to scroll.
   for (const name of ['Alpha team', 'Beta team', 'Gamma team']) {
     const emails = Array.from({ length: 8 }, (_, i) => `${name[0]!.toLowerCase()}${i}@example.com`);
     await addList(panel, name, emails);
   }
-  const worker = context.serviceWorkers()[0]!;
   // The panel tab is popup.html too; move it off so the only popup.html target is the real popup.
   await panel.goto('about:blank');
   await panel.bringToFront();
-  await worker.evaluate(() => chrome.action.openPopup());
-
-  const cdp = await browser!.newBrowserCDPSession();
-  let targetId = '';
-  await expect
-    .poll(async () => {
-      const { targetInfos } = await cdp.send('Target.getTargets');
-      targetId = targetInfos.find((t) => t.url.endsWith('/popup.html') && t.type === 'page')?.targetId ?? '';
-      return targetId;
-    })
-    .not.toBe('');
-
-  // Playwright's CDPSession has no per-target sessions, so talk to the popup through the browser.
-  const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: false });
-  let nextId = 0;
-  const pending = new Map<number, (value: unknown) => void>();
-  cdp.on('Target.receivedMessageFromTarget', (event) => {
-    const message = JSON.parse(event.message) as { id?: number; result?: unknown };
-    if (message.id !== undefined) pending.get(message.id)?.(message.result);
-  });
-  const evaluate = (expression: string) =>
-    new Promise<unknown>((resolve) => {
-      const id = ++nextId;
-      pending.set(id, (result) => resolve((result as { result: { value: unknown } }).result.value));
-      void cdp.send('Target.sendMessageToTarget', {
-        sessionId,
-        message: JSON.stringify({
-          id,
-          method: 'Runtime.evaluate',
-          params: { expression, returnByValue: true },
-        }),
-      });
-    });
+  const evaluate = await openRealPopup(context);
 
   await expect.poll(() => evaluate(`!!document.querySelector('.footer')`)).toBe(true);
   const size = await evaluate(`(() => {
