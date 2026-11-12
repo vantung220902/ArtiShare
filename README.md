@@ -111,7 +111,7 @@ If something looks wrong, click **Back** and change it: the form comes back with
 
 ### 5. Watch it run
 
-Invites go out one at a time from the background, with a short pause between them, so you can close the side panel or keep working. Each address moves from _Pending_ to _Invited_ (or _Failed_ / _Skipped_, with the reason). The artifact links here have the same copy button, while the run is going and after.
+Invites go out one at a time from the background, with a short pause between them, so you can close the popup or keep working: closing it doesn't stop the run, and reopening it shows how far it has got and keeps updating while it runs. **Stop** and **Resume** work the same after reopening. Each address moves from _Pending_ to _Invited_ (or _Failed_ / _Skipped_, with the reason). The artifact links here have the same copy button, while the run is going and after.
 
 - **Stop** pauses the run. **Resume** continues where it left off.
 - If the browser restarts mid-run, the run is kept and can be resumed.
