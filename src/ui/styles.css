@@ -983,6 +983,11 @@ details[open] > summary .chev {
   cursor: progress;
   opacity: 0.6;
 }
+.people li > button {
+  flex: none;
+  padding: 4px 9px;
+  font-size: 12px;
+}
 .people .alert {
   margin: 4px 0 0;
   padding: 6px 8px;

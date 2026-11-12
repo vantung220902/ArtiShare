@@ -4,6 +4,17 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F014 · Removing a person's invitation in Manage access asks first, then removes it
+
+- **Did:** New message `remove-invite` (`src/lib/messages.ts`, handled in `background.ts` by `client.removeInvite`). `PersonRow` in `src/entrypoints/popup/ManageView.tsx` has a Remove button (aria-label `Remove <email>`, shown for any row with an `id`) that asks through `useConfirm` ('Remove <email> from this artifact?' / 'Their invitation will stop working.', danger), then disables the row's select and button (`busy`) while in flight and drops the row via `onRemoved`. On failure it re-enables the row and shows the error on it (the `role="alert"` already used for changes; F015 tests it). Style `.people li > button`; README sentence added. `e2e/F014.spec.ts`.
+- **Verified:** `npm run check` (175 unit tests) and `npm run e2e` (62 specs) pass. feature-verifier: PASS.
+- **State:** F014 passes. 4 features left (F015–F018).
+- **Next:** F015: error handling in Manage access: the `locked…` person's change and removal errors on the row, `Forbidden` artifact messages, and a `Missing` artifact showing the error with Retry (the load-error Retry already exists in `ManageView`; check it and add e2e for all four steps).
+- **Notes:**
+  - The popup code lives in `src/entrypoints/popup/`, not `sidepanel/` as older entries say.
+  - The verifier flagged that a plain `.people button` rule would also shrink the confirm dialog's buttons, since the `<dialog>` is rendered inside the `<li>`; the rule is scoped to `.people li > button`. Keep that in mind if more rules go under `.people`.
+  - The preview groups are 'Will be invited' (not 'To invite', which is the stat label), and a newly invited person gets the list's permission.
+
 ### 2026-11-12 · F013 · Changing a person's permission in Manage access saves it on claude.ai
 
 - **Did:** New message `change-access` (`src/lib/messages.ts`, handled in `background.ts` by `client.changeAccess`). `ManageView.tsx` now has a `PersonRow` per invitee: an `AccessSelect` (new optional `disabled` and `label` props) that is disabled while saving and shows the chosen value, then a short 'Saved' (`.saved`, 2.5 s) on that row only; on success the parent's list is updated in place. On failure it clears `saving`, so the select falls back to the old value, and the error shows as a `role="alert"` on the row (F015 will test and polish that). Rows without an `id` or with an unknown role stay a plain tag. Styles in `src/ui/styles.css`; README sentence updated. `e2e/F013.spec.ts`.

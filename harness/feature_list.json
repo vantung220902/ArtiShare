@@ -177,7 +177,7 @@
         "Close and reopen the popup and open Manage access: they are still gone",
         "Preview the artifact from Share with a list containing that address: they are now under To invite"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F015",
