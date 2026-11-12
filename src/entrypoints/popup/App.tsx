@@ -162,7 +162,7 @@ export function App() {
               </p>
             )}
           </div>
-          {managing && <ManageView artifact={managing} onBack={() => setManaging(null)} />}
+          {managing && <ManageView artifact={managing} run={run} onBack={() => setManaging(null)} />}
         </div>
         <div id="panel-lists" role="tabpanel" aria-labelledby="tab-lists" hidden={tab !== 'lists'}>
           <ListsView
