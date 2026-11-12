@@ -16,6 +16,7 @@ export type ShareErrorCode =
   | 'daily-limit' // the account's daily invitation cap reached
   | 'invalid' // the address was rejected
   | 'access-unavailable' // the requested access level is disabled
+  | 'managed-elsewhere' // the invitee joined the organization; claude.ai manages their access
   | 'unknown';
 
 export class ShareError extends Error {
