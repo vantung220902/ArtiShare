@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F017 · Docs describe the popup and Manage access (done)
+
+- **Did:** Made the three `.claude/` edits that unattended sessions were not allowed to make (from the interactive session): `.claude/commands/harness-work.md:23`, `.claude/commands/harness-plan.md:27` and `.claude/agents/feature-verifier.md:20` now say popup instead of side panel. The rest of F017 was done in 214a445, 477e280 and 22c47be.
+- **Verified:** `grep -rIi 'side panel'` finds only `docs/claude-share-api.md` (claude.ai's own Share UI) and `e2e/F001.spec.ts` (asserts there is no side panel) outside `harness/`. `npm run check` (175 unit tests) and `npm run e2e` (74 specs) pass. feature-verifier: PASS.
+- **State:** F017 passes. All 18 features pass; the goal is done.
+- **Next:** Review the branch and open a PR into `develop`. Before release, check the real claude.ai PATCH/DELETE invite endpoints by hand, since they were only tested against the fake and a stub transport.
+- **Notes:** `harness/run.sh` stopped at its 20-session cap; sessions 17–20 were spent on this blocked feature. A feature that needs `.claude/` edits needs a human or the interactive session.
+
 ### 2026-11-12 · F017 · Still blocked on the three `.claude/` edits (nothing else left)
 
 - **Did:** Re-tried the edit to `.claude/commands/harness-work.md:23`; refused again, so no workaround was used and the other two were not tried. Found and fixed one more leftover: the comment in `docs/site.css:168` said 'side-panel captures', now 'popup captures'. F018 is already done, so no other feature is open.

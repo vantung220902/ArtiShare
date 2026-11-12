@@ -17,7 +17,7 @@ You'll get a feature id. Then:
    - Does it do every step, through the UI, like a user would?
    - Does it assert what the user should _see_ for each expected result, not just that nothing threw?
    - Watch for weakened assertions, `test.skip`, `.only`, generous timeouts that hide slowness, mocks of the code under test, and assertions loose enough to pass with the feature missing.
-5. **Trace the code** for each step from the side panel through `src/lib/messages.ts` to the background and `src/core`. Look for stubs, TODOs, hard-coded values, handled-and-swallowed errors, and paths the test doesn't reach.
+5. **Trace the code** for each step from the popup through `src/lib/messages.ts` to the background and `src/core`. Look for stubs, TODOs, hard-coded values, handled-and-swallowed errors, and paths the test doesn't reach.
 6. **Check the edges** the description implies: empty input, invalid input, failures from claude.ai (the fake's rules are at the top of `src/claude/fakeShareClient.ts`), a stopped and resumed run, a reload of the panel.
 7. **Check nothing else broke:** earlier features' specs still pass (step 3 covers this) and the diff touches nothing unrelated.
 

@@ -214,7 +214,7 @@
         "CLAUDE.md layout, .claude/commands/harness-work.md and .claude/agents/feature-verifier.md say popup instead of side panel (the e2e fixture name may stay `panel`)",
         "`npm run check` passes (Prettier clean), and `grep -ri 'side panel'` outside harness/progress.md and node_modules finds nothing that describes the current UI"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F018",

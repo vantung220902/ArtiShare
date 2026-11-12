@@ -24,7 +24,7 @@ Goal: $ARGUMENTS
 
    - **One behavior per feature, small enough for one session.** Split anything bigger.
    - **Order is priority.** Sessions take the first feature that isn't passing, so put dependencies first.
-   - **Steps are a test script a person could follow** in the side panel of the fake build (`npm run dev:fake`), ending with what they should see. The fake's rules are at the top of `src/claude/fakeShareClient.ts`. If a feature can't be exercised with the fake as it is, add a feature before it that teaches the fake that behavior.
+   - **Steps are a test script a person could follow** in the popup of the fake build (`npm run dev:fake`), ending with what they should see. The fake's rules are at the top of `src/claude/fakeShareClient.ts`. If a feature can't be exercised with the fake as it is, add a feature before it that teaches the fake that behavior.
    - **Categories:** `functional`, `edge-case`, `error-handling`, `ux`, `docs`.
    - **Be thorough.** Cover error paths, empty states, claude.ai's limits (see the README's Limits table), and resuming a stopped run where they apply. A missing feature is work that never gets done; later sessions may not add or rewrite features.
    - Every `passes` starts `false`.
