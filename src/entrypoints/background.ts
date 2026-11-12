@@ -76,6 +76,10 @@ async function handle(msg: Envelope): Promise<unknown> {
       await client.changeAccess(msg.artifact, msg.inviteId, msg.access);
 
       return null;
+    case 'remove-invite':
+      await client.removeInvite(msg.artifact, msg.inviteId);
+
+      return null;
     case 'start':
       await runManager.start(msg.label, msg.plans, msg.accountEmail);
 

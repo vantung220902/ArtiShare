@@ -23,6 +23,8 @@ export interface Messages {
   sharees: { req: { artifact: ArtifactRef }; res: Sharee[] };
   /** Changes one invitation's permission on claude.ai; `inviteId` is `Sharee.id`. */
   'change-access': { req: { artifact: ArtifactRef; inviteId: string; access: AccessLevel }; res: null };
+  /** Removes one invitation on claude.ai; `inviteId` is `Sharee.id`. */
+  'remove-invite': { req: { artifact: ArtifactRef; inviteId: string }; res: null };
   /** `label` names the run in the popup, e.g. the lists it came from. */
   start: { req: { label: string; plans: ArtifactPlan[]; accountEmail: string }; res: null };
   stop: { req: Record<string, never>; res: null };

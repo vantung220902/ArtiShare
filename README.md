@@ -121,7 +121,7 @@ Invites go out one at a time from the background, with a short pause between the
 
 ### Who already has access
 
-When the tab you opened the popup over is an artifact, a small **Manage access** link sits at the bottom of the Share tab, under the form or the run. It opens **People with access**: you (the owner) first, then everyone already invited, with _Pending_ or _Accepted_ and their permission, which you can change from the drop-down beside each person (it saves straight away and the row says _Saved_). It reads from claude.ai each time. **Back** returns to the Share tab exactly as you left it. On any other page there is no link.
+When the tab you opened the popup over is an artifact, a small **Manage access** link sits at the bottom of the Share tab, under the form or the run. It opens **People with access**: you (the owner) first, then everyone already invited, with _Pending_ or _Accepted_ and their permission, which you can change from the drop-down beside each person (it saves straight away and the row says _Saved_). **Remove** asks first ("Their invitation will stop working."), then takes the person off the artifact. It reads from claude.ai each time. **Back** returns to the Share tab exactly as you left it. On any other page there is no link.
 
 ## Good to know
 
