@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // Pastes into a scratch textarea, since reading the clipboard directly needs a permission.
 async function expectClipboard(panel: Page, expected: string) {

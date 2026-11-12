@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F009: clearing the name of an existing list and saving names it after its addresses.
 test('clearing the name of a saved list renames it after its addresses', async ({ panel }) => {

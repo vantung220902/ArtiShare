@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F010: Preview saves an unnamed list typed in the Share tab's inline form under its automatic name.
 test('Preview saves an unnamed inline list with its automatic name and ticks it', async ({ panel }) => {

@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F001: a claude.ai/cowork link with an artifact open is accepted in the Share tab and previews
 // as the matching claude.ai/artifact link.

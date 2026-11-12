@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F006: a list saved without a name is named after its first addresses.
 test('a list saved without a name is named after its addresses', async ({ panel }) => {

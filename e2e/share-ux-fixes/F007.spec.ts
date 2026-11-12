@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 const PLACEHOLDER = 'List name, e.g. Acme clients';
 
