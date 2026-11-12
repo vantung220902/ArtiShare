@@ -4,6 +4,17 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F009 · Closing the popup mid-run doesn't stop the run, and reopening shows live progress
+
+- **Did:** No source change was needed: the run already lives in the background and `chrome.storage.local`, and the run view follows it. Added `e2e/F009.spec.ts` (2 tests): (1) four addresses with a `slow-…` one last, closed (`goto('about:blank')`) once one is invited, reopened 1.5 s later: Running, Stop visible, more invited than before and fewer than 4, and the count keeps rising with the popup open; Stop, close, reopen: Stopped, same invited count (nothing sent while closed), "N left"; Resume ends with "Share finished: 4 invited" and Done. (2) A two-address run that finishes while the popup is closed shows "Share finished: 2 invited" on reopening. README (Run section) says closing doesn't stop the run and reopening shows progress.
+- **Verified:** `npm run check` (154 unit tests) and `npm run e2e` (55 specs) pass; F009 `--repeat-each=5` 10/10 passed. feature-verifier: PASS on its second run, with real command output (check, full e2e 55 passed, F009 x3 6 passed).
+- **State:** F009 passes. 9 features left (F010–F018).
+- **Next:** F010, the fake claude.ai's `changeAccess` and `removeInvite`, plus seeded artifacts ('Shared', 'Missing', `locked…`). That is the base for the Manage access view.
+- **Notes:**
+  - The verifier's first run was a FAIL only because its Bash was denied (no commands run); I re-ran it and it passed. Check that a PASS quotes real command output.
+  - Timing in the spec: the run is ~4.6 s minimum (0.3 s per invite, 0.8 s+ between, 1 s rate limit on the slow address), so reopening at ~2 s still finds it running. The first draft waited 2.5 s and the run had only the last address left, so the chips (hidden once finished) vanished; 1.5 s is the safe wait.
+  - Shell heredocs are refused here; use Edit/Write.
+
 ### 2026-11-12 · F008 · A preview survives the popup closing, even while it is loading
 
 - **Did:** `PopupState` gained `preview: PreviewState | null` (`src/core/popupState.ts`: `label`, `artifacts`, `invites`, `results` or null while loading, `accountEmail`; `parsePreviewState` validates what is read back). `storage.ts` exports `currentPopupState()` so `ShareView`, which mounts after the App has loaded the state, starts from the stored preview. `ShareView.tsx`: Preview click now stores and shows the preview at once with `results: null` ("Checking current access…", Send disabled); an effect asks the background for any preview without results (so a popup that closed mid-load asks again on reopening) and saves the answer. Back, an error, or Send clears the stored preview; a late answer after Back is ignored (`stale` flag). A failed preview goes back to the form with the error. README (step 4) says what reopening shows.

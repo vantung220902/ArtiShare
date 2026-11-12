@@ -114,7 +114,7 @@
         "Wait a few seconds and reopen the popup: see the run view with more addresses Invited than before, still updating",
         "Click Stop, close and reopen: see Stopped with Resume; click Resume and see it finish ('Share finished: …')"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F010",
