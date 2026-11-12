@@ -88,6 +88,8 @@ In the **Share** tab:
 - **Artifacts** (required, marked `*`): if the current tab is an artifact, its link is already filled in. Add more links (one per line), or open another artifact and click **+ Current tab**. Both work for a plain `claude.ai/artifact/…` link and for any claude.ai page with an artifact open, such as a chat (`claude.ai/chat/…?artifact=…`) or a cowork session (`claude.ai/cowork/…?artifact=…`).
 - **Share with:** tick the lists to invite. Need a new group? Click **+ New list** to make one without leaving the tab.
 
+If the popup closes while you're filling this in (it does when you click away), the links you typed and the lists you ticked are still there when you reopen it, until the browser quits or you send. After sending, the next form starts empty with your default lists ticked.
+
 Click **Preview**. The button shows how many people and artifacts are involved.
 
 ### 4. Check the preview

@@ -4,6 +4,18 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F005 · The Share form survives the popup closing
+
+- **Did:** The Share form's draft (Artifacts text and ticked list ids) is saved to `chrome.storage.session` on every change and restored on open. New `src/core/shareDraft.ts` (`parseShareDraft`, `restoreSelection`, pure and unit-tested in `tests/shareDraft.test.ts`); `loadShareDraft`/`saveShareDraft` in `src/lib/storage.ts`. In `ShareView.tsx`, `ShareView` now only loads the draft and renders `ShareForm` (the old body) with it as `initial`, so the first state is the restored one. The "default selection changed" effect no longer runs on mount (it used to overwrite restored ticks), and the save effect skips its first run so untouched defaults aren't stored as a choice. `Preview.start` clears the draft once `send('start')` succeeds, so the next form is empty with defaults ticked. Deleted lists are dropped from restored ticks. README 'Pick artifacts and lists' updated.
+- **Verified:** `npm run check` (122 unit tests) and `npm run e2e` (40 specs) pass. New `e2e/F005.spec.ts` (5 tests): typed links and ticks return after a reload (including unticking everything); a deleted list isn't ticked; after a run and Start a new share the form is empty, also after a reload; a reopened untouched form still follows a changed default; a restored draft isn't overwritten by the tab's artifact (F003 prefill). feature-verifier: PASS on its second run (the first was a FAIL only because Bash was refused).
+- **State:** F005 passes. 13 features left (F006–F018).
+- **Next:** F006, keep a list being typed or edited (new-list form, an edited saved list, the inline form in Share) and which tab was open. Reuse the `shareDraft` pattern: pure parse in `src/core`, session-storage helpers in `src/lib/storage.ts`, load before mounting, skip the first save. `ListForm` already reports `onDraftChange`.
+- **Notes:**
+  - 'Close the popup' in e2e is `panel.reload()`. Wait for the draft to be in `chrome.storage.session` (poll `storedDraft(panel)` in F005) before reloading rather than sleeping.
+  - Known small gap: the draft is cleared after `send('start')` resolves; if the popup closed in that gap, a stale draft would come back after the next Start a new share. Clearing earlier would lose the draft if the send failed, so left as is.
+  - One full e2e run had a one-off F002 real-popup failure that didn't repeat (3 isolated runs and 2 more full runs passed). Watch for flakiness there under load.
+  - Shell heredocs and `sed -i` are refused in this environment; use Edit.
+
 ### 2026-11-12 · F004 · Confirmations are shown inside the popup
 
 - **Did:** Added `src/ui/useConfirm.tsx` (`useConfirm()` returns `{ ask, dialog }`; `ask` resolves true/false) and `src/ui/ConfirmDialog.tsx` (a modal `<dialog role="alertdialog">`: Cancel is focused, Escape cancels, danger styling via `.confirm` in `styles.css`). Replaced the three `window.confirm` calls: delete list (`ListForm`), Send (`ShareView` Preview), discard a stopped run (`RunView`). The `panel` fixture no longer auto-accepts dialogs: it dismisses any native `dialog` event and fails the test; it also exports `confirmation(page)` and `answer(page, name)`. Existing specs that click Send (smoke, F001, share-ux-fixes F013–F017) now answer the in-popup confirmation; F016/F017 assert on it instead of counting dialogs. New `e2e/F004.spec.ts` covers the three confirmations with Cancel, Escape and confirm.
