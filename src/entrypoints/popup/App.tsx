@@ -1,13 +1,16 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import type { Account } from '../../claude/shareClient';
+import type { ArtifactRef } from '../../core/types';
 import { emptyPopupState, type PopupState, reconcileListsDraft, type Tab } from '../../core/popupState';
 import { send } from '../../lib/messages';
 import { loadPopupState, patchPopupState } from '../../lib/storage';
 import { useConfig, useRun } from '../../ui/hooks';
 import { SendIcon } from '../../ui/icons';
 import { ListsView } from './ListsView';
+import { ManageView } from './ManageView';
 import { RunView } from './RunView';
 import { ShareView } from './ShareView';
+import { currentTabArtifact } from './viewUtils';
 
 export function App() {
   const [config, save, configError] = useConfig();
@@ -25,6 +28,14 @@ export function App() {
   const [accountError, setAccountError] = useState('');
   // Set by "Start a new share", so the fresh Share form is ready to type in. Not on a plain panel open.
   const [focusArtifacts, setFocusArtifacts] = useState(false);
+
+  // The artifact in the tab the popup opened over, which Manage access is about. Read once: a popup
+  // closes when you click away, so it can't outlive a change of tab.
+  const [tabArtifact, setTabArtifact] = useState<ArtifactRef | null>(null);
+  const [managing, setManaging] = useState<ArtifactRef | null>(null);
+  useEffect(() => {
+    void currentTabArtifact().then(setTabArtifact, () => {});
+  }, []);
 
   const refreshAccount = () => {
     // oxlint-disable-next-line react/set-state-in-effect -- also a click handler; clears the old error before re-checking
@@ -127,20 +138,31 @@ export function App() {
       <div className="popup-body">
         {/* Both tabs stay mounted so switching doesn't lose what you've typed. */}
         <div id="panel-share" role="tabpanel" aria-labelledby="tab-share" hidden={tab !== 'share'}>
-          {run ? (
-            <RunView run={run} onStartNew={setFocusArtifacts} />
-          ) : (
-            <ShareView
-              focusArtifacts={focusArtifacts}
-              onArtifactsFocused={() => setFocusArtifacts(false)}
-              config={config}
-              save={save}
-              onAccount={(next) => {
-                setAccount(next);
-                setAccountError('');
-              }}
-            />
-          )}
+          {/* The form or run stays mounted (just hidden) under Manage access, so Back finds it as it was. */}
+          <div hidden={managing !== null}>
+            {run ? (
+              <RunView run={run} onStartNew={setFocusArtifacts} />
+            ) : (
+              <ShareView
+                focusArtifacts={focusArtifacts}
+                onArtifactsFocused={() => setFocusArtifacts(false)}
+                config={config}
+                save={save}
+                onAccount={(next) => {
+                  setAccount(next);
+                  setAccountError('');
+                }}
+              />
+            )}
+            {tabArtifact && (
+              <p className="manage-link">
+                <button className="link" onClick={() => setManaging(tabArtifact)}>
+                  Manage access
+                </button>
+              </p>
+            )}
+          </div>
+          {managing && <ManageView artifact={managing} onBack={() => setManaging(null)} />}
         </div>
         <div id="panel-lists" role="tabpanel" aria-labelledby="tab-lists" hidden={tab !== 'lists'}>
           <ListsView

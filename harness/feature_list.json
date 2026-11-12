@@ -151,7 +151,7 @@
         "Click Back: see the Share form with whatever was typed before still there",
         "Make a non-artifact page the active tab and reopen the popup: see no 'Manage access' link"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F013",

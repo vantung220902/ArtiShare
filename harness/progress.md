@@ -4,6 +4,18 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F012 · A 'Manage access' link opens the list of people already invited
+
+- **Did:** New message `sharees` (`src/lib/messages.ts`, answered in `background.ts` by `client.listSharees`). New `src/entrypoints/popup/ManageView.tsx`: 'People with access', the artifact link with copy, a Back button, 'You (owner)' always first and not editable (the owner entry claude.ai sends, if any, is filtered out), then each invitee with address, Pending/Accepted and permission as plain text. It has a loading line and, for a failed read, the error with a Retry link (F015 will test and extend that). `App.tsx` reads the active tab's artifact once (`currentTabArtifact`, moved from `ShareView.tsx` to `viewUtils.ts`) and, when there is one, shows a quiet `button.link` 'Manage access' under the Share form or the run view. The form or run stays mounted but `hidden` while Manage access shows, so Back finds it exactly as it was. Styles `.people`, `.manage-link` in `styles.css`. README has a 'Who already has access' section. `e2e/F012.spec.ts` (3 tests): the Shared artifact (link position below Preview, not a tab or primary; the four rows; Back keeps the typed text), under a finished run view, and no link on a non-artifact page.
+- **Verified:** `npm run check` (175 unit tests) and `npm run e2e` (60 specs) pass. feature-verifier: PASS, with command output quoted.
+- **State:** F012 passes. 6 features left (F013–F018). Manage access is read-only; the permission is text, not a select yet.
+- **Next:** F013: replace the permission text with `AccessSelect` per invitee row, calling a new `change-access` message (background → `client.changeAccess(artifact, inviteId, access)`); disable the select while in flight, show 'Saved' on that row, leave other rows alone. Use `Sharee.id` for the row key. Needs an `ArtifactRef` and invite id in the message.
+- **Notes:**
+  - The Manage access view is not saved across the popup closing (not asked for); reopening shows the Share tab.
+  - The link appears for the tab the popup opened over, read once on mount. In e2e that is why the spec brings the artifact tab to the front and reloads the panel, as F003 does.
+  - Fake artifact ids containing `Shared` are seeded: don't use that word in an id for a clean artifact in a spec (I hit that once).
+  - Shell heredocs and `>>` redirects are refused here; use Edit/Write. A `while`/`until` loop in Bash is refused too; poll with `pgrep`.
+
 ### 2026-11-12 · F011 · The claude.ai client can change an invitation's permission and remove it
 
 - **Did:** `ShareClient` (`src/claude/shareClient.ts`) gained `changeAccess(artifact, inviteId, access)` and `removeInvite(artifact, inviteId)`. `apiShareClient.ts` implements them as PATCH `{ role }` and DELETE on `/api/frame/invite/{uuid}/{inviteId}?org=…` with `X-Frame-CP: go`; the org lookup that `invite` did inline is now `orgFor()`, shared by all three. `listSharees` fills `Sharee.id` from the invitation's `id` (omitted if claude.ai sends none). `manageError()` maps 409 `invitee_joined_org` to the 'joined your organization' message, 403 to 'Only the owner can change access', 404 to 'The invitation no longer exists', 429 to rate-limited, and a Cloudflare challenge to `auth`. Added the error code `managed-elsewhere` (`src/core/runner.ts`), which the fake now throws too (it was `unknown`). `FakeShareClient` is gone; the fake returns `ShareClient`. `docs/claude-share-api.md` documents both endpoints and the refusal table. Tests: 12 new in `tests/apiShareClient.test.ts` (stub transport), and `tests/runManager.test.ts`'s client stub got the two methods.
