@@ -4,6 +4,18 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F016 · Manage access handles nobody invited, a stale list and repeated clicks
+
+- **Did:** `ManageView.tsx`: 'Only you have access.' plus 'Nobody is invited yet. Use Share to invite people.' when the list is empty (the 'You (owner)' row stays). New **Refresh** button beside Back (shown once a first read succeeded): it re-reads without blanking the list ('Refreshing…' while it runs); a failed refresh keeps the last list and shows 'Could not refresh: …' above it. The first-load error with Retry is unchanged (only while there is no list). `ManageView` takes a new `run` prop from `App.tsx` and shows an `<output>` note 'A share is in progress for this artifact. Refresh shows the latest.' while `run.status === 'running'` with a pending item for this artifact. `PersonRow` got a synchronous `inFlight` ref so a second change or remove can't start before React re-renders the disabled controls. README paragraph extended. `e2e/F016.spec.ts` (4 tests): the empty artifact; Refresh after a second popup sent invitations; the in-progress note during a real run and Refresh after it; repeated change/remove/confirm counting `chrome.runtime.sendMessage` calls by type (exactly 1 `change-access`, 1 `remove-invite`).
+- **Verified:** `npm run check` (175 unit tests) and `npm run e2e` (70 specs) pass; F016 spec 3× in a row (12/12). feature-verifier: PASS.
+- **State:** F016 passes. 2 features left (F017 docs, F018).
+- **Next:** F017: docs sweep (README, store/listing.md, docs/index.html, CLAUDE.md, harness-work.md, feature-verifier.md say popup instead of side panel; the 'never removes anyone' sentence already says Remove + confirm since F015). Start with `grep -ri 'side panel'`.
+- **Notes:**
+  - The failed-Refresh path ('Could not refresh') has no e2e (not one of the steps); the fake has no way to fail a read of an already-loaded artifact.
+  - The hidden run view also lists invited addresses, so `share.getByText('ana@example.com')` matches twice once a run exists; scope assertions to `ul.people > li` rows.
+  - A second popup (`context.newPage()` + `goto(panel.url())`) shares the background's fake state and run storage, which is how the spec makes the list go stale on purpose.
+  - Lint prefers `<output>` over `role="status"`, and forbids referencing an unbound method like `descriptor.set` in a `.call` chain on a destructured value.
+
 ### 2026-11-12 · F015 · Manage access explains refused changes and removals, and a list that can't load
 
 - **Did:** No source change: F013/F014 had already built the row error (`role="alert"`, controls re-enabled, select back to the old value) and F012 the load error with Retry. Added `e2e/F015.spec.ts` (4 tests): the `locked…` change and removal errors on the row with other rows still working and the row kept after reopening; a `ForbiddenSharedArtifact1` artifact listing people while a change and a removal both say 'Only the owner can change access'; a `Missing` artifact showing 'Artifact not found' with Retry and no list, where Retry goes back to loading and fails again, and Back still works. README: one sentence on the errors, and the line that said ArtiShare 'never removes anyone' now says it does so only on Remove + confirm.

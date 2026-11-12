@@ -201,7 +201,7 @@
         "Click Remove and confirm twice quickly, or change a select twice quickly: see only one request per action (controls are disabled while it's in flight) and no error",
         "While a run is sending to this artifact, open Manage access: see a note that a share is in progress and that Refresh shows the latest"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F017",

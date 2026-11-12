@@ -7,6 +7,7 @@ import {
   type Sharee,
 } from '../../core/types';
 import { send } from '../../lib/messages';
+import type { RunState } from '../../lib/storage';
 import { AccessSelect } from '../../ui/AccessSelect';
 import { BackIcon } from '../../ui/icons';
 import { useConfirm } from '../../ui/useConfirm';
@@ -41,21 +42,27 @@ function PersonRow({
   useEffect(() => () => window.clearTimeout(timer.current), []);
   const { ask, dialog } = useConfirm();
   const busy = saving !== null || removing;
+  // A second click can arrive before React has re-rendered the disabled controls, so `busy` may
+  // still read false; this is set synchronously and makes it one request per action.
+  const inFlight = useRef(false);
 
   const change = (access: AccessLevel) => {
-    if (busy || !person.id || access === person.access) return;
+    if (inFlight.current || !person.id || access === person.access) return;
+    inFlight.current = true;
     window.clearTimeout(timer.current);
     setSaved(false);
     setError('');
     setSaving(access);
     send('change-access', { artifact, inviteId: person.id, access }).then(
       () => {
+        inFlight.current = false;
         onChanged(person.id!, access);
         setSaving(null);
         setSaved(true);
         timer.current = window.setTimeout(() => setSaved(false), SAVED_MS);
       },
       (e: Error) => {
+        inFlight.current = false;
         setSaving(null);
         setError(e.message);
       },
@@ -63,15 +70,18 @@ function PersonRow({
   };
 
   const remove = async () => {
-    if (busy || !person.id) return;
+    if (inFlight.current || !person.id) return;
     const ok = await ask({
       title: `Remove ${person.email} from this artifact?`,
       detail: 'Their invitation will stop working.',
       confirmLabel: 'Remove',
       danger: true,
     });
-    if (!ok) return;
+    // A second ask answers the first as cancelled, so two confirmations can't both be true; but a
+    // change started while the question was open may still be running.
+    if (!ok || inFlight.current) return;
 
+    inFlight.current = true;
     window.clearTimeout(timer.current);
     setSaved(false);
     setError('');
@@ -79,6 +89,7 @@ function PersonRow({
     send('remove-invite', { artifact, inviteId: person.id }).then(
       () => onRemoved(person.id!),
       (e: Error) => {
+        inFlight.current = false;
         setRemoving(false);
         setError(e.message);
       },
@@ -120,25 +131,39 @@ function PersonRow({
 }
 
 /** Who is already invited to one artifact. Reads from claude.ai each time it opens, never from a copy. */
-export function ManageView({ artifact, onBack }: { artifact: ArtifactRef; onBack: () => void }) {
-  // null while loading.
+export function ManageView({
+  artifact,
+  run,
+  onBack,
+}: {
+  artifact: ArtifactRef;
+  /** The current run, if any: while it sends to this artifact the list on screen is already out of date. */
+  run: RunState | null;
+  onBack: () => void;
+}) {
+  // null until the first read succeeds.
   const [people, setPeople] = useState<Sharee[] | null>(null);
   const [error, setError] = useState('');
+  const [reading, setReading] = useState(true);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let stale = false;
-    // oxlint-disable-next-line react/set-state-in-effect -- a retry goes back to loading before asking again
-    setPeople(null);
+    // oxlint-disable-next-line react/set-state-in-effect -- a retry or refresh asks again; `people` is kept so a refresh doesn't blank the list
+    setReading(true);
     setError('');
 
     send('sharees', { artifact }).then(
       (found) => {
+        if (stale) return;
         // The owner is always shown first, from what we know, so claude.ai's own entry for them is dropped.
-        if (!stale) setPeople(found.filter((p) => p.access !== 'owner'));
+        setPeople(found.filter((p) => p.access !== 'owner'));
+        setReading(false);
       },
       (e: Error) => {
-        if (!stale) setError(e.message);
+        if (stale) return;
+        setError(e.message);
+        setReading(false);
       },
     );
 
@@ -147,44 +172,70 @@ export function ManageView({ artifact, onBack }: { artifact: ArtifactRef; onBack
     };
   }, [artifact, attempt]);
 
+  const sending =
+    run?.status === 'running' &&
+    run.items.some((item) => item.status === 'pending' && item.artifact.id === artifact.id);
+
   return (
     <div className="stack">
       <div className="row spread">
         <button className="ghost" onClick={onBack}>
           <BackIcon size={14} /> Back
         </button>
+        {people && (
+          <button className="ghost" disabled={reading} onClick={() => setAttempt((n) => n + 1)}>
+            {reading ? 'Refreshing…' : 'Refresh'}
+          </button>
+        )}
       </div>
       <section className="card stack">
         <h2 className="title">People with access</h2>
         <ArtifactLink url={artifact.url} />
-        {error ? (
-          <p className="alert">
-            {error}{' '}
-            <button className="link" onClick={() => setAttempt((n) => n + 1)}>
-              Retry
-            </button>
-          </p>
-        ) : people === null ? (
-          <output className="hint">Loading people…</output>
+        {sending && (
+          <output className="hint">
+            A share is in progress for this artifact. Refresh shows the latest.
+          </output>
+        )}
+        {people === null ? (
+          error ? (
+            <p className="alert">
+              {error}{' '}
+              <button className="link" onClick={() => setAttempt((n) => n + 1)}>
+                Retry
+              </button>
+            </p>
+          ) : (
+            <output className="hint">Loading people…</output>
+          )
         ) : (
-          <ul className="people">
-            <li>
-              <div className="grow">
-                <div className="email">You (owner)</div>
+          <>
+            {/* The list stays when a refresh fails, so the last good copy isn't lost. */}
+            {error && <p className="alert">Could not refresh: {error}</p>}
+            <ul className="people">
+              <li>
+                <div className="grow">
+                  <div className="email">You (owner)</div>
+                </div>
+              </li>
+              {people.map((p) => (
+                <PersonRow
+                  key={p.id ?? p.email}
+                  artifact={artifact}
+                  person={p}
+                  onChanged={(id, access) =>
+                    setPeople((all) => all && all.map((x) => (x.id === id ? { ...x, access } : x)))
+                  }
+                  onRemoved={(id) => setPeople((all) => all && all.filter((x) => x.id !== id))}
+                />
+              ))}
+            </ul>
+            {people.length === 0 && (
+              <div className="stack">
+                <p>Only you have access.</p>
+                <p className="hint">Nobody is invited yet. Use Share to invite people.</p>
               </div>
-            </li>
-            {people.map((p) => (
-              <PersonRow
-                key={p.id ?? p.email}
-                artifact={artifact}
-                person={p}
-                onChanged={(id, access) =>
-                  setPeople((all) => all && all.map((x) => (x.id === id ? { ...x, access } : x)))
-                }
-                onRemoved={(id) => setPeople((all) => all && all.filter((x) => x.id !== id))}
-              />
-            ))}
-          </ul>
+            )}
+          </>
         )}
       </section>
     </div>
