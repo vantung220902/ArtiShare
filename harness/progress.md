@@ -4,6 +4,16 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F007 · Verifier verdict for the reconciled restored draft
+
+- **Did:** No code change. The previous session finished F007 (spec `e2e/F007.spec.ts`, README) but couldn't get a verdict because the verifier's Bash was denied. This session re-ran the baseline and the verifier, then flipped `passes`.
+- **Verified:** `harness/init.sh` (check: 141 unit tests; e2e: 50 specs) passed. feature-verifier: PASS on the second run, with real output: `e2e/F007.spec.ts` 4 passed, `npm run check` 141 passed, full e2e 50 passed.
+- **State:** F007 passes. 11 features left (F008–F018).
+- **Next:** F008, a preview survives the popup closing, even while it is loading.
+- **Notes:**
+  - The verifier's first run this session said PASS but its tool log showed only Grep and Read, so its claims about running commands were unsupported. I discarded it and asked again, requiring Bash output quoted; check the verifier's tool count when its report quotes command results.
+  - Popup state is shared by every window, so two popups both editing lists would overwrite each other's `lists` draft. Fine for one popup at a time.
+
 ### 2026-11-12 · F007 · A restored draft is reconciled with what changed while the popup was closed
 
 - **Did:** No source change was needed: F005/F006 already drop deleted lists from restored ticks, `open` and `edits` (`reconcileListsDraft`), and a restored edit keeps its `baseline`, so `ListForm`'s existing conflict warning and Reload saved appear when the list changed meanwhile. Added `e2e/F007.spec.ts` (4 tests): (1) Alpha and Beta ticked with an artifact typed, popup closed, Beta deleted from a second popup page, reopen: artifact kept, Alpha ticked, Beta gone, no `.alert`; (2) an unsaved edit of Beta and an open Alpha, Beta deleted meanwhile: no Beta, Alpha still open and untouched, no stray expanded form; (3) an unsaved edit of Alpha, Alpha's addresses changed from another window: draft kept as typed, "This list changed in another window." shown, Save and Delete disabled, Reload saved loads the other window's addresses, clears the warning and the stored edit; (4) an edit of an unchanged list is restored without any warning. 'Close' is `goto('about:blank')`; 'another window' is a second popup page that sends `config-get`/`config-change` (the same messages Save and Delete use), then closes. README (Lists and Share sections) says what happens to drafts of deleted or changed lists.

@@ -91,7 +91,7 @@
         "Reopen the popup: see Alpha ticked, Beta gone, and no error",
         "Start an unsaved edit of list Alpha, close the popup, change Alpha's addresses from another window, reopen: see the draft kept and the existing 'This list changed in another window' warning with Reload saved"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F008",
