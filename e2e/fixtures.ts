@@ -3,8 +3,8 @@ import { chromium, test as base, type BrowserContext, type Page } from '@playwri
 const EXTENSION_DIR = new URL('../.output/chrome-mv3-fake', import.meta.url).pathname;
 
 /**
- * `context` is a fresh Chromium profile with the fake build loaded; `panel` is the side panel
- * opened as a normal tab (the real side panel can't be driven by Playwright).
+ * `context` is a fresh Chromium profile with the fake build loaded; `panel` is the popup page
+ * opened as a normal tab (a real action popup can't be opened from Playwright).
  */
 export const test = base.extend<{ context: BrowserContext; panel: Page }>({
   // oxlint-disable-next-line no-empty-pattern -- Playwright fixtures must destructure their deps
@@ -24,7 +24,7 @@ export const test = base.extend<{ context: BrowserContext; panel: Page }>({
     const page = await context.newPage();
     // The run asks for confirmation with window.confirm; accept it like a user would.
     page.on('dialog', (d) => void d.accept());
-    await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
     await provide(page);
   },
 });

@@ -1,6 +1,6 @@
 import { applyConfigChange, type Config, type ConfigChange } from '../core/config';
 
-/** Serializes config actions from every side panel through the background worker. */
+/** Serializes config actions from every open popup through the background worker. */
 export function createConfigController(load: () => Promise<Config>, save: (config: Config) => Promise<void>) {
   let queue: Promise<void> = Promise.resolve();
 
