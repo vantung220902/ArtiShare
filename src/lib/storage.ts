@@ -1,10 +1,12 @@
 import { type Config, ConfigSchema, loadStoredConfig } from '../core/config';
 import type { RunItem } from '../core/runner';
+import { emptyPopupState, parsePopupState, type PopupState } from '../core/popupState';
 import { parseShareDraft, type ShareDraft } from '../core/shareDraft';
 
 const CONFIG_KEY = 'config';
 const RUN_KEY = 'run';
 const SHARE_DRAFT_KEY = 'shareDraft';
+const POPUP_STATE_KEY = 'popupState';
 
 export interface RunState {
   id: string;
@@ -49,6 +51,29 @@ export async function loadShareDraft(): Promise<ShareDraft | null> {
 export async function saveShareDraft(draft: ShareDraft | null): Promise<void> {
   if (draft) await chrome.storage.session.set({ [SHARE_DRAFT_KEY]: draft });
   else await chrome.storage.session.remove(SHARE_DRAFT_KEY);
+}
+
+// The popup's own state (open tab, Lists tab drafts) is written piece by piece by different
+// components, so a copy is kept here: each piece is merged into it and the whole is written,
+// in order, so two quick changes can't overwrite each other.
+let popupState = emptyPopupState();
+let popupWrites: Promise<unknown> = Promise.resolve();
+
+export async function loadPopupState(): Promise<PopupState> {
+  popupState = parsePopupState((await chrome.storage.session.get(POPUP_STATE_KEY))[POPUP_STATE_KEY]);
+
+  return popupState;
+}
+
+/** Keeps `patch` for the next time the popup opens. Failing to is not worth bothering anyone about. */
+export function patchPopupState(patch: Partial<PopupState>): Promise<void> {
+  popupState = { ...popupState, ...patch };
+  const snapshot = popupState;
+  popupWrites = popupWrites
+    .then(() => chrome.storage.session.set({ [POPUP_STATE_KEY]: snapshot }))
+    .catch(() => {});
+
+  return popupWrites.then(() => {});
 }
 
 function watch<T>(key: string, cb: (value: T | null) => void): () => void {

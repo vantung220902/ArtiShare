@@ -79,7 +79,7 @@
         "In Share, click + New list, type one address, close and reopen: see the inline form with that address",
         "Save or Cancel each form: reopening the popup no longer shows the draft"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F007",

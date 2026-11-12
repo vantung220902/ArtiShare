@@ -1,14 +1,57 @@
-import { useState } from 'react';
-import { type Config, type ConfigChange } from '../../core/config';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { type Config, type ConfigChange, type EmailList } from '../../core/config';
+import {
+  type ListFormDraft,
+  type ListsDraft,
+  reconcileListsDraft,
+  sameListFormDraft,
+} from '../../core/popupState';
 import { ACCESS_LABELS } from '../../core/types';
+import { patchPopupState } from '../../lib/storage';
 import { ChevronIcon, PlusIcon, UsersIcon } from '../../ui/icons';
 import { ListBadge } from '../../ui/ListBadge';
 import { ListForm } from '../../ui/ListForm';
 import { byName, people, type Save } from './viewUtils';
 
-export function ListsView({ config, save }: { config: Config; save: Save }) {
-  const [adding, setAdding] = useState(false);
+interface ListsViewProps {
+  config: Config;
+  save: Save;
+  /** The tab's unsaved work from before the popup last closed. Only read when the tab mounts. */
+  initial: ListsDraft;
+}
+
+export function ListsView({ config, save, initial }: ListsViewProps) {
+  const [adding, setAdding] = useState(initial.adding);
+  const [newList, setNewList] = useState<ListFormDraft | null>(initial.newList);
+  const [open, setOpen] = useState<string[]>(initial.open);
+  const [edits, setEdits] = useState<Record<string, ListFormDraft>>(initial.edits);
   const [saveError, setSaveError] = useState('');
+
+  // Keep the unsaved work across the popup closing. Skips the first run: nothing has changed yet.
+  const firstRun = useRef(true);
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    const ids = config.lists.map((list) => list.id);
+    void patchPopupState({ lists: reconcileListsDraft({ adding, newList, open, edits }, ids) });
+  }, [adding, newList, open, edits, config.lists]);
+
+  // Each form reports a draft whenever it changes; ignore the ones that say nothing new.
+  const setEdit = useCallback((id: string, draft: ListFormDraft | null) => {
+    setEdits((current) => {
+      if (sameListFormDraft(current[id], draft)) return current;
+      const { [id]: _replaced, ...rest } = current;
+
+      return draft ? { ...rest, [id]: draft } : rest;
+    });
+  }, []);
+  const setOpened = useCallback((id: string, isOpen: boolean) => {
+    setOpen((current) =>
+      current.includes(id) === isOpen ? current : isOpen ? [...current, id] : current.filter((x) => x !== id),
+    );
+  }, []);
   const lists = byName(config.lists);
   const sel = config.defaultSelection;
   const change = (next: ConfigChange) =>
@@ -86,29 +129,32 @@ export function ListsView({ config, save }: { config: Config; save: Save }) {
         </div>
       )}
       {lists.map((l) => (
-        <details key={l.id} className="card list-card">
-          <summary>
-            <ListBadge list={l} />
-            <span className="grow pick-text">
-              <span className="pick-name truncate">{l.name}</span>
-              <span className="meta">
-                {people(l.emails.length)} · {ACCESS_LABELS[l.access]}
-              </span>
-            </span>
-            <ChevronIcon size={16} />
-          </summary>
-          <div className="list-body">
-            <ListForm config={config} save={save} list={l} />
-          </div>
-        </details>
+        <ListCard
+          key={l.id}
+          list={l}
+          config={config}
+          save={save}
+          isOpen={open.includes(l.id)}
+          initial={edits[l.id] ?? null}
+          onOpenChange={setOpened}
+          onUnsavedChange={setEdit}
+        />
       ))}
       {adding ? (
         <div className="card">
           <ListForm
             config={config}
             save={save}
-            onSaved={() => setAdding(false)}
-            onCancel={() => setAdding(false)}
+            initial={newList}
+            onUnsavedChange={setNewList}
+            onSaved={() => {
+              setAdding(false);
+              setNewList(null);
+            }}
+            onCancel={() => {
+              setAdding(false);
+              setNewList(null);
+            }}
           />
         </div>
       ) : (
@@ -117,5 +163,45 @@ export function ListsView({ config, save }: { config: Config; save: Save }) {
         </button>
       )}
     </div>
+  );
+}
+
+interface ListCardProps {
+  list: EmailList;
+  config: Config;
+  save: Save;
+  isOpen: boolean;
+  initial: ListFormDraft | null;
+  onOpenChange: (id: string, open: boolean) => void;
+  onUnsavedChange: (id: string, draft: ListFormDraft | null) => void;
+}
+
+/** One saved list, expandable into its edit form. Its own component so each form gets a stable callback. */
+function ListCard({ list, config, save, isOpen, initial, onOpenChange, onUnsavedChange }: ListCardProps) {
+  const report = useCallback(
+    (draft: ListFormDraft | null) => onUnsavedChange(list.id, draft),
+    [list.id, onUnsavedChange],
+  );
+
+  return (
+    <details
+      className="card list-card"
+      open={isOpen}
+      onToggle={(e) => onOpenChange(list.id, e.currentTarget.open)}
+    >
+      <summary>
+        <ListBadge list={list} />
+        <span className="grow pick-text">
+          <span className="pick-name truncate">{list.name}</span>
+          <span className="meta">
+            {people(list.emails.length)} · {ACCESS_LABELS[list.access]}
+          </span>
+        </span>
+        <ChevronIcon size={16} />
+      </summary>
+      <div className="list-body">
+        <ListForm config={config} save={save} list={list} initial={initial} onUnsavedChange={report} />
+      </div>
+    </details>
   );
 }

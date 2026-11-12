@@ -72,6 +72,8 @@ In the **Lists** tab, click **New list**. A `*` after a label marks a field you 
 
 Click **Save list**. To change a list later, click it to open it, edit, and **Save**.
 
+If the popup closes before you save (it does when you click away), what you typed is still there when you reopen it: the new-list form, a saved list you were editing, and the tab you were on. Saving, **Cancel** or **Revert** clears it. It is kept until the browser quits.
+
 ### 2. Choose the lists that are ticked by default
 
 At the top of the **Lists** tab, **Ticked by default when sharing** decides which lists are already ticked when you open the Share tab:
@@ -88,7 +90,7 @@ In the **Share** tab:
 - **Artifacts** (required, marked `*`): if the current tab is an artifact, its link is already filled in. Add more links (one per line), or open another artifact and click **+ Current tab**. Both work for a plain `claude.ai/artifact/…` link and for any claude.ai page with an artifact open, such as a chat (`claude.ai/chat/…?artifact=…`) or a cowork session (`claude.ai/cowork/…?artifact=…`).
 - **Share with:** tick the lists to invite. Need a new group? Click **+ New list** to make one without leaving the tab.
 
-If the popup closes while you're filling this in (it does when you click away), the links you typed and the lists you ticked are still there when you reopen it, until the browser quits or you send. After sending, the next form starts empty with your default lists ticked.
+If the popup closes while you're filling this in (it does when you click away), the links you typed, the lists you ticked and a list you were typing under **+ New list** are still there when you reopen it, until the browser quits or you send. After sending, the next form starts empty with your default lists ticked.
 
 Click **Preview**. The button shows how many people and artifacts are involved.
 
