@@ -22,13 +22,7 @@ export const FAKE_SHARED_PEOPLE: readonly Omit<Sharee, 'id'>[] = [
   { email: 'locked@example.com', access: 'view', status: 'active' },
 ];
 
-/** What the fake offers beyond `ShareClient`, until the real client can do the same. */
-export interface FakeShareClient extends ShareClient {
-  changeAccess(artifact: ArtifactRef, inviteId: string, access: AccessLevel): Promise<void>;
-  removeInvite(artifact: ArtifactRef, inviteId: string): Promise<void>;
-}
-
-export function createFakeShareClient(): FakeShareClient {
+export function createFakeShareClient(): ShareClient {
   const shares = new Map<string, Sharee[]>();
   const slowSeen = new Set<string>();
   let nextId = 1;
@@ -57,7 +51,7 @@ export function createFakeShareClient(): FakeShareClient {
     if (people[index]!.email.startsWith('locked')) {
       throw new ShareError(
         'This person joined your organization, so their access is managed in claude.ai.',
-        'unknown',
+        'managed-elsewhere',
       );
     }
 

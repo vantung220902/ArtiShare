@@ -4,6 +4,16 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F011 · The claude.ai client can change an invitation's permission and remove it
+
+- **Did:** `ShareClient` (`src/claude/shareClient.ts`) gained `changeAccess(artifact, inviteId, access)` and `removeInvite(artifact, inviteId)`. `apiShareClient.ts` implements them as PATCH `{ role }` and DELETE on `/api/frame/invite/{uuid}/{inviteId}?org=…` with `X-Frame-CP: go`; the org lookup that `invite` did inline is now `orgFor()`, shared by all three. `listSharees` fills `Sharee.id` from the invitation's `id` (omitted if claude.ai sends none). `manageError()` maps 409 `invitee_joined_org` to the 'joined your organization' message, 403 to 'Only the owner can change access', 404 to 'The invitation no longer exists', 429 to rate-limited, and a Cloudflare challenge to `auth`. Added the error code `managed-elsewhere` (`src/core/runner.ts`), which the fake now throws too (it was `unknown`). `FakeShareClient` is gone; the fake returns `ShareClient`. `docs/claude-share-api.md` documents both endpoints and the refusal table. Tests: 12 new in `tests/apiShareClient.test.ts` (stub transport), and `tests/runManager.test.ts`'s client stub got the two methods.
+- **Verified:** `npm run check` (175 unit tests) and `npm run e2e` (57 specs) pass. feature-verifier: PASS.
+- **State:** F011 passes. 7 features left (F012–F018). No e2e spec for F011: it has no UI, and its steps are about docs, the interface and unit tests.
+- **Next:** F012: the 'Manage access' link on an artifact tab and the read-only 'People with access' view. `listSharees` already returns ids and the fake has the `Shared…` artifact to click through.
+- **Notes:**
+  - The PATCH/DELETE request and response shapes come from the Share menu's code, not a live artifact; the doc's 'Not verified yet' list says so. Whether a pending invitation can have its role changed is unchecked.
+  - `changeAccess` and `removeInvite` throw `ShareError`s with the exact messages above, so the UI can show `err.message` and branch on `managed-elsewhere`.
+
 ### 2026-11-12 · F010 · The fake claude.ai can change and remove invitations, and has seeded artifacts
 
 - **Did:** `src/claude/fakeShareClient.ts`: ids containing `Shared` start with the owner plus viewer@ (accepted, Can view), commenter@ (pending, Commenter) and locked@example.com; `Missing` makes `listSharees` throw not-found; `changeAccess(artifact, inviteId, access)` and `removeInvite(artifact, inviteId)` (300 ms each) throw 'Only the owner can change access' (forbidden) for `Forbidden`, 'The invitation no longer exists' (not-found) for an unknown id, and 'This person joined your organization, so their access is managed in claude.ai.' for `locked…`. `Sharee` (`src/core/types.ts`) gained an optional `id` (the invitation id, none for the owner); the fake gives every invitation one (`inv-N`), including ones from `invite`. The new methods live on an exported `FakeShareClient` type, not yet on `ShareClient`. Rules are at the top of the file and in the README's fake-mode list. Tests: `tests/fakeShareClient.test.ts` (9) and `e2e/F010.spec.ts` (2: Shared preview lists the three people with permissions; Missing preview says not found).

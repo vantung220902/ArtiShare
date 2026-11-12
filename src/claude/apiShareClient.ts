@@ -58,6 +58,7 @@ interface AccountResponse {
 }
 
 interface InviteRecord {
+  id?: unknown;
   email?: unknown;
   status?: unknown;
   role?: unknown;
@@ -78,8 +79,35 @@ const pageTransport: Transport = { fetch: pageFetch, cookie: pageCookie };
 
 const ok = (res: PageResponse) => res.status >= 200 && res.status < 300;
 
-function framePath(kind: 'invites' | 'invite', uuid: string, org: string): string {
-  return `/api/frame/${kind}/${encodeURIComponent(uuid)}?org=${encodeURIComponent(org)}`;
+function framePath(kind: 'invites' | 'invite', uuid: string, org: string, inviteId?: string): string {
+  const id = inviteId === undefined ? '' : `/${encodeURIComponent(inviteId)}`;
+
+  return `/api/frame/${kind}/${encodeURIComponent(uuid)}${id}?org=${encodeURIComponent(org)}`;
+}
+
+/** Turns a refused permission change or removal into a ShareError. */
+export function manageError(res: PageResponse): ShareError {
+  if (res.cfMitigated !== 'challenge') {
+    let reason: unknown;
+
+    try {
+      reason = (JSON.parse(res.body) as { reason?: unknown } | null)?.reason;
+    } catch {
+      reason = undefined;
+    }
+
+    if (res.status === 409 && reason === 'invitee_joined_org') {
+      return new ShareError(
+        'This person joined your organization, so their access is managed in claude.ai.',
+        'managed-elsewhere',
+      );
+    }
+
+    if (res.status === 403) return new ShareError('Only the owner can change access', 'forbidden');
+    if (res.status === 404) return new ShareError('The invitation no longer exists', 'not-found');
+  }
+
+  return errorFromResponse(res, "Couldn't change access");
 }
 
 /** Turns a refused invite into a ShareError the runner knows how to handle. */
@@ -214,6 +242,16 @@ export function createApiShareClient(transport: Transport = pageTransport): Shar
     return errorFromResponse(res, "Couldn't read who has access");
   }
 
+  /** The organization that owns the artifact; looks it up when a resumed run or a fresh popup has none cached. */
+  async function orgFor(artifact: ArtifactRef): Promise<string> {
+    const cached = orgOf.get(uuidOf(artifact));
+    if (cached) return cached;
+    const found = await fetchInvites(artifact);
+    if (!ok(found.res)) throw listError(found.res);
+
+    return found.org;
+  }
+
   return {
     async whoami(): Promise<Account> {
       const { email, orgs: list } = await loadAccount();
@@ -241,20 +279,20 @@ export function createApiShareClient(transport: Transport = pageTransport): Shar
               ? inv.effectiveRole
               : '';
 
-        return [{ email: inv.email.toLowerCase(), access: ACCESS_FOR[role] ?? 'unknown', status }];
+        return [
+          {
+            ...(typeof inv.id === 'string' && inv.id ? { id: inv.id } : {}),
+            email: inv.email.toLowerCase(),
+            access: ACCESS_FOR[role] ?? 'unknown',
+            status,
+          },
+        ];
       });
     },
 
     async invite(artifact, email, access): Promise<void> {
       const uuid = uuidOf(artifact);
-      let org = orgOf.get(uuid);
-
-      if (!org) {
-        // A resumed run after a browser restart: find the artifact's organization first.
-        const found = await fetchInvites(artifact);
-        if (!ok(found.res)) throw listError(found.res);
-        org = found.org;
-      }
+      const org = await orgFor(artifact);
 
       const res = await transport.fetch({
         method: 'POST',
@@ -272,6 +310,27 @@ export function createApiShareClient(transport: Transport = pageTransport): Shar
       if (!data.invite && !data.shared_with_member) {
         throw new ShareError("claude.ai didn't confirm the invitation.", 'unknown');
       }
+    },
+
+    async changeAccess(artifact, inviteId, access): Promise<void> {
+      const uuid = uuidOf(artifact);
+      const res = await transport.fetch({
+        method: 'PATCH',
+        path: framePath('invite', uuid, await orgFor(artifact), inviteId),
+        headers: FRAME_HEADERS,
+        body: { role: ROLE_FOR[access] },
+      });
+      if (!ok(res)) throw manageError(res);
+    },
+
+    async removeInvite(artifact, inviteId): Promise<void> {
+      const uuid = uuidOf(artifact);
+      const res = await transport.fetch({
+        method: 'DELETE',
+        path: framePath('invite', uuid, await orgFor(artifact), inviteId),
+        headers: FRAME_HEADERS,
+      });
+      if (!ok(res)) throw manageError(res);
     },
   };
 }

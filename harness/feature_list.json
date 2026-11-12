@@ -138,7 +138,7 @@
         "Run `npm test`: apiShareClient tests (with a stub transport, nothing sent) show PATCH with `{ role: 'reader' | 'commenter' | 'editor' }` and DELETE are sent to the right URL with `X-Frame-CP: go` and the artifact's org",
         "The same tests show a 409 `invitee_joined_org` becomes 'This person joined your organization, so their access is managed in claude.ai.', a 403 'Only the owner can change access', a 404 'The invitation no longer exists', and a 429 a rate-limit error"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F012",

@@ -28,6 +28,8 @@ function client(overrides: Partial<ShareClient> = {}): ShareClient {
     whoami: async () => ({ email: 'owner@x.io' }),
     listSharees: async () => [],
     invite: async () => {},
+    changeAccess: async () => {},
+    removeInvite: async () => {},
     ...overrides,
   };
 }
