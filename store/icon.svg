@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-  <!-- Same mark as the side panel's .logo: accent square with the Lucide "send" glyph. -->
+  <!-- Same mark as the popup's .logo: accent square with the Lucide "send" glyph. -->
   <rect width="128" height="128" rx="34" fill="#12b886"/>
   <g transform="translate(62 66) scale(3.2) translate(-12 -12)" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
     <path d="M22 2 11 13"/>

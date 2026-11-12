@@ -25,7 +25,7 @@ ArtiShare is a Chrome extension. You save groups of email addresses as **lists**
 
 ```mermaid
 flowchart TD
-    A([Open claude.ai and sign in]) --> B[Click the ArtiShare icon<br/>to open the side panel]
+    A([Open claude.ai and sign in]) --> B[Click the ArtiShare icon<br/>to open the popup]
     B --> C{Do you have<br/>a list yet?}
     C -- No --> D[<b>Lists</b> tab<br/>name, addresses, permission]
     D --> E
@@ -52,15 +52,15 @@ You install it once. After that it starts with Chrome like any other extension. 
 2. Unzip it into a folder you'll keep, for example `~/Applications/ArtiShare`. Chrome loads the extension from this folder every time, so **don't leave it in Downloads** and don't delete it.
 3. Open `chrome://extensions` and turn on **Developer mode** (top right).
 4. Click **Load unpacked** and pick that folder.
-5. Pin **ArtiShare** in the toolbar. Clicking the icon opens the side panel.
+5. Pin **ArtiShare** in the toolbar. Clicking the icon opens the popup.
 
 The extension's card should show the ID `eeihicglfclmofckclcpjleekpddjflg`. It's the same on every machine, whichever folder you use.
 
-**To update:** replace the folder's contents with the new zip's, then click the reload icon ↻ on the extension's card. Your lists and settings are kept. The installed version is shown at the bottom of the side panel.
+**To update:** replace the folder's contents with the new zip's, then click the reload icon ↻ on the extension's card. Your lists and settings are kept. The installed version is shown at the bottom of the popup.
 
 ## Use it
 
-Open claude.ai and sign in, then click the ArtiShare icon. The side panel has two tabs: **Lists** and **Share**.
+Open claude.ai and sign in, then click the ArtiShare icon. The popup has two tabs: **Lists** and **Share**.
 
 ### 1. Make a list
 
@@ -117,9 +117,9 @@ Invites go out one at a time from the background, with a short pause between the
 - If the browser restarts mid-run, the run is kept and can be resumed.
 - A run stays tied to the claude.ai account used for Preview. If you switch accounts, sign back in as that account before resuming.
 - A stopped run saved by an older version without account verification cannot resume. Start a new share; Preview will recheck who has already been invited.
-- When it's done, the panel says so (_Share finished: …_). Click **Start a new share** for a fresh Share form with the cursor in **Artifacts**. If you stopped a run that still has invites left, you're asked before it's discarded.
+- When it's done, the popup says so (_Share finished: …_). Click **Start a new share** for a fresh Share form with the cursor in **Artifacts**. If you stopped a run that still has invites left, you're asked before it's discarded.
 
-### Who already has access
+### Optional: Manage access
 
 When the tab you opened the popup over is an artifact, a small **Manage access** link sits at the bottom of the Share tab, under the form or the run. It opens **People with access**: you (the owner) first, then everyone already invited, with _Pending_ or _Accepted_ and their permission, which you can change from the drop-down beside each person (it saves straight away and the row says _Saved_). **Remove** asks first ("Their invitation will stop working."), then takes the person off the artifact. If claude.ai refuses a change or removal (say the person joined your organization), the reason shows on that row and nothing changes; if the list itself can't be loaded you get the reason and **Retry**. It reads from claude.ai each time it opens, and **Refresh** reads it again (the list stays on screen while it does, and if that fails you keep the last copy and see why). With nobody invited it says "Only you have access." and points you to Share. While a run is sending to this artifact a note says the list may be behind, so press Refresh to see the latest. **Back** returns to the Share tab exactly as you left it. On any other page there is no link.
 
@@ -233,8 +233,8 @@ src/
   core/         framework-free logic, unit-tested: email parsing, artifact links, saved lists
                 (schema and upgrade from 0.1.0), planner (who to invite), runner (queue, retry, stop)
   claude/       ShareClient interface, the claude.ai client, the fake client, and in-page fetch
-  lib/          chrome.storage access and the side panel ↔ background message types
-  entrypoints/  background worker (runs invites) and the side panel
+  lib/          chrome.storage access and the popup ↔ background message types
+  entrypoints/  background worker (runs invites) and the popup
   ui/           shared React components and styles
 tests/          Vitest specs for src/core
 docs/           claude.ai sharing API notes and README screenshots

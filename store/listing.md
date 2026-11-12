@@ -22,11 +22,12 @@ ArtiShare invites whole groups of people to your claude.ai artifacts in a few cl
 Save the email addresses you share with often as lists, each with its own permission: can view, can comment or can edit. Then paste one or more artifact links, tick the lists, and ArtiShare sends the invitations. You don't add people one by one in the Share menu, and you don't have to make the artifact public.
 
 How it works
-• Open claude.ai, sign in, and click the ArtiShare icon to open the side panel.
+• Open claude.ai, sign in, and click the ArtiShare icon to open the popup.
 • Lists: give a list a name, add email addresses and pick a permission.
 • Share: add artifact links, or the claude.ai tab you're on, and tick the lists to share with.
 • Preview: see who will be invited and who already has an invitation. Nothing is sent yet.
-• Send: the invitations go out one at a time, and you can follow each one.
+• Send: the invitations go out one at a time, and you can follow each one. Closing the popup doesn't stop them, and your draft is kept.
+• Manage access (optional): on an artifact, see who is already invited, change their permission or remove their invitation.
 
 Good to know
 • Your own address is skipped, and so is anyone who already has an invitation.
@@ -64,7 +65,7 @@ ArtiShare is an independent tool. It isn't made, endorsed or supported by Anthro
 **Single purpose:**
 
 ```text
-ArtiShare does one thing: it invites saved lists of email addresses to the user's claude.ai artifacts in bulk, from a side panel.
+ArtiShare does one thing: it invites saved lists of email addresses to the user's claude.ai artifacts in bulk, and lets the user manage the invitations already sent to an artifact (change a person's permission or remove their invitation), from a toolbar popup.
 ```
 
 **Permission justifications:**
@@ -72,7 +73,6 @@ ArtiShare does one thing: it invites saved lists of email addresses to the user'
 | Permission                 | Justification                                                                                                                                                                   |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `storage`                  | Saves the user's lists (name, email addresses and permission), the current run's progress, and the signed-in account email used to verify a resumed run.                        |
-| `sidePanel`                | The whole interface is a side panel that opens next to claude.ai when the user clicks the toolbar icon.                                                                         |
 | `scripting`                | Runs ArtiShare's requests inside the user's open claude.ai tab, so they use the user's own claude.ai session, just as the Share menu does. It's used only on claude.ai tabs.    |
 | Host `https://claude.ai/*` | Needed to run those requests in claude.ai tabs, and to read the address of the current claude.ai tab for the "Current tab" button. The extension doesn't access any other site. |
 
@@ -107,7 +107,7 @@ Leave the other categories unticked. Then tick all three certifications:
 ArtiShare needs a claude.ai account with at least one published artifact.
 
 1. Sign in at https://claude.ai and open one of your artifacts (claude.ai/artifact/...).
-2. Click the ArtiShare toolbar icon. The side panel opens and shows the signed-in account.
+2. Click the ArtiShare toolbar icon. The popup opens and shows the signed-in account.
 3. In Lists, create a list containing an email address you control, with "Can view".
 4. In Share, click "Current tab" to add the artifact, tick the list and click Preview.
 5. Click Send and confirm. The address receives a claude.ai invitation email.

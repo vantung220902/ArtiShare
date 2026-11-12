@@ -4,6 +4,16 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F017 · Docs describe the popup and Manage access (partly done, blocked on `.claude/` edits)
+
+- **Did:** README: flowchart, Install step 5, update note, Use it, 'the popup says so', Develop project layout now say popup; the Manage access section is headed 'Optional: Manage access'. `store/listing.md`: description and test steps say popup, the `sidePanel` permission row is gone, the single-purpose text mentions managing existing invitations, the description has a Manage access bullet and says closing the popup doesn't stop a run. `docs/index.html`: no 'side panel', plus a Manage access line under Good to know. `CLAUDE.md` layout says popup and `popup/`. Icon SVG comments and `docs/site.css` say popup.
+- **Verified:** `npm run check` and `npm run e2e` (70 specs) pass. The feature-verifier was **not** run, because the feature is incomplete.
+- **State:** F017 stays `passes: false`. Three one-line edits are left, and this session's permission mode refused edits under `.claude/` (sessions can't edit their own config): `.claude/commands/harness-work.md:23` ('in the side panel and asserts' → 'in the popup and asserts'), `.claude/commands/harness-plan.md:27` ('in the side panel of the fake build' → 'in the popup of the fake build') and `.claude/agents/feature-verifier.md:20` ('from the side panel through' → 'from the popup through').
+- **Next:** A human makes those three edits (or allows edits under `.claude/`). Then: run `grep -ri 'side panel'` (it should find only `docs/claude-share-api.md:159`, which is claude.ai's own Share UI, the untracked `video/` folder and `harness/`), run the verifier for F017, set `passes: true`. Then F018 (screenshots).
+- **Notes:**
+  - An e2e run overlapping with a background `harness/init.sh` produced one random failure in each run (F001, F008). Run `npm run e2e` alone: 70/70.
+  - `video/` is untracked and still says side panel; left alone.
+
 ### 2026-11-12 · F016 · Manage access handles nobody invited, a stale list and repeated clicks
 
 - **Did:** `ManageView.tsx`: 'Only you have access.' plus 'Nobody is invited yet. Use Share to invite people.' when the list is empty (the 'You (owner)' row stays). New **Refresh** button beside Back (shown once a first read succeeded): it re-reads without blanking the list ('Refreshing…' while it runs); a failed refresh keeps the last list and shows 'Could not refresh: …' above it. The first-load error with Retry is unchanged (only while there is no list). `ManageView` takes a new `run` prop from `App.tsx` and shows an `<output>` note 'A share is in progress for this artifact. Refresh shows the latest.' while `run.status === 'running'` with a pending item for this artifact. `PersonRow` got a synchronous `inFlight` ref so a second change or remove can't start before React re-renders the disabled controls. README paragraph extended. `e2e/F016.spec.ts` (4 tests): the empty artifact; Refresh after a second popup sent invitations; the in-progress note during a real run and Refresh after it; repeated change/remove/confirm counting `chrome.runtime.sendMessage` calls by type (exactly 1 `change-access`, 1 `remove-invite`).
