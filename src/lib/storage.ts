@@ -59,6 +59,9 @@ export async function saveShareDraft(draft: ShareDraft | null): Promise<void> {
 let popupState = emptyPopupState();
 let popupWrites: Promise<unknown> = Promise.resolve();
 
+/** The popup state as last loaded or patched, for a view that mounts after the popup has loaded it. */
+export const currentPopupState = (): PopupState => popupState;
+
 export async function loadPopupState(): Promise<PopupState> {
   popupState = parsePopupState((await chrome.storage.session.get(POPUP_STATE_KEY))[POPUP_STATE_KEY]);
 

@@ -105,7 +105,9 @@ Each artifact's link has a **copy** button beside it that copies the link to the
 
 On Claude Team and Enterprise plans, people added directly as organization members are not in the invitation list ArtiShare reads. Preview may show them under **To invite**. Check their access in Claude's Share menu before sending; inviting them may change that direct access. This does not apply to personal Pro, Max, or Ultra plans.
 
-If something looks wrong, click **Back** and change it. When it's right, click **Send** and confirm.
+If the popup closes while you're looking at the preview, or before it has finished loading, reopening it shows the preview again (it checks access again if it hadn't finished), with **Back** and **Send**, until the browser quits, you click **Back**, or you send.
+
+If something looks wrong, click **Back** and change it: the form comes back with the links and ticks you had. When it's right, click **Send** and confirm.
 
 ### 5. Watch it run
 

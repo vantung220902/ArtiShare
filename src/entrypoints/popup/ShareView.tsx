@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Account } from '../../claude/shareClient';
 import { parseArtifactList, parseArtifactRef } from '../../core/artifactUrl';
-import { type Config, defaultListIds, type Invitee, resolveInvites } from '../../core/config';
+import { type Config, defaultListIds, resolveInvites } from '../../core/config';
 import { ACCESS_LABELS, type AccessLevel, type ArtifactRef } from '../../core/types';
-import type { ListFormDraft } from '../../core/popupState';
+import type { ListFormDraft, PreviewState } from '../../core/popupState';
 import { restoreSelection, type ShareDraft } from '../../core/shareDraft';
 import { type PreviewResult, send } from '../../lib/messages';
-import { loadShareDraft, saveShareDraft } from '../../lib/storage';
+import { currentPopupState, loadShareDraft, patchPopupState, saveShareDraft } from '../../lib/storage';
 import { BackIcon, PlusIcon, SendIcon } from '../../ui/icons';
 import { useConfirm } from '../../ui/useConfirm';
 import { ListBadge } from '../../ui/ListBadge';
@@ -20,12 +20,6 @@ async function currentTabArtifact(): Promise<ArtifactRef | null> {
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
 
   return tab?.url ? parseArtifactRef(tab.url) : null;
-}
-
-interface Draft {
-  label: string;
-  artifacts: ArtifactRef[];
-  invites: Invitee[];
 }
 
 interface ShareViewProps {
@@ -69,11 +63,12 @@ function ShareForm({
   const [creating, setCreating] = useState(initial?.creating ?? false);
   // What is typed in the inline form, kept with the rest of the draft.
   const [newList, setNewList] = useState<ListFormDraft | null>(initial?.newList ?? null);
-  const [preview, setPreview] = useState<{
-    draft: Draft;
-    results: PreviewResult[];
-    accountEmail: string;
-  } | null>(null);
+  // The preview being looked at, kept across the popup closing. Already loaded by the App.
+  const [preview, setPreviewState] = useState<PreviewState | null>(() => currentPopupState().preview);
+  const setPreview = (next: PreviewState | null) => {
+    setPreviewState(next);
+    void patchPopupState({ preview: next });
+  };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [draft, setDraft] = useState<ListDraft | null>(null);
@@ -179,24 +174,51 @@ function ShareForm({
       .filter((l) => current.selected.includes(l.id))
       .map((l) => l.name)
       .join(', ');
-    const next: Draft = { label, artifacts: artifacts.refs, invites: current.invites };
-    setBusy(true);
-
-    try {
-      const { account, results } = await send('preview', {
-        artifacts: next.artifacts,
-        invites: next.invites,
-      });
-      onAccount(account);
-      setPreview({ draft: next, results, accountEmail: account.email });
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    // Shown at once, while loading, and saved at once: closing the popup now still leaves it to come back to.
+    setPreview({
+      label,
+      artifacts: artifacts.refs,
+      invites: current.invites,
+      results: null,
+      accountEmail: null,
+    });
   };
 
-  if (preview) return <Preview {...preview} onBack={() => setPreview(null)} />;
+  // Asks for the results of a preview that has none yet: one just started, or one the popup
+  // closed on before the answer came. Reading access changes nothing, so asking twice is harmless.
+  const loading = preview !== null && preview.results === null;
+  useEffect(() => {
+    if (!preview || preview.results) return;
+    let stale = false;
+
+    send('preview', { artifacts: preview.artifacts, invites: preview.invites }).then(
+      ({ account, results }) => {
+        if (stale) return;
+        onAccount(account);
+        setPreview({ ...preview, results, accountEmail: account.email });
+      },
+      (e: Error) => {
+        if (stale) return;
+        setPreview(null);
+        setError(e.message);
+      },
+    );
+
+    return () => {
+      stale = true;
+    };
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- only when a preview starts loading or stops
+  }, [loading, preview?.artifacts, preview?.invites]);
+
+  if (preview)
+    return (
+      <Preview
+        label={preview.label}
+        results={preview.results}
+        accountEmail={preview.accountEmail}
+        onBack={() => setPreview(null)}
+      />
+    );
 
   return (
     <div className="stack">
@@ -297,21 +319,22 @@ function ShareForm({
   );
 }
 
+/** `results` is null while they are still being read. */
 function Preview({
-  draft,
+  label,
   results,
   accountEmail,
   onBack,
 }: {
-  draft: Draft;
-  results: PreviewResult[];
-  accountEmail: string;
+  label: string;
+  results: PreviewResult[] | null;
+  accountEmail: string | null;
   onBack: () => void;
 }) {
   const [error, setError] = useState('');
   const [starting, setStarting] = useState(false);
   const { ask, dialog } = useConfirm();
-  const plans = results.flatMap((r) => (r.plan ? [r.plan] : []));
+  const plans = (results ?? []).flatMap((r) => (r.plan ? [r.plan] : []));
   const total = plans.reduce((n, p) => n + p.toInvite.length, 0);
 
   const start = async () => {
@@ -329,9 +352,9 @@ function Preview({
     }
 
     try {
-      await send('start', { label: draft.label, plans, accountEmail });
-      // The links and ticks are now a run. The next form starts empty.
-      await saveShareDraft(null).catch(() => {});
+      await send('start', { label, plans, accountEmail: accountEmail! });
+      // The links and ticks are now a run. The next form starts empty, not on this preview.
+      await Promise.all([saveShareDraft(null).catch(() => {}), patchPopupState({ preview: null })]);
     } catch (e) {
       setError((e as Error).message);
       setStarting(false);
@@ -345,10 +368,11 @@ function Preview({
         <button className="ghost" onClick={onBack}>
           <BackIcon size={14} /> Back
         </button>
-        <span className="hint truncate">{draft.label}</span>
+        <span className="hint truncate">{label}</span>
       </div>
-      <p className="hint">Sending as {accountEmail}</p>
-      {results.map((r) => (
+      {results === null && <output className="hint">Checking current access…</output>}
+      {accountEmail && <p className="hint">Sending as {accountEmail}</p>}
+      {(results ?? []).map((r) => (
         <section key={r.artifact.id} className="card stack">
           <ArtifactLink url={r.artifact.url} />
           {r.error ? (
@@ -400,7 +424,7 @@ function Preview({
         the rest of its invites are skipped.
       </p>
       {error && <p className="alert">{error}</p>}
-      <button className="primary block" disabled={!total || starting} onClick={start}>
+      <button className="primary block" disabled={!total || starting || results === null} onClick={start}>
         {total ? (
           <>
             <SendIcon size={15} /> Send {plural(total, 'invitation')}
