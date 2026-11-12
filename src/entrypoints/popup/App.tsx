@@ -2,7 +2,7 @@ import { useEffect, useState, type KeyboardEvent } from 'react';
 import type { Account } from '../../claude/shareClient';
 import { send } from '../../lib/messages';
 import { useConfig, useRun } from '../../ui/hooks';
-import { CloseIcon, SendIcon } from '../../ui/icons';
+import { SendIcon } from '../../ui/icons';
 import { ListsView } from './ListsView';
 import { RunView } from './RunView';
 import { ShareView } from './ShareView';
@@ -42,88 +42,99 @@ export function App() {
     }
   };
 
-  if (configError && !config) return <div className="panel alert">Could not load lists: {configError}</div>;
+  if (configError && !config)
+    return (
+      <div className="popup">
+        <div className="popup-body alert">Could not load lists: {configError}</div>
+      </div>
+    );
   if (runError && run === undefined)
-    return <div className="panel alert">Could not load invitation progress: {runError}</div>;
-  if (!config || run === undefined) return <div className="panel muted">Loading…</div>;
+    return (
+      <div className="popup">
+        <div className="popup-body alert">Could not load invitation progress: {runError}</div>
+      </div>
+    );
+  if (!config || run === undefined)
+    return (
+      <div className="popup">
+        <div className="popup-body muted">Loading…</div>
+      </div>
+    );
 
   return (
-    <div className="panel">
-      <header className="header">
-        <div className="brand">
-          <span className="logo">
-            <SendIcon size={16} />
-          </span>
-          <h1 className="wordmark">ArtiShare</h1>
-        </div>
-        <AccountPill account={account} error={accountError} />
-        {/* window.close() closes the popup. A run keeps going in the background. */}
-        <button
-          className="ghost icon-btn"
-          aria-label="Close ArtiShare"
-          title="Close"
-          onClick={() => window.close()}
-        >
-          <CloseIcon size={16} />
-        </button>
-      </header>
+    // Header and tabs stay put and only .popup-body scrolls; the popup itself is capped at 600 px.
+    // There is no close button: a popup closes when you click away, and a run keeps going in the background.
+    <div className="popup">
+      <div className="popup-top">
+        <header className="header">
+          <div className="brand">
+            <span className="logo">
+              <SendIcon size={16} />
+            </span>
+            <h1 className="wordmark">ArtiShare</h1>
+          </div>
+          <AccountPill account={account} error={accountError} />
+        </header>
 
-      {accountError && (
-        <p className="alert">
-          {accountError}{' '}
-          <button className="link" onClick={refreshAccount}>
-            Retry
-          </button>
-        </p>
-      )}
-
-      <div className="segmented" role="tablist" aria-label="Sections">
-        <button
-          id="tab-share"
-          role="tab"
-          aria-controls="panel-share"
-          aria-selected={tab === 'share'}
-          tabIndex={tab === 'share' ? 0 : -1}
-          onKeyDown={onTabKeyDown}
-          onClick={() => setTab('share')}
-        >
-          Share
-        </button>
-        <button
-          id="tab-lists"
-          role="tab"
-          aria-controls="panel-lists"
-          aria-selected={tab === 'lists'}
-          tabIndex={tab === 'lists' ? 0 : -1}
-          onKeyDown={onTabKeyDown}
-          onClick={() => setTab('lists')}
-        >
-          Lists <span className="count">{config.lists.length}</span>
-        </button>
-      </div>
-
-      {/* Both tabs stay mounted so switching doesn't lose what you've typed. */}
-      <div id="panel-share" role="tabpanel" aria-labelledby="tab-share" hidden={tab !== 'share'}>
-        {run ? (
-          <RunView run={run} onStartNew={setFocusArtifacts} />
-        ) : (
-          <ShareView
-            focusArtifacts={focusArtifacts}
-            onArtifactsFocused={() => setFocusArtifacts(false)}
-            config={config}
-            save={save}
-            onAccount={(next) => {
-              setAccount(next);
-              setAccountError('');
-            }}
-          />
+        {accountError && (
+          <p className="alert">
+            {accountError}{' '}
+            <button className="link" onClick={refreshAccount}>
+              Retry
+            </button>
+          </p>
         )}
-      </div>
-      <div id="panel-lists" role="tabpanel" aria-labelledby="tab-lists" hidden={tab !== 'lists'}>
-        <ListsView config={config} save={save} />
+
+        <div className="segmented" role="tablist" aria-label="Sections">
+          <button
+            id="tab-share"
+            role="tab"
+            aria-controls="panel-share"
+            aria-selected={tab === 'share'}
+            tabIndex={tab === 'share' ? 0 : -1}
+            onKeyDown={onTabKeyDown}
+            onClick={() => setTab('share')}
+          >
+            Share
+          </button>
+          <button
+            id="tab-lists"
+            role="tab"
+            aria-controls="panel-lists"
+            aria-selected={tab === 'lists'}
+            tabIndex={tab === 'lists' ? 0 : -1}
+            onKeyDown={onTabKeyDown}
+            onClick={() => setTab('lists')}
+          >
+            Lists <span className="count">{config.lists.length}</span>
+          </button>
+        </div>
       </div>
 
-      <p className="footer">Version {chrome.runtime.getManifest().version}</p>
+      <div className="popup-body">
+        {/* Both tabs stay mounted so switching doesn't lose what you've typed. */}
+        <div id="panel-share" role="tabpanel" aria-labelledby="tab-share" hidden={tab !== 'share'}>
+          {run ? (
+            <RunView run={run} onStartNew={setFocusArtifacts} />
+          ) : (
+            <ShareView
+              focusArtifacts={focusArtifacts}
+              onArtifactsFocused={() => setFocusArtifacts(false)}
+              config={config}
+              save={save}
+              onAccount={(next) => {
+                setAccount(next);
+                setAccountError('');
+              }}
+            />
+          )}
+        </div>
+        <div id="panel-lists" role="tabpanel" aria-labelledby="tab-lists" hidden={tab !== 'lists'}>
+          <ListsView config={config} save={save} />
+        </div>
+      </div>
+
+      <footer className="footer">Version {chrome.runtime.getManifest().version}</footer>
     </div>
   );
 }

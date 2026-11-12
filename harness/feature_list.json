@@ -28,7 +28,7 @@
         "See no 'Close ArtiShare' button in the header (a popup closes when you click away)",
         "Open the popup again: focus is not trapped in a text field, and Tab moves through the header, the tabs, then the form"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F003",
