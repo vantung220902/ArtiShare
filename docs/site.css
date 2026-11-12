@@ -165,7 +165,7 @@ main section:last-child {
   margin-bottom: 16px;
 }
 
-/* Screenshots: tall side-panel captures, cropped from the top */
+/* Screenshots: tall popup captures, cropped from the top */
 .shots {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

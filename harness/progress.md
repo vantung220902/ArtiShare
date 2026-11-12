@@ -4,6 +4,13 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F017 · Still blocked on the three `.claude/` edits (nothing else left)
+
+- **Did:** Re-tried the edit to `.claude/commands/harness-work.md:23`; refused again, so no workaround was used and the other two were not tried. Found and fixed one more leftover: the comment in `docs/site.css:168` said 'side-panel captures', now 'popup captures'. F018 is already done, so no other feature is open.
+- **Verified:** Searched the repo for 'side panel' (case-insensitive, excluding `node_modules`, `.git`, build output, untracked `video/`). What is left: the three `.claude/` lines, `docs/claude-share-api.md:159` (claude.ai's own Share UI, correct), `e2e/F001.spec.ts` (asserts there is no side panel, correct), and `harness/` history. The verifier was not run: F017 step 4 would fail. `npm run check` passes (175 unit tests); `e2e` was not re-run for a comment-only CSS change.
+- **State:** F017 `passes: false`. 1 feature left.
+- **Next:** A human makes the three edits: `.claude/commands/harness-work.md:23` ('in the side panel and asserts' → 'in the popup and asserts'), `.claude/commands/harness-plan.md:27` ('in the side panel of the fake build' → 'in the popup of the fake build'), `.claude/agents/feature-verifier.md:20` ('from the side panel through' → 'from the popup through'). Then a session runs `npm run check`, the verifier for F017, and flips `passes`.
+
 ### 2026-11-12 · F018 · README and store screenshots show the popup
 
 - **Did:** F017 is still blocked on a human (the three `.claude/` edits; an edit to `.claude/commands/harness-work.md` was refused again), so this session took F018 as the log allows. New `scripts/screenshots.spec.ts` (+ `scripts/playwright.config.ts`, `npm run screenshots`) drives the fake build's popup at 380×600, 2x, with made-up addresses and ids (`Ex4mple…`), and writes `docs/images/share|preview|done|manage.png` (760 px wide) and `store/images/screenshot-1-share|2-preview|3-done.png` (1280×800, headline left, popup in a frame right, rendered in a separate 1x browser). README: four images with alt text naming the popup (manage.png is new), a `npm run screenshots` line under Develop, the fake-mode sentence mentions the script. `e2e/F018.spec.ts` checks the PNG sizes, the README tags and alt text, and that the generator only uses made-up ids and addresses. `e2e/node-shims.d.ts` declares the few `node:fs`/`node:url` calls, because the project has no `@types/node`.
