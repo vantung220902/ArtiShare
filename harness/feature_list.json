@@ -14,7 +14,7 @@
         "Make a list, preview and send to one artifact from the popup and see the run finish ('Share finished: …'), as it did in the side panel",
         "In e2e, the `panel` fixture opens the popup page as a tab, and every existing spec (e2e/smoke.spec.ts and e2e/share-ux-fixes/*, from the previous goal) still passes against it"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F002",

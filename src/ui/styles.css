@@ -1,4 +1,4 @@
-/* ArtiShare side panel: "Fresh" look. White cards on light gray, mint accent, ink buttons. */
+/* ArtiShare popup: "Fresh" look. White cards on light gray, mint accent, ink buttons. */
 
 :root {
   --bg: #f4f5f7;
@@ -74,6 +74,8 @@
 }
 
 body {
+  /* A popup is sized from its content, so without a width it shrinks to the narrowest line. */
+  width: 380px;
   margin: 0;
   background: var(--bg);
   color: var(--text);

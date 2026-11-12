@@ -90,8 +90,6 @@ async function handle(msg: Envelope): Promise<unknown> {
 }
 
 export default defineBackground(() => {
-  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
-
   chrome.runtime.onMessage.addListener((msg: Envelope, sender, sendResponse: (r: Reply<unknown>) => void) => {
     if (sender.id !== chrome.runtime.id) return false;
     handle(msg).then(

@@ -57,7 +57,7 @@ export function App() {
           <h1 className="wordmark">ArtiShare</h1>
         </div>
         <AccountPill account={account} error={accountError} />
-        {/* window.close() closes the side panel. A run keeps going in the background. */}
+        {/* window.close() closes the popup. A run keeps going in the background. */}
         <button
           className="ghost icon-btn"
           aria-label="Close ArtiShare"

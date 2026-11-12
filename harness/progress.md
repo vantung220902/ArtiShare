@@ -4,6 +4,17 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F001 · The toolbar icon opens a popup instead of the side panel
+
+- **Did:** `git mv src/entrypoints/sidepanel src/entrypoints/popup`, so WXT sets `action.default_popup: popup.html`. Removed `sidePanel` from the permissions in `wxt.config.ts` (the `key` is untouched) and the `chrome.sidePanel.setPanelBehavior` call in `background.ts`. Set `body { width: 380px }` in `src/ui/styles.css`, since a popup is sized from its content. Comments in styles.css, messages.ts, configController.ts, App.tsx and tests/configController.test.ts now say popup. The `panel` fixture in `e2e/fixtures.ts` opens `popup.html`. New `e2e/F001.spec.ts` has three tests: the manifest (default_popup, no side_panel or sidePanel, extension ID still the key-pinned `eeihicglfclmofckclcpjleekpddjflg`); `chrome.action.openPopup()` from the worker, then `chrome.runtime.getContexts` lists one POPUP at `/popup.html` and no SIDE_PANEL; and header, account, tabs and version plus list → preview → send → 'Share finished: 1 invited'.
+- **Verified:** `harness/init.sh` at start. `npm run check` (109 unit tests) and `npm run e2e` (23 specs: 3 new, plus smoke and e2e/share-ux-fixes/) pass. feature-verifier: PASS. It also opened the real action popup over CDP and ran a whole share in it.
+- **State:** F001 passes. 17 features left (F002–F018).
+- **Next:** F002, the popup layout. Pin the header and tabs, scroll only the content (max 600 px tall), pin the footer, stop long addresses and links from scrolling sideways, and remove the 'Close ArtiShare' button from `App.tsx`. The verifier saw the real popup's innerWidth at 410 against the 380 px body, so check for extra margin or a scrollbar gutter.
+- **Notes:**
+  - Playwright doesn't expose an action popup as a page; `context.waitForEvent('page')` never fires. Use `chrome.runtime.getContexts({ contextTypes: [chrome.runtime.ContextType.POPUP] })` from the worker, or the `panel` fixture (the popup page in a tab).
+  - In the real popup, Send still uses `window.confirm`, and Chrome showed it without closing the popup in the verifier's run. F004 replaces those dialogs anyway.
+  - README, store listing, docs/ and CLAUDE.md still say side panel; F017 updates them.
+
 ### 2026-11-12 · Planning · Popup instead of side panel, and Manage access
 
 - **Did:** Planned a new goal on `harness/popup-and-manage-access` (from `develop`), replacing the finished share-ux-fixes list (all 18 passed and merged in PR 13). 18 features, F001–F018. Nothing built.

@@ -19,7 +19,7 @@ export interface Messages {
   'config-change': { req: { change: ConfigChange }; res: Config };
   whoami: { req: Record<string, never>; res: Account };
   preview: { req: { artifacts: ArtifactRef[]; invites: Invitee[] }; res: PreviewResponse };
-  /** `label` names the run in the side panel, e.g. the lists it came from. */
+  /** `label` names the run in the popup, e.g. the lists it came from. */
   start: { req: { label: string; plans: ArtifactPlan[]; accountEmail: string }; res: null };
   stop: { req: Record<string, never>; res: null };
   resume: { req: Record<string, never>; res: null };
