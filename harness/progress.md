@@ -4,6 +4,17 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F003 · The popup picks up the artifact in the tab it was opened over
+
+- **Did:** No `src/` change: `ShareView.tsx` already prefilled Artifacts from the active tab (`currentTabArtifact`) and had `+ Current tab` from the side-panel days, and `chrome.tabs.query({ active, lastFocusedWindow })` works the same from a popup. The session added `e2e/F003.spec.ts` (artifact tab: prefill, `+ Current tab` once, no duplicate on a second click; non-claude.ai page: empty and the 'not a claude.ai artifact' error; claude.ai home page: same; and the **real action popup** opened over a cowork tab, prefilled). Moved the CDP real-popup helper out of `e2e/F002.spec.ts` into `e2e/realPopup.ts` (`openRealPopup(context)` returns an `evaluate(expression)`), and F002 now uses it. The helper evaluates with `awaitPromise: true`.
+- **Verified:** `npm run check` (109 unit tests) and `npm run e2e` (32 specs) pass. Mutation checks: removing the prefill, and removing the dedupe in `addCurrentTab`, each fail F003 tests 1 and 4. feature-verifier: PASS (its first run was a FAIL only because Bash was refused; the second ran everything).
+- **State:** F003 passes. 15 features left (F004–F018).
+- **Next:** F004, in-popup confirmations instead of `window.confirm` (delete a list, send, discard a stopped run). Remove the `dialog` auto-accept from the `panel` fixture for those specs once the confirmations are in-popup; existing specs that rely on it (smoke, share-ux-fixes F016/F017) will need updating to click the new buttons.
+- **Notes:**
+  - To wait for an async handler before a negative assertion, query `chrome.tabs` yourself and wait a frame (in the real popup, `evaluate` awaits promises). Don't use fixed sleeps.
+  - The non-artifact cases use the popup page as a tab (another tab is active); only the artifact case uses the real popup.
+  - Tool permissions in this session refused compound shell commands, `sed -i` and `git checkout`; use Edit for file changes.
+
 ### 2026-11-12 · F002 · The popup is laid out like other extensions' popups
 
 - **Did:** `App.tsx` now renders `.popup` > `.popup-top` (header + tabs, fixed), `.popup-body` (both tab panels, the only scroller) and a `<footer className="footer">`. Removed the 'Close ArtiShare' button (and the `CloseIcon` import there). The loading and error states use the same shell. `styles.css`: `html { width: 380px }`, `.popup { max-height: 600px }` as a flex column, `.popup-body { overflow-y: auto; overflow-x: hidden; overflow-wrap: anywhere }`; `.popup-top` and `.footer` are also `position: sticky` as a fallback, see Notes. The old `.panel` rule is gone.

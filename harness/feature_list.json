@@ -40,7 +40,7 @@
         "Clear Artifacts and click + Current tab: see the same link added once and no error",
         "Make a non-claude.ai page the active tab, reopen the popup: Artifacts is empty, and + Current tab shows 'The current tab is not a claude.ai artifact.'"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F004",
