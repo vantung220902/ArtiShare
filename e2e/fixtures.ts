@@ -1,4 +1,4 @@
-import { chromium, test as base, type BrowserContext, type Page } from '@playwright/test';
+import { chromium, expect, test as base, type BrowserContext, type Page } from '@playwright/test';
 
 const EXTENSION_DIR = new URL('../.output/chrome-mv3-fake', import.meta.url).pathname;
 
@@ -22,11 +22,24 @@ export const test = base.extend<{ context: BrowserContext; panel: Page }>({
     const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
     const extensionId = new URL(worker.url()).host;
     const page = await context.newPage();
-    // The run asks for confirmation with window.confirm; accept it like a user would.
-    page.on('dialog', (d) => void d.accept());
+    // Confirmations are drawn inside the popup because a browser dialog can close it. A native
+    // dialog is therefore always a bug: dismiss it and fail the test that opened it.
+    const dialogs: string[] = [];
+    page.on('dialog', (d) => {
+      dialogs.push(d.message());
+      void d.dismiss();
+    });
     await page.goto(`chrome-extension://${extensionId}/popup.html`);
     await provide(page);
+    expect(dialogs, 'no browser dialog should open').toEqual([]);
   },
 });
 
-export { expect } from '@playwright/test';
+/** The in-popup confirmation (an alertdialog), for asking what it says and answering it. */
+export const confirmation = (page: Pick<Page, 'getByRole'>) => page.getByRole('alertdialog');
+
+/** Click a button in the in-popup confirmation, e.g. `answer(page, 'Send')`. */
+export const answer = (page: Pick<Page, 'getByRole'>, name: string) =>
+  confirmation(page).getByRole('button', { name, exact: true }).click();
+
+export { expect };

@@ -53,7 +53,7 @@
         "Stop a run with invites left and click Start a new share: see the in-popup 'Discard this run? The remaining invites will not be sent.' Cancel keeps the stopped run and Resume; confirming opens a fresh Share form",
         "In e2e, no `dialog` event fires during any of this (the fixture's auto-accept is removed from these specs)"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F005",

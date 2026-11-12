@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { answer, expect, test } from './fixtures';
 
 // F001: clicking the ArtiShare toolbar icon opens a popup with the Share and Lists tabs, instead
 // of a side panel.
@@ -72,6 +72,7 @@ test('the popup has the header, account, tabs and version, and a whole share wor
   await pick.check();
   await share.getByRole('button', { name: /^Preview/ }).click();
   await share.getByRole('button', { name: 'Send 1 invitation' }).click();
+  await answer(share, 'Send');
 
   await expect(share.getByText('Share finished: 1 invited')).toBeVisible({ timeout: 20_000 });
 });

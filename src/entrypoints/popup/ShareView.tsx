@@ -5,6 +5,7 @@ import { type Config, defaultListIds, type Invitee, resolveInvites } from '../..
 import { ACCESS_LABELS, type AccessLevel, type ArtifactRef } from '../../core/types';
 import { type PreviewResult, send } from '../../lib/messages';
 import { BackIcon, PlusIcon, SendIcon } from '../../ui/icons';
+import { useConfirm } from '../../ui/useConfirm';
 import { ListBadge } from '../../ui/ListBadge';
 import { type ListDraft, ListForm, type ListFormHandle } from '../../ui/ListForm';
 import { RequiredMark } from '../../ui/RequiredMark';
@@ -242,16 +243,23 @@ function Preview({
 }) {
   const [error, setError] = useState('');
   const [starting, setStarting] = useState(false);
+  const { ask, dialog } = useConfirm();
   const plans = results.flatMap((r) => (r.plan ? [r.plan] : []));
   const total = plans.reduce((n, p) => n + p.toInvite.length, 0);
 
   const start = async () => {
-    const ok = window.confirm(
-      `Send ${plural(total, 'invitation')} across ${plural(plans.length, 'artifact')} as ${accountEmail}?\n\n` +
-        'People outside your organization will get an email from Claude.',
-    );
-    if (!ok) return;
+    // Held while the question is open so a second click can't stack another one.
     setStarting(true);
+    const ok = await ask({
+      title: `Send ${plural(total, 'invitation')} across ${plural(plans.length, 'artifact')} as ${accountEmail}?`,
+      detail: 'People outside your organization will get an email from Claude.',
+      confirmLabel: 'Send',
+    });
+
+    if (!ok) {
+      setStarting(false);
+      return;
+    }
 
     try {
       await send('start', { label: draft.label, plans, accountEmail });
@@ -263,6 +271,7 @@ function Preview({
 
   return (
     <div className="stack">
+      {dialog}
       <div className="row spread">
         <button className="ghost" onClick={onBack}>
           <BackIcon size={14} /> Back

@@ -12,6 +12,7 @@ import {
 import { parseEmails } from '../core/emails';
 import type { AccessLevel } from '../core/types';
 import { AccessSelect } from './AccessSelect';
+import { useConfirm } from './useConfirm';
 import { EmailInput } from './EmailInput';
 import { RequiredMark } from './RequiredMark';
 
@@ -49,6 +50,7 @@ export function ListForm({ ref, config, save, list, onSaved, onCancel, onDraftCh
   const [access, setAccess] = useState<AccessLevel>(list?.access ?? 'view');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const { ask, dialog } = useConfirm();
   const [awaitingSaved, setAwaitingSaved] = useState(false);
   const lastSeenList = useRef<EmailList | null>(list ?? null);
   const nameId = useId();
@@ -161,8 +163,15 @@ export function ListForm({ ref, config, save, list, onSaved, onCancel, onDraftCh
   useImperativeHandle(ref, () => ({ hasDraft: () => hasDraft, submit }));
 
   const remove = async () => {
-    if (!baseline || conflict || !window.confirm(`Delete the list "${baseline.name}"?`)) return;
+    if (!baseline || conflict) return;
     setBusy(true);
+
+    if (
+      !(await ask({ title: `Delete the list "${baseline.name}"?`, confirmLabel: 'Delete', danger: true }))
+    ) {
+      setBusy(false);
+      return;
+    }
 
     try {
       await save({ type: 'delete-list', id: baseline.id, expected: baseline });
@@ -175,6 +184,7 @@ export function ListForm({ ref, config, save, list, onSaved, onCancel, onDraftCh
 
   return (
     <div className="stack">
+      {dialog}
       <label htmlFor={nameId}>List name (optional)</label>
       <input
         id={nameId}

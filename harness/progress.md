@@ -4,6 +4,18 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F004 · Confirmations are shown inside the popup
+
+- **Did:** Added `src/ui/useConfirm.tsx` (`useConfirm()` returns `{ ask, dialog }`; `ask` resolves true/false) and `src/ui/ConfirmDialog.tsx` (a modal `<dialog role="alertdialog">`: Cancel is focused, Escape cancels, danger styling via `.confirm` in `styles.css`). Replaced the three `window.confirm` calls: delete list (`ListForm`), Send (`ShareView` Preview), discard a stopped run (`RunView`). The `panel` fixture no longer auto-accepts dialogs: it dismisses any native `dialog` event and fails the test; it also exports `confirmation(page)` and `answer(page, name)`. Existing specs that click Send (smoke, F001, share-ux-fixes F013–F017) now answer the in-popup confirmation; F016/F017 assert on it instead of counting dialogs. New `e2e/F004.spec.ts` covers the three confirmations with Cancel, Escape and confirm.
+- **Verified:** `npm run check` (109 unit tests) and `npm run e2e` (35 specs) pass. feature-verifier: PASS.
+- **State:** F004 passes. 14 features left (F005–F018).
+- **Next:** F005, keep the Share form draft (artifacts typed, lists ticked) across popup closes. `useConfirm` is reusable for F014 (Remove in Manage access): `answer(page, 'Remove')`.
+- **Notes:**
+  - The dialog's text has no separator between title and detail, so assert them with two `toContainText` calls.
+  - Both buttons in a confirmation can share a name with a button behind it ('Delete', 'Send'); scope to `confirmation(page)` / `answer`.
+  - oxlint prints a pre-existing 'Unused oxlint-disable directive' warning at `ShareView.tsx:70`; not from this feature.
+  - The `useConfirm` hook lives in its own file because oxlint's only-export-components rule warns when a component file also exports a hook.
+
 ### 2026-11-12 · F003 · The popup picks up the artifact in the tab it was opened over
 
 - **Did:** No `src/` change: `ShareView.tsx` already prefilled Artifacts from the active tab (`currentTabArtifact`) and had `+ Current tab` from the side-panel days, and `chrome.tabs.query({ active, lastFocusedWindow })` works the same from a popup. The session added `e2e/F003.spec.ts` (artifact tab: prefill, `+ Current tab` once, no duplicate on a second click; non-claude.ai page: empty and the 'not a claude.ai artifact' error; claude.ai home page: same; and the **real action popup** opened over a cowork tab, prefilled). Moved the CDP real-popup helper out of `e2e/F002.spec.ts` into `e2e/realPopup.ts` (`openRealPopup(context)` returns an `evaluate(expression)`), and F002 now uses it. The helper evaluates with `awaitPromise: true`.

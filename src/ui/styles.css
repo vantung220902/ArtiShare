@@ -661,6 +661,40 @@ button.link:hover:not(:disabled) {
   gap: 8px;
 }
 
+/* ---------- Confirmation ---------- */
+
+/* A modal <dialog> sits in the top layer, so it covers the popup's own scroll areas. */
+dialog.confirm {
+  width: calc(100% - 32px);
+  max-width: 340px;
+  margin: auto;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 12px 32px rgb(16 24 40 / 0.28);
+  overflow-wrap: anywhere;
+}
+dialog.confirm::backdrop {
+  background: rgb(16 24 40 / 0.45);
+}
+.confirm-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.confirm-actions {
+  justify-content: flex-end;
+}
+/* The usual danger button is a text-coloured ghost; on a confirmation it must read as the risky choice. */
+.confirm button.danger {
+  background: var(--err);
+  color: #fff;
+}
+.confirm button.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--err), #000 12%);
+}
+
 /* ---------- Feedback ---------- */
 
 .alert {
