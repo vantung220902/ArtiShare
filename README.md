@@ -215,9 +215,12 @@ The dev server listens on port **47613** (set in `wxt.config.ts`). If that port 
 
 **Fake mode** lets you click through the whole flow safely. The screenshots in this README come from it. Its fake claude.ai behaves like this:
 
-- an artifact whose ID contains `Forbidden` rejects every invite
+- an artifact whose ID contains `Forbidden` rejects every invite, permission change and removal
+- an artifact whose ID contains `Shared` starts with three people invited: `viewer@example.com` (accepted, Can view), `commenter@example.com` (pending, Commenter) and `locked@example.com`, who joined the organization, so their permission can't be changed or removed
+- an artifact whose ID contains `Missing` can't be found: its invitations can't be listed
 - an address starting with `fail` is rejected
 - an address starting with `slow` is rate-limited once, then succeeds
+- an address starting with `locked` can't have its permission changed or be removed
 
 ### Project layout
 
