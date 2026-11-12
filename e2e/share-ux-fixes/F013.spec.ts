@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { expect, test } from '../fixtures';
+import { answer, expect, test } from '../fixtures';
 
 // Pastes into a scratch textarea, since reading the clipboard directly needs a permission.
 async function expectClipboard(panel: Page, expected: string) {
@@ -25,6 +25,7 @@ test('the run view has a copy button beside each artifact link, running and done
   await share.getByLabel(/Artifacts/).fill(`${first}\n${second}`);
   await share.getByRole('button', { name: /^Preview/ }).click();
   await share.getByRole('button', { name: 'Send 4 invitations' }).click();
+  await answer(share, 'Send');
 
   // While the run is running.
   await expect(share.getByText('Running', { exact: true })).toBeVisible();

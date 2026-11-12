@@ -1,4 +1,4 @@
-import { expect, test } from '../fixtures';
+import { answer, expect, test } from '../fixtures';
 
 // F014: when the clipboard refuses, the copy button says so instead of failing silently.
 test('the copy button says "Couldn\'t copy" when the clipboard refuses', async ({ panel }) => {
@@ -42,6 +42,7 @@ test('the copy button says "Couldn\'t copy" when the clipboard refuses', async (
   await expect(share.locator('.alert')).toHaveCount(0);
 
   await share.getByRole('button', { name: 'Send 2 invitations' }).click();
+  await answer(share, 'Send');
   await expect(share.getByText('Done', { exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(share.getByText('2 invited')).toBeVisible();
 

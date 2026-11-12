@@ -1,4 +1,4 @@
-import { expect, test } from '../fixtures';
+import { answer, expect, test } from '../fixtures';
 
 // F015: a finished run says so, and offers one obvious primary 'Start a new share' button.
 test('a finished run shows a finished message and one primary Start a new share button', async ({
@@ -10,6 +10,7 @@ test('a finished run shows a finished message and one primary Start a new share 
   await share.getByLabel(/Artifacts/).fill('https://claude.ai/artifact/FinishArtifact0001');
   await share.getByRole('button', { name: /^Preview/ }).click();
   await share.getByRole('button', { name: 'Send 2 invitations' }).click();
+  await answer(share, 'Send');
   await expect(share.getByText('Done', { exact: true })).toBeVisible({ timeout: 20_000 });
 
   const card = share.locator('section.card').first();

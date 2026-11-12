@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { answer, expect, test } from './fixtures';
 
 // The core flow, end to end, against the fake claude.ai (see src/claude/fakeShareClient.ts):
 // make a list, preview it against an artifact, send, and see each invite's outcome.
@@ -25,6 +25,7 @@ test('make a list, preview and send invites', async ({ panel }) => {
   // The list of names is collapsed; it only has to be there.
   await expect(share.getByText('ana@example.com · Can view')).toBeAttached();
   await share.getByRole('button', { name: 'Send 2 invitations' }).click();
+  await answer(share, 'Send');
 
   await expect(share.getByText('Done', { exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(share.getByText('1 invited')).toBeVisible();

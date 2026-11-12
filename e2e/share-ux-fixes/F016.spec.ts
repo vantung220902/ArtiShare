@@ -1,12 +1,9 @@
-import { expect, test } from '../fixtures';
+import { answer, confirmation, expect, test } from '../fixtures';
 
 // F016: 'Start a new share' after a finished run goes straight to a fresh Share form.
 test('Start a new share after a finished run opens a fresh Share form without a confirmation', async ({
   panel,
 }) => {
-  const dialogs: string[] = [];
-  panel.on('dialog', (d) => dialogs.push(d.message()));
-
   // Two lists, with only the first ticked by default.
   await panel.getByRole('tab', { name: /Lists/ }).click();
   const lists = panel.getByRole('tabpanel', { name: /Lists/ });
@@ -45,9 +42,9 @@ test('Start a new share after a finished run opens a fresh Share form without a 
   await share.getByLabel(/Artifacts/).fill('https://claude.ai/artifact/FreshFormArtifact001');
   await share.getByRole('button', { name: /^Preview/ }).click();
   await share.getByRole('button', { name: /^Send \d+ invitations?$/ }).click();
-  await expect(share.getByText('Done', { exact: true })).toBeVisible({ timeout: 20_000 });
+  await answer(share, 'Send');
   // Sending asks once; only what happens after this point is under test.
-  dialogs.length = 0;
+  await expect(share.getByText('Done', { exact: true })).toBeVisible({ timeout: 20_000 });
 
   await share.getByRole('button', { name: 'Start a new share' }).click();
 
@@ -61,13 +58,14 @@ test('Start a new share after a finished run opens a fresh Share form without a 
   await expect(share.locator('.alert')).toHaveCount(0);
   await expect(share.getByText('Will be invited')).toHaveCount(0);
   await expect(share.getByText('Share finished')).toHaveCount(0);
-  expect(dialogs).toEqual([]);
+  await expect(confirmation(panel)).toHaveCount(0);
 
   // And it works: a new run starts.
   await artifacts.fill('https://claude.ai/artifact/FreshFormArtifact002');
   await share.getByRole('button', { name: /^Preview/ }).click();
   await expect(share.getByText('Will be invited')).toBeVisible();
   await share.getByRole('button', { name: /^Send \d+ invitations?$/ }).click();
+  await answer(share, 'Send');
   await expect(share.getByText('Done', { exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(share.getByRole('link', { name: /FreshFormArtifact002/ })).toBeVisible();
 
