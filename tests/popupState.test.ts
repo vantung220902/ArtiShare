@@ -3,6 +3,7 @@ import {
   emptyPopupState,
   parseListFormDraft,
   parsePopupState,
+  parsePreviewState,
   reconcileListsDraft,
   sameListFormDraft,
 } from '../src/core/popupState';
@@ -48,7 +49,7 @@ describe('parsePopupState', () => {
       tab: 'lists',
       lists: { adding: true, newList: form, open: ['a'], edits: { a: { ...form, baseline: list } } },
     };
-    expect(parsePopupState(stored)).toEqual(stored);
+    expect(parsePopupState(stored)).toEqual({ ...stored, preview: null });
   });
 
   it('falls back piece by piece', () => {
@@ -115,5 +116,46 @@ describe('parseShareDraft with the inline list form', () => {
         selected: [],
       },
     );
+  });
+});
+
+describe('parsePreviewState', () => {
+  const artifact = { id: 'One', kind: 'artifact' as const, url: 'https://claude.ai/artifact/One' };
+  const invites = [{ email: 'ana@example.com', access: 'view' as const }];
+  const plan = { artifact, toInvite: invites, alreadyShared: [], sameInbox: [], self: [] };
+  const loading = { label: 'Alpha', artifacts: [artifact], invites, results: null, accountEmail: null };
+  const loaded = { ...loading, results: [{ artifact, plan }], accountEmail: 'me@example.com' };
+
+  it('reads a preview that is still loading and one with results', () => {
+    expect(parsePreviewState(loading)).toEqual(loading);
+    expect(parsePreviewState(loaded)).toEqual(loaded);
+    expect(parsePreviewState({ ...loaded, results: [{ artifact, error: 'Not yours' }] })?.results).toEqual([
+      { artifact, error: 'Not yours' },
+    ]);
+  });
+
+  it('treats results left out as still loading', () => {
+    expect(parsePreviewState({ label: 'Alpha', artifacts: [artifact], invites })).toEqual(loading);
+  });
+
+  it.each([
+    undefined,
+    'x',
+    { ...loading, label: 1 },
+    { ...loading, artifacts: [] },
+    { ...loading, artifacts: [{ id: 'x' }] },
+    { ...loading, invites: [] },
+    { ...loading, invites: [{ email: 'a@example.com', access: 'owner' }] },
+    { ...loaded, accountEmail: null },
+    { ...loaded, results: [{ artifact, plan: { toInvite: [] } }] },
+    { ...loaded, results: 'x' },
+  ])('ignores %j', (raw) => {
+    expect(parsePreviewState(raw)).toBeNull();
+  });
+
+  it('is part of the popup state and absent from the empty one', () => {
+    expect(emptyPopupState().preview).toBeNull();
+    expect(parsePopupState({ preview: loaded }).preview).toEqual(loaded);
+    expect(parsePopupState({ preview: 3 }).preview).toBeNull();
   });
 });

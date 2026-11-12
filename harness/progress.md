@@ -4,6 +4,17 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F008 · A preview survives the popup closing, even while it is loading
+
+- **Did:** `PopupState` gained `preview: PreviewState | null` (`src/core/popupState.ts`: `label`, `artifacts`, `invites`, `results` or null while loading, `accountEmail`; `parsePreviewState` validates what is read back). `storage.ts` exports `currentPopupState()` so `ShareView`, which mounts after the App has loaded the state, starts from the stored preview. `ShareView.tsx`: Preview click now stores and shows the preview at once with `results: null` ("Checking current access…", Send disabled); an effect asks the background for any preview without results (so a popup that closed mid-load asks again on reopening) and saves the answer. Back, an error, or Send clears the stored preview; a late answer after Back is ignored (`stale` flag). A failed preview goes back to the form with the error. README (step 4) says what reopening shows.
+- **Verified:** `npm run check` (154 unit tests) and `npm run e2e` (53 specs) pass. New `e2e/F008.spec.ts` (3 tests): close mid-load, reopen (preview with both cards, Send 4), reopen again, Back, reopen (form); Back while loading stays on the form after the late answer; Send from a restored preview, then Start a new share and reopen give an empty form. feature-verifier: PASS (ran check, full e2e 53 passed, and F008 `--repeat-each=3` 9 passed).
+- **State:** F008 passes. 10 features left (F009–F018).
+- **Next:** F009, closing the popup mid-run doesn't stop the run and reopening shows live progress. The run already lives in the background and `chrome.storage.local`, so likely mostly an e2e spec; check Stop/Resume after reopening.
+- **Notes:**
+  - A preview with `results: null` stored while another view is open (e.g. switching to Lists tab doesn't unmount Share) is fine; only unmounting makes it stale and it re-asks on next mount.
+  - The spec doesn't assert the visible "Checking current access…" text on reopen: the fake answers in ~300 ms, too quick to assert without flakiness.
+  - Shell heredocs are refused here; use Edit/Write.
+
 ### 2026-11-12 · F007 · Verifier verdict for the reconciled restored draft
 
 - **Did:** No code change. The previous session finished F007 (spec `e2e/F007.spec.ts`, README) but couldn't get a verdict because the verifier's Bash was denied. This session re-ran the baseline and the verifier, then flipped `passes`.

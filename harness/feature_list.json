@@ -103,7 +103,7 @@
         "Close and reopen again: the same preview shows, with Back and Send",
         "Click Back: see the form with the same artifacts and ticks; reopening now shows the form, not the preview"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F009",
