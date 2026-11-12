@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Account } from '../../claude/shareClient';
-import { parseArtifactList, parseArtifactRef } from '../../core/artifactUrl';
+import { parseArtifactList } from '../../core/artifactUrl';
 import { type Config, defaultListIds, resolveInvites } from '../../core/config';
-import { ACCESS_LABELS, type AccessLevel, type ArtifactRef } from '../../core/types';
+import { ACCESS_LABELS, type AccessLevel } from '../../core/types';
 import type { ListFormDraft, PreviewState } from '../../core/popupState';
 import { restoreSelection, type ShareDraft } from '../../core/shareDraft';
 import { type PreviewResult, send } from '../../lib/messages';
@@ -13,14 +13,7 @@ import { ListBadge } from '../../ui/ListBadge';
 import { type ListDraft, ListForm, type ListFormHandle } from '../../ui/ListForm';
 import { RequiredMark } from '../../ui/RequiredMark';
 import { ArtifactLink, EmailGroup } from './viewComponents';
-import { byName, people, plural, type Save } from './viewUtils';
-
-/** The artifact open in the active tab, if any. The claude.ai host permission exposes those tabs' URLs. */
-async function currentTabArtifact(): Promise<ArtifactRef | null> {
-  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-
-  return tab?.url ? parseArtifactRef(tab.url) : null;
-}
+import { byName, currentTabArtifact, people, plural, type Save } from './viewUtils';
 
 interface ShareViewProps {
   focusArtifacts?: boolean;

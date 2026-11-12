@@ -948,6 +948,42 @@ details[open] > summary .chev {
   color: var(--warn);
 }
 
+/* ---------- Manage access ---------- */
+
+.people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.people li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+}
+.people li:first-child {
+  border-top: none;
+  padding-top: 2px;
+}
+.people li:last-child {
+  padding-bottom: 0;
+}
+.people .tag {
+  text-transform: none;
+}
+.manage-link {
+  text-align: center;
+  font-size: 12px;
+}
+.manage-link button.link {
+  color: var(--muted);
+}
+.manage-link button.link:hover:not(:disabled) {
+  color: var(--text);
+}
+
 /* ---------- Lists tab ---------- */
 
 .section-head {

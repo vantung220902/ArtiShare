@@ -119,6 +119,10 @@ Invites go out one at a time from the background, with a short pause between the
 - A stopped run saved by an older version without account verification cannot resume. Start a new share; Preview will recheck who has already been invited.
 - When it's done, the panel says so (_Share finished: …_). Click **Start a new share** for a fresh Share form with the cursor in **Artifacts**. If you stopped a run that still has invites left, you're asked before it's discarded.
 
+### Who already has access
+
+When the tab you opened the popup over is an artifact, a small **Manage access** link sits at the bottom of the Share tab, under the form or the run. It opens **People with access**: you (the owner) first, then everyone already invited, with _Pending_ or _Accepted_ and their permission. It reads from claude.ai each time. **Back** returns to the Share tab exactly as you left it. On any other page there is no link.
+
 ## Good to know
 
 - **Runs recheck email invitations before sending.** Addresses already in Claude's invitation list are skipped. On Team and Enterprise plans, check direct organization-member access in Claude separately.

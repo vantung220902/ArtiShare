@@ -1,4 +1,13 @@
+import { parseArtifactRef } from '../../core/artifactUrl';
 import type { Config, ConfigChange, EmailList } from '../../core/config';
+import type { ArtifactRef } from '../../core/types';
+
+/** The artifact open in the active tab, if any. The claude.ai host permission exposes those tabs' URLs. */
+export async function currentTabArtifact(): Promise<ArtifactRef | null> {
+  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+
+  return tab?.url ? parseArtifactRef(tab.url) : null;
+}
 
 export type Save = (change: ConfigChange) => Promise<Config>;
 

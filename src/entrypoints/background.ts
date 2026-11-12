@@ -70,6 +70,8 @@ async function handle(msg: Envelope): Promise<unknown> {
       return client.whoami();
     case 'preview':
       return preview(msg);
+    case 'sharees':
+      return client.listSharees(msg.artifact);
     case 'start':
       await runManager.start(msg.label, msg.plans, msg.accountEmail);
 
