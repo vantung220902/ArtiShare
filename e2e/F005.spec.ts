@@ -92,6 +92,8 @@ test('a list deleted since the draft was saved is not ticked on reopening', asyn
   await expect(lists.locator('summary', { hasText: 'Beta team' })).toHaveCount(0);
 
   await panel.reload();
+  // The popup reopens on the tab it was closed on, which is Lists here.
+  await panel.getByRole('tab', { name: 'Share' }).click();
   await expect(artifacts).toHaveValue(ONE);
   await expect(alpha).toBeChecked();
   await expect(beta).toHaveCount(0);
@@ -144,6 +146,8 @@ test('a reopened form with no typing in it still follows a changed default selec
   await defaultAlpha.click();
   await expect(defaultAlpha).not.toBeChecked();
   await panel.reload();
+  // The popup reopens on the Lists tab, where it was closed.
+  await panel.getByRole('tab', { name: 'Share' }).click();
   await expect(beta).toBeChecked();
   await expect(alpha).not.toBeChecked();
 });

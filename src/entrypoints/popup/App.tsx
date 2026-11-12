@@ -1,18 +1,26 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import type { Account } from '../../claude/shareClient';
+import { emptyPopupState, type PopupState, reconcileListsDraft, type Tab } from '../../core/popupState';
 import { send } from '../../lib/messages';
+import { loadPopupState, patchPopupState } from '../../lib/storage';
 import { useConfig, useRun } from '../../ui/hooks';
 import { SendIcon } from '../../ui/icons';
 import { ListsView } from './ListsView';
 import { RunView } from './RunView';
 import { ShareView } from './ShareView';
 
-type Tab = 'share' | 'lists';
-
 export function App() {
   const [config, save, configError] = useConfig();
   const [run, runError] = useRun();
-  const [tab, setTab] = useState<Tab>('share');
+  // What was open and typed before the popup last closed. Nothing is drawn until it is known,
+  // so the first state of every form is the restored one.
+  const [stored, setStored] = useState<PopupState | undefined>(undefined);
+  const [tabChoice, setTabChoice] = useState<Tab | null>(null);
+  const tab = tabChoice ?? stored?.tab ?? 'share';
+  const setTab = (next: Tab) => {
+    setTabChoice(next);
+    void patchPopupState({ tab: next });
+  };
   const [account, setAccount] = useState<Account | null>(null);
   const [accountError, setAccountError] = useState('');
   // Set by "Start a new share", so the fresh Share form is ready to type in. Not on a plain panel open.
@@ -28,6 +36,11 @@ export function App() {
   };
 
   useEffect(refreshAccount, []);
+
+  useEffect(() => {
+    // Restoring is a convenience: if it can't be read, open on an empty Share tab.
+    void loadPopupState().then(setStored, () => setStored(emptyPopupState()));
+  }, []);
 
   const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     let next: Tab | null = null;
@@ -54,7 +67,7 @@ export function App() {
         <div className="popup-body alert">Could not load invitation progress: {runError}</div>
       </div>
     );
-  if (!config || run === undefined)
+  if (!config || run === undefined || !stored)
     return (
       <div className="popup">
         <div className="popup-body muted">Loading…</div>
@@ -130,7 +143,14 @@ export function App() {
           )}
         </div>
         <div id="panel-lists" role="tabpanel" aria-labelledby="tab-lists" hidden={tab !== 'lists'}>
-          <ListsView config={config} save={save} />
+          <ListsView
+            config={config}
+            save={save}
+            initial={reconcileListsDraft(
+              stored.lists,
+              config.lists.map((list) => list.id),
+            )}
+          />
         </div>
       </div>
 

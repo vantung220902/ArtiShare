@@ -3,6 +3,7 @@ import type { Account } from '../../claude/shareClient';
 import { parseArtifactList, parseArtifactRef } from '../../core/artifactUrl';
 import { type Config, defaultListIds, type Invitee, resolveInvites } from '../../core/config';
 import { ACCESS_LABELS, type AccessLevel, type ArtifactRef } from '../../core/types';
+import type { ListFormDraft } from '../../core/popupState';
 import { restoreSelection, type ShareDraft } from '../../core/shareDraft';
 import { type PreviewResult, send } from '../../lib/messages';
 import { loadShareDraft, saveShareDraft } from '../../lib/storage';
@@ -65,7 +66,9 @@ function ShareForm({
       defaultListIds(config),
     ),
   );
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState(initial?.creating ?? false);
+  // What is typed in the inline form, kept with the rest of the draft.
+  const [newList, setNewList] = useState<ListFormDraft | null>(initial?.newList ?? null);
   const [preview, setPreview] = useState<{
     draft: Draft;
     results: PreviewResult[];
@@ -103,13 +106,20 @@ function ShareForm({
   // Keep the form across the popup closing. Skips the first run: nothing has changed yet, and
   // saving the untouched defaults would make a later change to the defaults look like a choice.
   const firstRun = useRef(true);
+  const showingForm = creating || config.lists.length === 0;
   useEffect(() => {
     if (firstRun.current) {
       firstRun.current = false;
       return;
     }
-    void saveShareDraft({ artifactText, selected }).catch(() => {});
-  }, [artifactText, selected]);
+    const shown = showingForm ? newList : null;
+    void saveShareDraft({
+      artifactText,
+      selected,
+      ...(creating && { creating }),
+      ...(shown && { newList: shown }),
+    }).catch(() => {});
+  }, [artifactText, selected, creating, showingForm, newList]);
 
   // In "All lists" mode, include lists created in the Lists tab without losing manual unticks.
   useEffect(() => {
@@ -243,16 +253,32 @@ function ShareForm({
               ref={form}
               config={config}
               save={save}
+              initial={newList}
+              onUnsavedChange={setNewList}
               onSaved={(list) => {
                 setSelected((ids) => [...ids, list.id]);
                 setCreating(false);
+                setNewList(null);
               }}
-              onCancel={lists.length ? () => setCreating(false) : undefined}
+              onCancel={
+                lists.length
+                  ? () => {
+                      setCreating(false);
+                      setNewList(null);
+                    }
+                  : undefined
+              }
               onDraftChange={setDraft}
             />
           </div>
         ) : (
-          <button className="dashed" onClick={() => setCreating(true)}>
+          <button
+            className="dashed"
+            onClick={() => {
+              setNewList(null);
+              setCreating(true);
+            }}
+          >
             <PlusIcon size={14} /> New list
           </button>
         )}

@@ -4,7 +4,7 @@ import { ACCESS_LEVELS, type AccessLevel } from './types';
 
 const AccessSchema = z.enum(['view', 'comment', 'edit']);
 
-const EmailListSchema = z.object({
+export const EmailListSchema = z.object({
   id: z.string().min(1),
   name: z.string().trim().min(1),
   emails: z.array(z.string()),

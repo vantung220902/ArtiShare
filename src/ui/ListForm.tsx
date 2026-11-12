@@ -10,6 +10,7 @@ import {
   uniqueListName,
 } from '../core/config';
 import { parseEmails } from '../core/emails';
+import type { ListFormDraft } from '../core/popupState';
 import type { AccessLevel } from '../core/types';
 import { AccessSelect } from './AccessSelect';
 import { useConfirm } from './useConfirm';
@@ -40,14 +41,34 @@ interface Props {
   onCancel?: () => void;
   /** Reports the unsaved draft of a new list as it is typed, or null when the form is empty. */
   onDraftChange?: (draft: ListDraft | null) => void;
+  /** What was typed before the popup last closed. Only read when the form mounts. */
+  initial?: ListFormDraft | null;
+  /**
+   * Reports everything typed and not yet saved (null when nothing is), so it can be kept while
+   * the popup is closed. Unlike `onDraftChange` it holds the text as typed, and covers edits.
+   */
+  onUnsavedChange?: (draft: ListFormDraft | null) => void;
 }
 
 /** Name, addresses and permission for one saved list. Used to create lists and to edit them. */
-export function ListForm({ ref, config, save, list, onSaved, onCancel, onDraftChange }: Props) {
-  const [baseline, setBaseline] = useState<EmailList | null>(list ?? null);
-  const [name, setName] = useState(list?.name ?? '');
-  const [text, setText] = useState(list?.emails.join('\n') ?? '');
-  const [access, setAccess] = useState<AccessLevel>(list?.access ?? 'view');
+export function ListForm({
+  ref,
+  config,
+  save,
+  list,
+  onSaved,
+  onCancel,
+  onDraftChange,
+  initial,
+  onUnsavedChange,
+}: Props) {
+  // A restored edit keeps the baseline it started from, so a change made elsewhere meanwhile
+  // shows as a conflict instead of being silently overwritten.
+  const restored = initial && !!initial.baseline === !!list ? initial : null;
+  const [baseline, setBaseline] = useState<EmailList | null>(restored ? restored.baseline : (list ?? null));
+  const [name, setName] = useState(restored?.name ?? list?.name ?? '');
+  const [text, setText] = useState(restored?.text ?? list?.emails.join('\n') ?? '');
+  const [access, setAccess] = useState<AccessLevel>(restored?.access ?? list?.access ?? 'view');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const { ask, dialog } = useConfirm();
@@ -108,6 +129,13 @@ export function ListForm({ ref, config, save, list, onSaved, onCancel, onDraftCh
     [list, hasDraft, text, access],
   );
   useEffect(() => onDraftChange?.(draft), [draft, onDraftChange]);
+
+  // Typed and not saved. Name and permission count too: a new list's draft is more than its addresses.
+  const unsaved = useMemo(
+    () => (dirty ? { name, text, access, baseline } : null),
+    [dirty, name, text, access, baseline],
+  );
+  useEffect(() => onUnsavedChange?.(unsaved), [unsaved, onUnsavedChange]);
 
   const fail = (message: string) => {
     setError(message);
