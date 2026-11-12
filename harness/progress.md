@@ -4,6 +4,17 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F010 · The fake claude.ai can change and remove invitations, and has seeded artifacts
+
+- **Did:** `src/claude/fakeShareClient.ts`: ids containing `Shared` start with the owner plus viewer@ (accepted, Can view), commenter@ (pending, Commenter) and locked@example.com; `Missing` makes `listSharees` throw not-found; `changeAccess(artifact, inviteId, access)` and `removeInvite(artifact, inviteId)` (300 ms each) throw 'Only the owner can change access' (forbidden) for `Forbidden`, 'The invitation no longer exists' (not-found) for an unknown id, and 'This person joined your organization, so their access is managed in claude.ai.' for `locked…`. `Sharee` (`src/core/types.ts`) gained an optional `id` (the invitation id, none for the owner); the fake gives every invitation one (`inv-N`), including ones from `invite`. The new methods live on an exported `FakeShareClient` type, not yet on `ShareClient`. Rules are at the top of the file and in the README's fake-mode list. Tests: `tests/fakeShareClient.test.ts` (9) and `e2e/F010.spec.ts` (2: Shared preview lists the three people with permissions; Missing preview says not found).
+- **Verified:** `npm run check` (163 unit tests) and `npm run e2e` (57 specs) pass. feature-verifier: PASS on its second run, with real command output (its first run was a FAIL only because Bash was denied).
+- **State:** F010 passes. 8 features left (F011–F018).
+- **Next:** F011: add `changeAccess` and `removeInvite` to `ShareClient` (src/claude/shareClient.ts) and implement them in `apiShareClient.ts` (PATCH/DELETE `/api/frame/invite/{uuid}/{inviteId}`), make `listSharees` fill `Sharee.id`, document them in `docs/claude-share-api.md`, and then drop `FakeShareClient` in favour of `ShareClient`.
+- **Notes:**
+  - The fake's methods take an invite id, not an email, to match what F011's real client needs. The id is optional on `Sharee` only because the owner has none.
+  - The preview's group is titled 'Existing email access (left unchanged)' and only lists people whose addresses are in the lists being previewed, so the F010 step's 'Already have access' is checked with a list holding the three seeded addresses plus a new one. Manage access (F012+) is what shows everyone.
+  - The fake's locked error uses code `unknown`; F011 may add a dedicated code.
+
 ### 2026-11-12 · F009 · Closing the popup mid-run doesn't stop the run, and reopening shows live progress
 
 - **Did:** No source change was needed: the run already lives in the background and `chrome.storage.local`, and the run view follows it. Added `e2e/F009.spec.ts` (2 tests): (1) four addresses with a `slow-…` one last, closed (`goto('about:blank')`) once one is invited, reopened 1.5 s later: Running, Stop visible, more invited than before and fewer than 4, and the count keeps rising with the popup open; Stop, close, reopen: Stopped, same invited count (nothing sent while closed), "N left"; Resume ends with "Share finished: 4 invited" and Done. (2) A two-address run that finishes while the popup is closed shows "Share finished: 2 invited" on reopening. README (Run section) says closing doesn't stop the run and reopening shows progress.

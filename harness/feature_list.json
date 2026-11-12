@@ -126,7 +126,7 @@
         "See the three seeded people under Already have access, with their permissions",
         "Unit tests show the fake's `changeAccess` updates a person's permission, `removeInvite` removes them, both throw for a `locked…` address and for a 'Forbidden' artifact, `listSharees` throws for a 'Missing' artifact, and the next `listSharees` reflects each change"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F011",
