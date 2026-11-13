@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-13 · F008 · Side panel page and manifest
+
+- **Did:** New `src/entrypoints/sidepanel/` (`index.html`, `main.tsx`): renders the popup's `App` and adds `html.sidepanel`. WXT then writes `side_panel.default_path: sidepanel.html` and the `sidePanel` permission; `action.default_popup` and the `key` are unchanged. `styles.css`: `html.sidepanel` drops the 380 px width and 600 px cap and makes `.popup` 100% high, so only `.popup-body` scrolls. `e2e/fixtures.ts` gains `extensionId` and `sidePanel` (sidepanel.html at 400×900) fixtures. New `e2e/F008.spec.ts` (manifest, header/tabs/version, full height and body-only scrolling, a full list → preview → send run). `e2e/popup-and-manage-access/F001.spec.ts`: dropped its "no side_panel / no sidePanel permission" assertions (F008 adds both on purpose) and renamed that test.
+- **Verified:** `npm run check` (197 unit tests) and `npm run e2e` (91) pass. feature-verifier: **PASS** on all five steps.
+- **State:** F008 passes. 8 of 18 features pass. Nothing in the UI opens the side panel yet, so no README change.
+- **Next:** F009 (the "Open in side panel" header icon, `chrome.sidePanel.setPanelBehavior` and `action.setPopup`, and the stored choice). `App` takes no props yet; it will need to know which surface it is in (the sidepanel `main.tsx` is the place to say so).
+- **Notes:** The feature-verifier's tool log was not inspected; the green runs above are this session's own.
+
 ### 2026-11-13 · F007 · Manage access icon: keyboard focus and header fit
 
 - **Did:** `ManageView.tsx`: focus moves to Back when People with access opens (`backRef`). `App.tsx`: `manageIconRef`; Back returns focus to the icon (the icon toggle itself keeps focus). Nothing else needed: the icon already hid off artifact tabs, `button:focus-visible` already draws the ring, and `.account` (min-width 0, truncates) plus `icon-btn` (flex none) already fit 380 px. New `e2e/F007.spec.ts` covers all six steps (no icon and no gap, Tab/Enter/Back focus, a long address truncating at 380 px, the in-progress note during a run, tooltip and dark-mode colour).

@@ -112,7 +112,7 @@
         "Make a list, preview and send to one artifact from the side panel: see the run finish ('Share finished: …')",
         "Every existing popup spec still passes"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F009",
