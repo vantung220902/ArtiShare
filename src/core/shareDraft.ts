@@ -1,3 +1,4 @@
+import { addArtifactText } from './artifactRows';
 import { type ListFormDraft, parseListFormDraft } from './popupState';
 
 /**
@@ -26,7 +27,7 @@ export interface ShareDraft {
 export function parseShareDraft(raw: unknown): ShareDraft | null {
   if (!raw || typeof raw !== 'object') return null;
   const {
-    artifacts = [],
+    artifacts: storedRows,
     artifactText,
     selected,
     creating,
@@ -35,9 +36,17 @@ export function parseShareDraft(raw: unknown): ShareDraft | null {
   } = raw as Record<string, unknown>;
   if (typeof artifactText !== 'string') return null;
   const isStrings = (v: unknown): v is string[] => Array.isArray(v) && v.every((s) => typeof s === 'string');
-  // 0.3.0 had no rows, only the box, so a draft without them is still one.
+  const artifacts = storedRows ?? [];
   if (!isStrings(artifacts) || !isStrings(selected)) return null;
   const draft: ShareDraft = { artifacts, artifactText, selected };
+  // 0.3.0 had no rows, only the box, with every link of the list in it. Its links become rows now
+  // and what wasn't a link stays to be fixed. Later drafts always have `artifacts`, so what they
+  // have typed in the box is left as typed.
+  if (storedRows === undefined) {
+    const added = addArtifactText([], artifactText);
+    draft.artifacts = added.rows.map((ref) => ref.url);
+    draft.artifactText = added.leftover;
+  }
   // Only a convenience: a bad list of removed artifacts costs nothing but the hold-back.
   if (isStrings(removed) && removed.length) draft.removed = removed;
   if (creating === true) draft.creating = true;
