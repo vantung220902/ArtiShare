@@ -21,7 +21,7 @@ test('Remove asks first; Cancel keeps the person, confirming removes them for go
   await panel.reload();
 
   const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await share.getByRole('button', { name: 'Manage access' }).click();
+  await panel.getByRole('button', { name: 'Manage access' }).click();
   const rows = share.locator('ul.people > li');
   await expect(rows).toHaveCount(4);
   await expect(rows.nth(2)).toContainText('commenter@example.com');
@@ -49,7 +49,7 @@ test('Remove asks first; Cancel keeps the person, confirming removes them for go
 
   // Close and reopen the popup: they are still gone.
   await panel.reload();
-  await share.getByRole('button', { name: 'Manage access' }).click();
+  await panel.getByRole('button', { name: 'Manage access' }).click();
   await expect(rows).toHaveCount(3);
   await expect(share.getByText('commenter@example.com')).toHaveCount(0);
 

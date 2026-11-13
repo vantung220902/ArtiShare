@@ -5,7 +5,7 @@ import { emptyPopupState, type PopupState, reconcileListsDraft, type Tab } from 
 import { send } from '../../lib/messages';
 import { loadPopupState, patchPopupState } from '../../lib/storage';
 import { useConfig, useRun } from '../../ui/hooks';
-import { SendIcon } from '../../ui/icons';
+import { SendIcon, UsersIcon } from '../../ui/icons';
 import { ListsView } from './ListsView';
 import { ManageView } from './ManageView';
 import { RunView } from './RunView';
@@ -20,7 +20,14 @@ export function App() {
   const [stored, setStored] = useState<PopupState | undefined>(undefined);
   const [tabChoice, setTabChoice] = useState<Tab | null>(null);
   const tab = tabChoice ?? stored?.tab ?? 'share';
+  // The artifact in the tab the popup opened over, which Manage access is about. Read once: a popup
+  // closes when you click away, so it can't outlive a change of tab.
+  const [tabArtifact, setTabArtifact] = useState<ArtifactRef | null>(null);
+  // Set while People with access is open, whichever tab it was opened from.
+  const [managing, setManaging] = useState<ArtifactRef | null>(null);
   const setTab = (next: Tab) => {
+    // Choosing a tab shows that tab, so People with access closes.
+    setManaging(null);
     setTabChoice(next);
     void patchPopupState({ tab: next });
   };
@@ -29,10 +36,6 @@ export function App() {
   // Set by "Start a new share", so the fresh Share form is ready to type in. Not on a plain panel open.
   const [focusArtifacts, setFocusArtifacts] = useState(false);
 
-  // The artifact in the tab the popup opened over, which Manage access is about. Read once: a popup
-  // closes when you click away, so it can't outlive a change of tab.
-  const [tabArtifact, setTabArtifact] = useState<ArtifactRef | null>(null);
-  const [managing, setManaging] = useState<ArtifactRef | null>(null);
   useEffect(() => {
     void currentTabArtifact().then(setTabArtifact, () => {});
   }, []);
@@ -85,6 +88,10 @@ export function App() {
       </div>
     );
 
+  const manageView = (artifact: ArtifactRef) => (
+    <ManageView artifact={artifact} run={run} onBack={() => setManaging(null)} />
+  );
+
   return (
     // Header and tabs stay put and only .popup-body scrolls; the popup itself is capped at 600 px.
     // There is no close button: a popup closes when you click away, and a run keeps going in the background.
@@ -98,6 +105,18 @@ export function App() {
             <h1 className="wordmark">ArtiShare</h1>
           </div>
           <AccountPill account={account} error={accountError} />
+          {/* Only where it works: an artifact tab. In the header so it never scrolls out of reach. */}
+          {tabArtifact && (
+            <button
+              className="ghost icon-btn"
+              aria-label="Manage access"
+              title="Manage access to this artifact"
+              aria-pressed={managing !== null}
+              onClick={() => setManaging(managing ? null : tabArtifact)}
+            >
+              <UsersIcon size={16} />
+            </button>
+          )}
         </header>
 
         {accountError && (
@@ -154,25 +173,22 @@ export function App() {
                 }}
               />
             )}
-            {tabArtifact && (
-              <p className="manage-link">
-                <button className="link" onClick={() => setManaging(tabArtifact)}>
-                  Manage access
-                </button>
-              </p>
-            )}
           </div>
-          {managing && <ManageView artifact={managing} run={run} onBack={() => setManaging(null)} />}
+          {managing && tab === 'share' && manageView(managing)}
         </div>
         <div id="panel-lists" role="tabpanel" aria-labelledby="tab-lists" hidden={tab !== 'lists'}>
-          <ListsView
-            config={config}
-            save={save}
-            initial={reconcileListsDraft(
-              stored.lists,
-              config.lists.map((list) => list.id),
-            )}
-          />
+          {/* Hidden, not unmounted, under Manage access: an open list and its unsaved changes survive. */}
+          <div hidden={managing !== null}>
+            <ListsView
+              config={config}
+              save={save}
+              initial={reconcileListsDraft(
+                stored.lists,
+                config.lists.map((list) => list.id),
+              )}
+            />
+          </div>
+          {managing && tab === 'lists' && manageView(managing)}
         </div>
       </div>
 

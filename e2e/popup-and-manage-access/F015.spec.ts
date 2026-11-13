@@ -23,7 +23,7 @@ async function openManage(context: BrowserContext, panel: Page, url: string) {
   await tab.bringToFront();
   await panel.reload();
   const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await share.getByRole('button', { name: 'Manage access' }).click();
+  await panel.getByRole('button', { name: 'Manage access' }).click();
 
   return { share, rows: share.locator('ul.people > li') };
 }
@@ -72,7 +72,7 @@ test('a refused removal keeps the row and shows the error on it', async ({ conte
 
   // It is still there after reopening: nothing was removed on claude.ai.
   await panel.reload();
-  await share.getByRole('button', { name: 'Manage access' }).click();
+  await panel.getByRole('button', { name: 'Manage access' }).click();
   await expect(rows).toHaveCount(4);
 });
 
@@ -105,7 +105,7 @@ test('a Missing artifact shows the error and Retry instead of an empty list; Ret
   await tab.bringToFront();
   await panel.reload();
   const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await share.getByRole('button', { name: 'Manage access' }).click();
+  await panel.getByRole('button', { name: 'Manage access' }).click();
 
   const alert = share.locator('p.alert');
   await expect(alert).toContainText('Artifact not found');

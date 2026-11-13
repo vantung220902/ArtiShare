@@ -19,7 +19,7 @@ async function openManage(context: BrowserContext, panel: Page, url: string) {
   await tab.bringToFront();
   await panel.reload();
   const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await share.getByRole('button', { name: 'Manage access' }).click();
+  await panel.getByRole('button', { name: 'Manage access' }).click();
 
   return { share, rows: share.locator('ul.people > li') };
 }
@@ -98,7 +98,7 @@ test('while a run sends to this artifact, Manage access says so and Refresh show
   await answer(share, 'Send');
   await expect(share.getByText('Running', { exact: true })).toBeVisible();
 
-  await share.getByRole('button', { name: 'Manage access' }).click();
+  await panel.getByRole('button', { name: 'Manage access' }).click();
   const note = share.getByRole('status').filter({ hasText: 'A share is in progress' });
   await expect(note).toContainText('Refresh shows the latest.');
 

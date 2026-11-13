@@ -21,7 +21,7 @@ test("changing a person's permission shows Saved on their row only, and sticks a
   await panel.reload();
 
   const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await share.getByRole('button', { name: 'Manage access' }).click();
+  await panel.getByRole('button', { name: 'Manage access' }).click();
   const rows = share.locator('ul.people > li');
   await expect(rows).toHaveCount(4);
 
@@ -50,7 +50,7 @@ test("changing a person's permission shows Saved on their row only, and sticks a
 
   // Close and reopen the popup, then open Manage access again.
   await panel.reload();
-  await share.getByRole('button', { name: 'Manage access' }).click();
+  await panel.getByRole('button', { name: 'Manage access' }).click();
   await expect(rows).toHaveCount(4);
   await expect(rows.nth(1).getByRole('combobox')).toHaveValue('edit');
 
