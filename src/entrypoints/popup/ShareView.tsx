@@ -3,7 +3,7 @@ import type { Account } from '../../claude/shareClient';
 import { addArtifactText, sameArtifact } from '../../core/artifactRows';
 import { artifactKey, parseArtifactList } from '../../core/artifactUrl';
 import { type Config, defaultListIds, resolveInvites } from '../../core/config';
-import { ACCESS_LABELS, type AccessLevel, type ArtifactRef } from '../../core/types';
+import { ACCESS_LABELS, type AccessLevel } from '../../core/types';
 import type { ListFormDraft, PreviewState } from '../../core/popupState';
 import { restoreSelection, type ShareDraft } from '../../core/shareDraft';
 import { type PreviewResult, send } from '../../lib/messages';
@@ -14,10 +14,13 @@ import { ListBadge } from '../../ui/ListBadge';
 import { type ListDraft, ListForm, type ListFormHandle } from '../../ui/ListForm';
 import { ArtifactsField, type ArtifactsValue } from './ArtifactsField';
 import { ArtifactLink, EmailGroup } from './viewComponents';
-import { byName, currentTabArtifact, people, plural, type Save } from './viewUtils';
+import { useTabArtifact } from './useTabArtifact';
+import { byName, people, plural, type Save } from './viewUtils';
 
 interface ShareViewProps {
   focusArtifacts?: boolean;
+  /** Keep up with the active tab after mounting: the side panel stays open as you switch tabs. */
+  followTab?: boolean;
   /** Called once the focus asked for by `focusArtifacts` is done, so a later mount doesn't repeat it. */
   onArtifactsFocused?: () => void;
   config: Config;
@@ -43,6 +46,7 @@ function ShareForm({
   save,
   onAccount,
   focusArtifacts = false,
+  followTab = false,
   onArtifactsFocused,
   initial,
 }: ShareViewProps & { initial: ShareDraft | null }) {
@@ -80,22 +84,21 @@ function ShareForm({
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- only when the form mounts
   }, []);
 
-  // The artifact in the tab the popup opened over. It is added when it isn't a row yet, and its row
-  // is marked, so the artifact you're looking at is shared without a click, the second and third
-  // one the same as the first. One you took out with × stays out: it is only marked, so + Current
-  // tab or a paste brings it back with the mark.
-  const [thisTab, setThisTab] = useState<ArtifactRef | null>(null);
+  // The artifact in the active tab. It is added when it isn't a row yet, and its row is marked, so the
+  // artifact you're looking at is shared without a click, the second and third one the same as the
+  // first. One you took out with × stays out: it is only marked, so + Current tab or a paste brings
+  // it back with the mark. In the side panel it follows you from tab to tab.
+  const thisTab = useTabArtifact(followTab);
+  const thisTabKey = thisTab && artifactKey(thisTab);
   useEffect(() => {
-    void currentTabArtifact().then((ref) => {
-      if (!ref) return;
-      setThisTab(ref);
-      setArtifacts((a) =>
-        a.rows.some((row) => sameArtifact(row, ref)) || a.removed.includes(artifactKey(ref))
-          ? a
-          : { ...a, rows: [...a.rows, ref] },
-      );
-    });
-  }, []);
+    if (!thisTab) return;
+    setArtifacts((a) =>
+      a.rows.some((row) => sameArtifact(row, thisTab)) || a.removed.includes(artifactKey(thisTab))
+        ? a
+        : { ...a, rows: [...a.rows, thisTab] },
+    );
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- only when the active tab's artifact changes
+  }, [thisTabKey]);
 
   // Changing the default selection in the Lists tab re-applies it here. Not on mount, which
   // would undo the ticks restored from the draft.
