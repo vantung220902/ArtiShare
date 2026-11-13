@@ -4,6 +4,16 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-13 · F005 · A 0.3.0 draft and typed links carry over into the rows
+
+- **Did:** `parseShareDraft` (`src/core/shareDraft.ts`) turns a draft with no `artifacts` key (0.3.0's, which held every link in the box) into rows with `addArtifactText`; what isn't a link stays in the box, so the warning shows. A draft that has `artifacts` keeps its typed text as typed. Unit tests in `tests/shareDraft.test.ts`; new `e2e/F005.spec.ts` (0.3.0 draft seeded in session storage, a typed link counted by and included in Preview, the typed link kept across a reopen, "Add at least one artifact." with nothing). The older specs already use the rows from F001–F004, so none needed changing.
+- **Verified:** `npm run check` (197 unit tests) and `npm run e2e` (81, including `e2e/F005.spec.ts`) both pass. feature-verifier: **no verdict**. Both runs returned FAIL only because Bash was denied in the verifier's session, so it ran no commands.
+- **State:** F005 `passes` is still **false**: the work is done and green, but it has no PASS yet.
+- **Next:** Run the feature-verifier for F005 again (from a session where it can run Bash); on PASS set `passes: true` for F005 and commit that alone, then take F006.
+- **Notes:**
+  - F004's second verifier run did get Bash; this time neither did, so it looks like a permissions prompt in the verifier's session rather than anything in the change.
+  - The popup reopens on the tab it was closed on, so an e2e spec that reloads the panel must click Share again (`reopen` in `e2e/F005.spec.ts`).
+
 ### 2026-11-13 · F004 · A removed artifact isn't added back by itself
 
 - **Did:** The draft now keeps `removed` (artifact keys taken out with ×), left out when empty (`shareDraft.ts`; a malformed value is dropped without discarding the draft). `updateRemoved` in `artifactRows.ts` adds the removed artifact and forgets any key that is a row again. `ArtifactsValue` gains `removed`; `ArtifactsField.tsx` updates it on ×, Undo, paste/Enter and + Current tab. The mount effect in `ShareView.tsx` skips the prefill for a key in `removed`. `thisTab` is still set then, so + Current tab or a paste brings it back with the badge. README Artifacts bullet.

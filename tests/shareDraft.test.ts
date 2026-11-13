@@ -20,11 +20,25 @@ describe('parseShareDraft', () => {
     });
   });
 
-  it('reads a 0.3.0 draft, which had only the box, as one without rows', () => {
-    expect(parseShareDraft({ artifactText: ONE, selected: ['x'] })).toEqual({
+  it('turns the links of a 0.3.0 draft, which had only the box, into rows and keeps the rest typed', () => {
+    const TWO = 'https://claude.ai/artifact/ExampleArtifactTwo02';
+    expect(parseShareDraft({ artifactText: `${ONE}\n${TWO}\nnot a link`, selected: ['x'] })).toEqual({
+      artifacts: [ONE, TWO],
+      artifactText: 'not a link',
+      selected: ['x'],
+    });
+    expect(parseShareDraft({ artifactText: '', selected: [] })).toEqual({
+      artifacts: [],
+      artifactText: '',
+      selected: [],
+    });
+  });
+
+  it('leaves a link typed into the box of a draft that has rows as typed', () => {
+    expect(parseShareDraft({ artifacts: [], artifactText: ONE, selected: [] })).toEqual({
       artifacts: [],
       artifactText: ONE,
-      selected: ['x'],
+      selected: [],
     });
   });
 
