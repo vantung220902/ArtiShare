@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F012 · Moving between the popup and the side panel keeps your work
+
+- **Did:** No source change was needed: the Share draft, the Lists drafts, the preview, the open tab and the run all live in storage (session and local) that both pages read, and the run is in the background. New `e2e/F012.spec.ts` (2 tests) covers all four steps: artifacts + ticks + a half-typed new list + the open tab across popup → side panel → popup; a preview carried over, then a run switched mid-way with live progress, Stop and Resume in the side panel, and the finished run seen from the popup. README: the Side panel paragraph now says the work comes along and a run is not interrupted.
+- **Verified:** `npm run check` (204 unit tests) and `npm run e2e` (115, counting the stray debug spec) pass; F012 passed 6 of 6 with `--repeat-each=3`. feature-verifier: **FAIL**, only because of the stray `e2e/zz-dbg.spec.ts` (below); it marked all four steps and the README ✓.
+- **State:** F012 `passes` is **false**, only because the verifier would not PASS while the stray file is in the tree. Nothing of F012 is left to build. 11 of 18 features pass.
+- **Next:** **Delete `e2e/zz-dbg.spec.ts`** (untracked, from the F011 session; `rm` and `git clean` need approval in these sessions, so a human has to), then run the feature-verifier on F012 again. It should PASS; then set `passes: true` for F012 and write a short entry, before starting F013.
+- **Notes:** `e2e/zz-dbg.spec.ts` is not committed. The commit for this session added only `e2e/F012.spec.ts`, `README.md` and this entry. As the e2e specs can't click the toolbar, the "other surface" is a fresh page of `popup.html` or `sidepanel.html` opened after the icon closed the first one.
+
 ### 2026-11-14 · F011 · The popup-or-side-panel choice survives a restart and an update
 
 - **Did:** No source change was needed: `applyStoredSurface` at background start and `parseSurface` already did this. New `e2e/F011.spec.ts` (11 tests) covers all five steps. README: the Side panel paragraph now says the choice also survives an update, and that the popup is used until the side panel is chosen.
