@@ -1,18 +1,21 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { Account } from '../../claude/shareClient';
+import type { Surface } from '../../core/surface';
 import type { ArtifactRef } from '../../core/types';
 import { emptyPopupState, type PopupState, reconcileListsDraft, type Tab } from '../../core/popupState';
 import { send } from '../../lib/messages';
+import { moveToSidePanel } from '../../lib/surface';
 import { loadPopupState, patchPopupState } from '../../lib/storage';
 import { useConfig, useRun } from '../../ui/hooks';
-import { SendIcon, UsersIcon } from '../../ui/icons';
+import { SendIcon, SidePanelIcon, UsersIcon } from '../../ui/icons';
 import { ListsView } from './ListsView';
 import { ManageView } from './ManageView';
 import { RunView } from './RunView';
 import { ShareView } from './ShareView';
 import { currentTabArtifact } from './viewUtils';
 
-export function App() {
+/** In the popup there is an "Open in side panel" icon; the side panel itself has no use for it. */
+export function App({ surface = 'popup' }: { surface?: Surface }) {
   const [config, save, configError] = useConfig();
   const [run, runError] = useRun();
   // What was open and typed before the popup last closed. Nothing is drawn until it is known,
@@ -34,6 +37,7 @@ export function App() {
   };
   const [account, setAccount] = useState<Account | null>(null);
   const [accountError, setAccountError] = useState('');
+  const [surfaceError, setSurfaceError] = useState('');
   // Set by "Start a new share", so the fresh Share form is ready to type in. Not on a plain panel open.
   const [focusArtifacts, setFocusArtifacts] = useState(false);
 
@@ -127,7 +131,25 @@ export function App() {
               <UsersIcon size={16} />
             </button>
           )}
+          {surface === 'popup' && (
+            <button
+              className="ghost icon-btn"
+              aria-label="Open in side panel"
+              title="Open in side panel"
+              onClick={() => {
+                // Nothing is left for the popup to do once the panel is open, so it closes.
+                moveToSidePanel().then(
+                  () => window.close(),
+                  (e: Error) => setSurfaceError(e.message),
+                );
+              }}
+            >
+              <SidePanelIcon size={16} />
+            </button>
+          )}
         </header>
+
+        {surfaceError && <p className="alert">Could not open the side panel: {surfaceError}</p>}
 
         {accountError && (
           <p className="alert">

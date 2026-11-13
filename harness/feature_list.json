@@ -124,7 +124,7 @@
         "Click the ArtiShare toolbar icon again: the side panel opens, not the popup (in e2e: `chrome.action.getPopup({})` returns '' and `chrome.sidePanel.getPanelBehavior()` reports `openPanelOnActionClick: true`, and the stored choice says side panel)",
         "In the side panel, see no 'Open in side panel' icon"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F010",

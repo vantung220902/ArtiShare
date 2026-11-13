@@ -6,4 +6,4 @@ import '../../ui/styles.css';
 import { App } from '../popup/App';
 
 document.documentElement.classList.add('sidepanel');
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(<App surface="sidepanel" />);

@@ -4,6 +4,17 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-13 · F009 · Open in side panel icon
+
+- **Did:** New `src/core/surface.ts` (`Surface` = `'popup' | 'sidepanel'`, `parseSurface`, default popup) with `tests/surface.test.ts`. `src/lib/storage.ts`: `loadSurface`/`saveSurface` (`chrome.storage.local` key `surface`). New `src/lib/surface.ts`: `applySurface` (`sidePanel.setPanelBehavior` + `action.setPopup`, `''` for the side panel), `chooseSurface` (save then apply), `applyStoredSurface`, `moveToSidePanel` (`sidePanel.open` first, while the click is still a gesture, then `chooseSurface('sidepanel')`). `background.ts` calls `applyStoredSurface()` on every start because `setPopup` is forgotten on browser restart. `App` takes `surface` (default `'popup'`); the popup shows a `SidePanelIcon` button "Open in side panel" in the header after Manage access, which closes the popup (`window.close()`) once the panel is open, or shows "Could not open the side panel: …". `sidepanel/main.tsx` passes `surface="sidepanel"`, so no icon there. README: new "Side panel" paragraph. New `e2e/F009.spec.ts`; `popup-and-manage-access/F002.spec.ts` now expects the first Tab stop to be the new icon.
+- **Verified:** `npm run check` (204 unit tests) and `npm run e2e` (97) pass. feature-verifier: **PASS** on all four steps.
+- **State:** F009 passes. 9 of 18 features pass.
+- **Next:** F010 (the side panel's "Use popup instead" icon: `chooseSurface('popup')`, close the side panel with `window.close()`, and repeated switching). `App`'s `surface` prop and `lib/surface.ts` are ready for it.
+- **Notes:**
+  - Playwright's `sidePanel.open` works from a normal-tab extension page on a real click, so e2e covers the click and reads back `getPopup`, `getPanelBehavior` and storage. It can't see the panel itself or a real toolbar click.
+  - The restart path (`applyStoredSurface` at background start) has no e2e test.
+  - `window.close()` closes a side panel in current Chrome; F010 should confirm that, or use `chrome.sidePanel.setOptions({enabled:false})` then re-enable, if not.
+
 ### 2026-11-13 · F008 · Side panel page and manifest
 
 - **Did:** New `src/entrypoints/sidepanel/` (`index.html`, `main.tsx`): renders the popup's `App` and adds `html.sidepanel`. WXT then writes `side_panel.default_path: sidepanel.html` and the `sidePanel` permission; `action.default_popup` and the `key` are unchanged. `styles.css`: `html.sidepanel` drops the 380 px width and 600 px cap and makes `.popup` 100% high, so only `.popup-body` scrolls. `e2e/fixtures.ts` gains `extensionId` and `sidePanel` (sidepanel.html at 400×900) fixtures. New `e2e/F008.spec.ts` (manifest, header/tabs/version, full height and body-only scrolling, a full list → preview → send run). `e2e/popup-and-manage-access/F001.spec.ts`: dropped its "no side_panel / no sidePanel permission" assertions (F008 adds both on purpose) and renamed that test.

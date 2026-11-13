@@ -6,6 +6,7 @@ import { planArtifact } from '../core/planner';
 import { abortableSleep } from '../core/runner';
 import type { Envelope, Messages, PreviewResponse, PreviewResult, Reply } from '../lib/messages';
 import { createRunManager } from '../lib/runManager';
+import { applyStoredSurface } from '../lib/surface';
 import { loadConfig, loadRun, saveConfig, saveRun } from '../lib/storage';
 
 const FAKE = import.meta.env.WXT_FAKE_CLAUDE === 'true';
@@ -100,6 +101,9 @@ async function handle(msg: Envelope): Promise<unknown> {
 }
 
 export default defineBackground(() => {
+  // `action.setPopup` is forgotten when the browser restarts, so the remembered choice is set again.
+  void applyStoredSurface().catch(() => {});
+
   chrome.runtime.onMessage.addListener((msg: Envelope, sender, sendResponse: (r: Reply<unknown>) => void) => {
     if (sender.id !== chrome.runtime.id) return false;
     handle(msg).then(
