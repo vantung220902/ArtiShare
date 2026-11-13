@@ -28,7 +28,7 @@
         "Remove the last row with the keyboard: focus moves to the paste box, and the empty state 'No artifacts yet…' shows",
         "Remove a row, close the popup and reopen it: the row is still gone (the list is saved like the rest of the draft)"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F003",

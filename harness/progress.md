@@ -4,6 +4,17 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-13 · F002 · Undo after ×, and keyboard focus
+
+- **Did:** `ArtifactsField.tsx`: × now remembers the removed row and its index and shows `Removed <url> · Undo` (an `<output class="undo-bar">`, url truncated by CSS) for 5 s (`UNDO_MS`); Undo splices it back at its old index (clamped), unless the artifact was re-added meanwhile. Only the latest removal can be undone. Focus: for a keyboard activation (`click` with `detail === 0`) focus moves, after render (`useLayoutEffect`), to the × now at the removed position (the previous one when the last row went), or to the paste box when no rows are left; Undo from the keyboard focuses the restored ×. Mouse clicks don't move focus. Persistence needed no change: rows are already in the saved draft. CSS `.undo-bar`; README Artifacts bullet.
+- **Verified:** `npm run check` (191 unit tests) and `npm run e2e` (76, including the new `e2e/F002.spec.ts`). feature-verifier: **PASS** on the first run.
+- **State:** F002 passes.
+- **Next:** F003 (the current tab's artifact is added when it isn't in the list, with a 'This tab' badge). It replaces the old prefill rule in `ShareView.tsx` and must update `popup-and-manage-access/F005.spec.ts` 'a restored draft is not overwritten…' (see the F001 notes).
+- **Notes:**
+  - The Undo bar sits below the paste box, so a keyboard user Tabs through the box to reach Undo.
+  - The message's spans are separated by `{' '}` because a flex row drops the spaces, and `Removed https://…` would otherwise read as one word.
+  - The undo timing assertion in the spec is wall-clock (4.5–6.5 s); it passed every run.
+
 ### 2026-11-13 · F001 · Artifacts as rows with a Remove (×) button
 
 - **Did:** Turned the Artifacts textarea into rows.
