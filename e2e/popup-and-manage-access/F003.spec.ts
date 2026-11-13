@@ -13,7 +13,7 @@ test.beforeEach(async ({ context }) => {
   );
 });
 
-test('opening over an artifact tab fills Artifacts, and + Current tab adds it once', async ({
+test('opening over an artifact tab adds it to Artifacts, and + Current tab adds it once', async ({
   context,
   panel,
 }) => {
@@ -25,22 +25,25 @@ test('opening over an artifact tab fills Artifacts, and + Current tab adds it on
 
   const share = panel.getByRole('tabpanel', { name: 'Share' });
   const artifacts = share.getByLabel(/Artifacts/);
+  const rows = share.locator('.artifact-item');
   const error = share.locator('.err, p.alert');
 
-  await expect(artifacts).toHaveValue(ARTIFACT);
+  await expect(rows).toHaveText([ARTIFACT]);
+  await expect(artifacts).toHaveValue('');
 
-  await artifacts.fill('');
+  await share.getByRole('button', { name: `Remove ${ARTIFACT}` }).click();
+  await expect(rows).toHaveCount(0);
   await share.getByRole('button', { name: 'Current tab' }).click();
-  await expect(artifacts).toHaveValue(ARTIFACT);
+  await expect(rows).toHaveText([ARTIFACT]);
   await expect(error).toHaveCount(0);
 
   // A second click doesn't add it twice. The handler awaits chrome.tabs.query before changing the
-  // text, so query ourselves (answered after the handler's) and let React paint before reading it.
+  // rows, so query ourselves (answered after the handler's) and let React paint before reading it.
   await share.getByRole('button', { name: 'Current tab' }).click();
   await panel.evaluate(() => chrome.tabs.query({ active: true, lastFocusedWindow: true }));
   await panel.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve(null))));
-  // The raw text, not the count: the count de-duplicates and would hide a doubled link.
-  expect(await artifacts.inputValue()).toBe(ARTIFACT);
+  await expect(rows).toHaveText([ARTIFACT]);
+  expect(await artifacts.inputValue()).toBe('');
   await expect(error).toHaveCount(0);
 });
 
@@ -82,7 +85,7 @@ test('a claude.ai page that is not an artifact (the home page) is not picked up 
 
 // The popup page opened as a tab always has some other tab active; the real action popup is what
 // users get, so check it too: it must see the tab it was opened over.
-test('the real action popup, opened over an artifact tab, has Artifacts filled in', async ({
+test('the real action popup, opened over an artifact tab, has it in Artifacts', async ({
   context,
   panel,
 }) => {
@@ -93,7 +96,8 @@ test('the real action popup, opened over an artifact tab, has Artifacts filled i
   await cowork.bringToFront();
   const evaluate = await openRealPopup(context);
 
-  await expect.poll(() => evaluate(`document.getElementById('artifacts')?.value ?? null`)).toBe(ARTIFACT);
+  const rows = `[...document.querySelectorAll('.artifact-item')].map((row) => row.textContent)`;
+  await expect.poll(() => evaluate(rows)).toEqual([ARTIFACT]);
 
   // + Current tab in the real popup adds nothing more and shows no error.
   await evaluate(
@@ -103,6 +107,6 @@ test('the real action popup, opened over an artifact tab, has Artifacts filled i
   await evaluate(`chrome.tabs.query({ active: true, lastFocusedWindow: true }).then(
     () => new Promise((resolve) => requestAnimationFrame(() => resolve(null))),
   )`);
-  expect(await evaluate(`document.getElementById('artifacts').value`)).toBe(ARTIFACT);
+  expect(await evaluate(rows)).toEqual([ARTIFACT]);
   expect(await evaluate(`document.querySelectorAll('p.alert, .hint.err').length`)).toBe(0);
 });

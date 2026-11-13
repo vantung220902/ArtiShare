@@ -802,6 +802,45 @@ button.copy-btn.failed {
   color: var(--err);
 }
 
+/* ---------- Artifacts rows ---------- */
+
+.artifact-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.artifact-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 1px 1px 1px 8px;
+  border-radius: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  transition: background-color 0.3s;
+}
+.artifact-item > svg {
+  flex: none;
+  color: var(--accent-ink);
+}
+.artifact-item:hover {
+  background: var(--field);
+}
+/* Named again by a paste or + Current tab: shown where it already is instead of added twice. */
+.artifact-item.repeated {
+  background: var(--accent-soft);
+}
+/* One line until something that isn't a link is left in it; then it grows to show it. */
+.paste-box {
+  resize: none;
+  field-sizing: content;
+  max-height: 8.5em;
+}
+
 details > summary {
   list-style: none;
   cursor: pointer;

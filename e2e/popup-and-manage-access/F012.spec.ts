@@ -31,10 +31,13 @@ test('Manage access lists the owner and each invitee, and Back returns to the fo
   const below = async () => (await link.boundingBox())!.y > (await previewButton.boundingBox())!.y;
   expect(await below()).toBe(true);
 
-  // Something typed before opening it.
-  const artifacts = share.getByLabel(/Artifacts/);
-  await expect(artifacts).toHaveValue(SHARED);
-  await artifacts.fill(`${SHARED}\nhttps://claude.ai/artifact/SecondTypedArtifact01`);
+  // Something added before opening it.
+  const SECOND = 'https://claude.ai/artifact/SecondTypedArtifact01';
+  const artifactRows = share.locator('.artifact-item');
+  await expect(artifactRows).toHaveText([SHARED]);
+  await share.getByLabel(/Artifacts/).fill(SECOND);
+  await share.getByLabel(/Artifacts/).press('Enter');
+  await expect(artifactRows).toHaveText([SHARED, SECOND]);
 
   await link.click();
   await expect(share.getByRole('heading', { name: 'People with access' })).toBeVisible();
@@ -58,7 +61,7 @@ test('Manage access lists the owner and each invitee, and Back returns to the fo
 
   await share.getByRole('button', { name: 'Back' }).click();
   await expect(share.getByRole('heading', { name: 'People with access' })).toHaveCount(0);
-  await expect(artifacts).toHaveValue(`${SHARED}\nhttps://claude.ai/artifact/SecondTypedArtifact01`);
+  await expect(artifactRows).toHaveText([SHARED, SECOND]);
   await expect(link).toBeVisible();
 });
 

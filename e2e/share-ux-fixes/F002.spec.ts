@@ -23,8 +23,9 @@ test('a cowork link and its artifact link are one artifact; bad cowork links are
   const count = share.locator('label[for="artifacts"] .count');
   const hint = share.locator('.hint.err');
 
-  // Both links name the same artifact: one count, one card.
+  // Both links name the same artifact: one row, one count, one card.
   await artifacts.fill(`${COWORK}\nhttps://${ARTIFACT}`);
+  await expect(share.locator('.artifact-item')).toHaveText([`https://${ARTIFACT}`]);
   await expect(count).toHaveText('1');
   await expect(hint).toHaveCount(0);
 
@@ -34,6 +35,7 @@ test('a cowork link and its artifact link are one artifact; bad cowork links are
   await expect(cards).toHaveCount(1);
   await expect(cards.locator('a.artifact-link')).toHaveText(ARTIFACT);
   await panel.getByRole('button', { name: /back/i }).first().click();
+  await share.getByRole('button', { name: `Remove https://${ARTIFACT}` }).click();
 
   // A cowork session with no artifact open is not an artifact link.
   await artifacts.fill(SESSION);

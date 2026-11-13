@@ -28,13 +28,13 @@ async function setUp(panel: Page) {
         async () =>
           (
             (await chrome.storage.session.get('shareDraft')).shareDraft as
-              { artifactText: string; selected: string[] } | undefined
+              { artifacts: string[]; artifactText: string; selected: string[] } | undefined
           )?.selected.length,
       ),
     )
     .toBe(1);
 
-  return { share, pick, artifacts: share.getByLabel(/Artifacts/) };
+  return { share, pick, artifacts: share.getByLabel(/Artifacts/), rows: share.locator('.artifact-item') };
 }
 
 /** The preview as last saved, read from session storage. */
@@ -48,7 +48,7 @@ const storedPreview = (panel: Page) =>
   );
 
 test('a preview survives the popup closing, whether it is loading or loaded', async ({ panel }) => {
-  const { share, pick, artifacts } = await setUp(panel);
+  const { share, pick, artifacts, rows } = await setUp(panel);
 
   await share.getByRole('button', { name: /^Preview/ }).click();
   // The preview is saved the moment it starts, before any answer; closing now is closing mid-load.
@@ -77,24 +77,24 @@ test('a preview survives the popup closing, whether it is loading or loaded', as
 
   // Back returns to the form as it was.
   await share.getByRole('button', { name: 'Back' }).click();
-  await expect(artifacts).toHaveValue(`${ONE}\n${TWO}`);
+  await expect(rows).toHaveText([ONE, TWO]);
   await expect(pick).toBeChecked();
   await expect.poll(() => storedPreview(panel)).toBeNull();
 
   // And a later reopening shows the form, not the preview.
   await panel.reload();
-  await expect(artifacts).toHaveValue(`${ONE}\n${TWO}`);
+  await expect(rows).toHaveText([ONE, TWO]);
   await expect(pick).toBeChecked();
   await expect(share.getByRole('button', { name: 'Back' })).toHaveCount(0);
   await expect(share.getByRole('button', { name: /^Preview/ })).toBeVisible();
 });
 
 test('Back while the preview is still loading goes to the form and stays there', async ({ panel }) => {
-  const { share, artifacts } = await setUp(panel);
+  const { share, artifacts, rows } = await setUp(panel);
 
   await share.getByRole('button', { name: /^Preview/ }).click();
   await share.getByRole('button', { name: 'Back' }).click();
-  await expect(artifacts).toHaveValue(`${ONE}\n${TWO}`);
+  await expect(rows).toHaveText([ONE, TWO]);
 
   // The answer that arrives late must not bring the preview back.
   await panel.waitForTimeout(1_000);
@@ -106,7 +106,7 @@ test('Back while the preview is still loading goes to the form and stays there',
 test('sending from a restored preview starts a run, and a new share is not that preview', async ({
   panel,
 }) => {
-  const { share, artifacts } = await setUp(panel);
+  const { share, artifacts, rows } = await setUp(panel);
 
   await share.getByRole('button', { name: /^Preview/ }).click();
   await panel.reload();
@@ -117,8 +117,10 @@ test('sending from a restored preview starts a run, and a new share is not that 
   // The finished run ends with a fresh form: the old preview is gone with the run.
   await share.getByRole('button', { name: 'Start a new share' }).click();
   await expect(artifacts).toHaveValue('');
+  await expect(rows).toHaveCount(0);
   expect(await storedPreview(panel)).toBeNull();
   await panel.reload();
   await expect(artifacts).toHaveValue('');
+  await expect(rows).toHaveCount(0);
   await expect(share.getByRole('button', { name: 'Back' })).toHaveCount(0);
 });
