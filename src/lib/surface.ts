@@ -27,6 +27,11 @@ export async function applyStoredSurface(): Promise<void> {
   await applySurface(await loadSurface());
 }
 
+/** Moves ArtiShare back to the popup: the toolbar icon opens the popup again. */
+export async function moveToPopup(): Promise<void> {
+  await chooseSurface('popup');
+}
+
 /**
  * Moves ArtiShare from the popup into the side panel of this window, and makes the toolbar icon
  * open it from now on. Call from a click: the browser only opens a side panel for a user gesture.
