@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { addArtifactText, insertPaste, removeArtifact, sameArtifact } from '../src/core/artifactRows';
-import { artifactUuid, parseArtifactRef } from '../src/core/artifactUrl';
+import {
+  addArtifactText,
+  insertPaste,
+  removeArtifact,
+  sameArtifact,
+  updateRemoved,
+} from '../src/core/artifactRows';
+import { artifactKey, artifactUuid, parseArtifactRef } from '../src/core/artifactUrl';
 
 const ONE = 'https://claude.ai/artifact/ExampleArtifactOne01';
 const TWO = 'https://claude.ai/artifact/ExampleArtifactTwo02';
@@ -97,6 +103,25 @@ describe('removeArtifact', () => {
     const rows = [ref(ONE), ref(COWORK_AS_ARTIFACT), ref(TWO)];
     expect(urls(removeArtifact(rows, ref(COWORK)))).toEqual([ONE, TWO]);
     expect(removeArtifact(rows, ref(THREE))).toEqual(rows);
+  });
+});
+
+describe('updateRemoved', () => {
+  it('adds the artifact taken out, by artifact rather than link, once', () => {
+    const key = artifactKey(ref(COWORK));
+    expect(updateRemoved([], [ref(TWO)], ref(COWORK))).toEqual([key]);
+    expect(updateRemoved([key], [ref(TWO)], ref(COWORK_AS_ARTIFACT))).toEqual([key]);
+  });
+
+  it('forgets an artifact once it is a row again, however it was linked', () => {
+    const one = artifactKey(ref(ONE));
+    const cowork = artifactKey(ref(COWORK));
+    expect(updateRemoved([one, cowork], [ref(COWORK_AS_ARTIFACT), ref(TWO)])).toEqual([one]);
+  });
+
+  it('keeps the others held back', () => {
+    const [one, two] = [artifactKey(ref(ONE)), artifactKey(ref(TWO))];
+    expect(updateRemoved([one, two], [ref(THREE)])).toEqual([one, two]);
   });
 });
 

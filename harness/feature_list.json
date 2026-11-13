@@ -57,7 +57,7 @@
         "Remove One, send a run with the other rows and let it finish: after Start a new share, opening over One adds it again",
         "Remove One, quit and restart the browser: opening over One adds it again (what was removed is kept with the draft, which lasts until the browser quits)"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F005",

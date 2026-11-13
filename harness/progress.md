@@ -4,6 +4,16 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-13 · F004 · A removed artifact isn't added back by itself
+
+- **Did:** The draft now keeps `removed` (artifact keys taken out with ×), left out when empty (`shareDraft.ts`; a malformed value is dropped without discarding the draft). `updateRemoved` in `artifactRows.ts` adds the removed artifact and forgets any key that is a row again. `ArtifactsValue` gains `removed`; `ArtifactsField.tsx` updates it on ×, Undo, paste/Enter and + Current tab. The mount effect in `ShareView.tsx` skips the prefill for a key in `removed`. `thisTab` is still set then, so + Current tab or a paste brings it back with the badge. README Artifacts bullet.
+- **Verified:** `npm run check` (196 unit tests) and `npm run e2e` (80, including the new `e2e/F004.spec.ts`: hold-back, + Current tab, other artifact, Undo, paste, run + Start a new share, and a simulated browser quit by clearing the session draft). feature-verifier: **PASS** on the second run (the first returned FAIL only because Bash was denied in its session).
+- **State:** F004 passes.
+- **Next:** F005 (a 0.3.0 draft and typed-but-not-added links carry over; older specs on the rows). Much of it is already true from F001, so start by writing `e2e/F005.spec.ts` for its steps and see what fails.
+- **Notes:**
+  - `removed` lives in the session-storage draft, so it is cleared by sending (`saveShareDraft(null)`, then Start a new share) and by a browser restart, with no extra code.
+  - Pre-existing and left alone: `addCurrentTab` captures `rows` before its `await`, so rows changed during that await would be overwritten.
+
 ### 2026-11-13 · F003 · Add the current tab's artifact, marked 'This tab'
 
 - **Did:** `ShareView.tsx`: the old prefill (only with no rows and no text) is now "on mount, if the active tab is an artifact and no row is the same artifact (`sameArtifact`), append it". The tab's ref is kept in `thisTab` state and passed to `ArtifactsField`, which shows a `This tab` badge (`.this-tab` in `styles.css`) on the row for that artifact, whether it was just added or already there. A cowork link and its `/code/artifact/<uuid>` link match by uuid. A non-artifact tab sets nothing. README Artifacts bullet.
