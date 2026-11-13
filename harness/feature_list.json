@@ -43,7 +43,7 @@
         "Make a non-claude.ai page the active tab and reopen: the rows are unchanged and no row has the badge",
         "Send a run from this form and let it finish, make an artifact the active tab and click Start a new share: see the fresh list holding only that tab's artifact"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F004",
