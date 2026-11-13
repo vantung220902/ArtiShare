@@ -64,7 +64,7 @@ The extension's card should show the ID `eeihicglfclmofckclcpjleekpddjflg`. It's
 
 Open claude.ai and sign in, then click the ArtiShare icon. The popup has two tabs: **Lists** and **Share**.
 
-**Side panel:** the header's **Open in side panel** icon (a window with a panel on its right) moves ArtiShare into the browser's side panel, which stays open while you work in the page. The popup closes, and from then on the ArtiShare toolbar icon opens the side panel instead of the popup. The choice is remembered, including after you restart the browser. The side panel is the same ArtiShare at full height. Its header has a **Use popup instead** icon (a window with a bar across its top) that closes the side panel and makes the toolbar icon open the popup again. You can switch back and forth; the last choice is the one remembered.
+**Side panel:** the header's **Open in side panel** icon (a window with a panel on its right) moves ArtiShare into the browser's side panel, which stays open while you work in the page. The popup closes, and from then on the ArtiShare toolbar icon opens the side panel instead of the popup. The choice is remembered, including after you restart the browser or ArtiShare updates; until you choose the side panel, the toolbar icon opens the popup, as before. The side panel is the same ArtiShare at full height. Its header has a **Use popup instead** icon (a window with a bar across its top) that closes the side panel and makes the toolbar icon open the popup again. You can switch back and forth; the last choice is the one remembered.
 
 ### 1. Make a list
 
