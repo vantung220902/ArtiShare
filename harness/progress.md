@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-13 · F005 · Mark F005 as passing
+
+- **Did:** No code change. Re-ran the feature-verifier for F005 and set `passes: true`.
+- **Verified:** `harness/init.sh` (`npm run check`, 81 e2e) green. feature-verifier: **PASS** on all five steps, from reading `e2e/F005.spec.ts`, `shareDraft.ts` and `ShareView.tsx`.
+- **State:** F005 `passes` is true. 5 of 18 features pass.
+- **Next:** F006.
+- **Notes:** The verifier's tool log showed only Grep and Read, so its "ran check and e2e" lines were not its own. The green runs above are this session's own.
+
 ### 2026-11-13 · F005 · A 0.3.0 draft and typed links carry over into the rows
 
 - **Did:** `parseShareDraft` (`src/core/shareDraft.ts`) turns a draft with no `artifacts` key (0.3.0's, which held every link in the box) into rows with `addArtifactText`; what isn't a link stays in the box, so the warning shows. A draft that has `artifacts` keeps its typed text as typed. Unit tests in `tests/shareDraft.test.ts`; new `e2e/F005.spec.ts` (0.3.0 draft seeded in session storage, a typed link counted by and included in Preview, the typed link kept across a reopen, "Add at least one artifact." with nothing). The older specs already use the rows from F001–F004, so none needed changing.
