@@ -162,7 +162,7 @@
         "Click Preview in the side panel, then Use popup instead and open the popup: see the same preview with Back and Send",
         "Click Send and confirm; while it runs, switch to the side panel: see live progress, and Stop then Resume work there; the run is not interrupted by the switch and finishes ('Share finished: …')"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F013",

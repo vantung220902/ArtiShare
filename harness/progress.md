@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F012 · Re-verified after removing the stray debug spec
+
+- **Did:** No code change. `rm` of the untracked `e2e/zz-dbg.spec.ts` needed approval, so it was set aside with `git stash push -u` instead (`stash@{0}`; drop it with `git stash drop` whenever). Set F012 `passes` to true.
+- **Verified:** `harness/init.sh` OK (`npm run check`, 204 unit tests; `npm run e2e`, 114 passed). feature-verifier on F012: **PASS** on all four steps, plus a 2x repeat of `e2e/F012.spec.ts`.
+- **State:** F012 passes. 12 of 18 features pass. The tree is clean.
+- **Next:** F013.
+- **Notes:** The verifier's one remark: e2e cannot click the toolbar or open Chrome's real side panel, so the spec switches by closing one page and opening the other's HTML fresh. That proves state survives in shared storage, which is what F012 is about.
+
 ### 2026-11-14 · F012 · Moving between the popup and the side panel keeps your work
 
 - **Did:** No source change was needed: the Share draft, the Lists drafts, the preview, the open tab and the run all live in storage (session and local) that both pages read, and the run is in the background. New `e2e/F012.spec.ts` (2 tests) covers all four steps: artifacts + ticks + a half-typed new list + the open tab across popup → side panel → popup; a preview carried over, then a run switched mid-way with live progress, Stop and Resume in the side panel, and the finished run seen from the popup. README: the Side panel paragraph now says the work comes along and a run is not interrupted.
