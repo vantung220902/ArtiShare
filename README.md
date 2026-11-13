@@ -5,11 +5,13 @@
 ArtiShare is a Chrome extension. You save groups of email addresses as **lists** once. After that you can invite a list (or several) to one or more artifacts at once, without adding each person through the Share menu and without making the artifact public.
 
 <p align="center">
-  <img src="docs/images/share.png" width="250" alt="Share tab: pick artifacts and lists">
+  <img src="docs/images/share.png" width="190" alt="The popup's Share tab: pick artifacts and lists">
   &nbsp;
-  <img src="docs/images/preview.png" width="250" alt="Preview: who will be invited and who already has access">
+  <img src="docs/images/preview.png" width="190" alt="Preview in the popup: who will be invited and who already has access">
   &nbsp;
-  <img src="docs/images/done.png" width="250" alt="Finished run: every invite sent">
+  <img src="docs/images/done.png" width="190" alt="Finished run in the popup: every invite sent">
+  &nbsp;
+  <img src="docs/images/manage.png" width="190" alt="Manage access in the popup: the people already invited to an artifact, each with a permission and a Remove button">
 </p>
 
 ## Contents
@@ -25,7 +27,7 @@ ArtiShare is a Chrome extension. You save groups of email addresses as **lists**
 
 ```mermaid
 flowchart TD
-    A([Open claude.ai and sign in]) --> B[Click the ArtiShare icon<br/>to open the side panel]
+    A([Open claude.ai and sign in]) --> B[Click the ArtiShare icon<br/>to open the popup]
     B --> C{Do you have<br/>a list yet?}
     C -- No --> D[<b>Lists</b> tab<br/>name, addresses, permission]
     D --> E
@@ -42,7 +44,7 @@ flowchart TD
     M --> J
 ```
 
-ArtiShare works inside your own signed-in claude.ai session. It never asks for your password or removes anyone. It leaves the email invitations shown in preview unchanged.
+ArtiShare works inside your own signed-in claude.ai session. It never asks for your password, and it removes someone only when you click Remove in Manage access and confirm. It leaves the email invitations shown in preview unchanged.
 
 ## Install
 
@@ -52,15 +54,15 @@ You install it once. After that it starts with Chrome like any other extension. 
 2. Unzip it into a folder you'll keep, for example `~/Applications/ArtiShare`. Chrome loads the extension from this folder every time, so **don't leave it in Downloads** and don't delete it.
 3. Open `chrome://extensions` and turn on **Developer mode** (top right).
 4. Click **Load unpacked** and pick that folder.
-5. Pin **ArtiShare** in the toolbar. Clicking the icon opens the side panel.
+5. Pin **ArtiShare** in the toolbar. Clicking the icon opens the popup.
 
 The extension's card should show the ID `eeihicglfclmofckclcpjleekpddjflg`. It's the same on every machine, whichever folder you use.
 
-**To update:** replace the folder's contents with the new zip's, then click the reload icon ↻ on the extension's card. Your lists and settings are kept. The installed version is shown at the bottom of the side panel.
+**To update:** replace the folder's contents with the new zip's, then click the reload icon ↻ on the extension's card. Your lists and settings are kept. The installed version is shown at the bottom of the popup.
 
 ## Use it
 
-Open claude.ai and sign in, then click the ArtiShare icon. The side panel has two tabs: **Lists** and **Share**.
+Open claude.ai and sign in, then click the ArtiShare icon. The popup has two tabs: **Lists** and **Share**.
 
 ### 1. Make a list
 
@@ -71,6 +73,8 @@ In the **Lists** tab, click **New list**. A `*` after a label marks a field you 
 - **Pick the permission** everyone on this list gets: _Can view_, _Commenter_ or _Can edit_.
 
 Click **Save list**. To change a list later, click it to open it, edit, and **Save**.
+
+If the popup closes before you save (it does when you click away), what you typed is still there when you reopen it: the new-list form, a saved list you were editing, and the tab you were on. Saving, **Cancel** or **Revert** clears it. It is kept until the browser quits. If a list was deleted while the popup was closed, its draft is dropped. If it was changed in another window, your draft is kept and the list shows "This list changed in another window" until you click **Reload saved**.
 
 ### 2. Choose the lists that are ticked by default
 
@@ -88,6 +92,8 @@ In the **Share** tab:
 - **Artifacts** (required, marked `*`): if the current tab is an artifact, its link is already filled in. Add more links (one per line), or open another artifact and click **+ Current tab**. Both work for a plain `claude.ai/artifact/…` link and for any claude.ai page with an artifact open, such as a chat (`claude.ai/chat/…?artifact=…`) or a cowork session (`claude.ai/cowork/…?artifact=…`).
 - **Share with:** tick the lists to invite. Need a new group? Click **+ New list** to make one without leaving the tab.
 
+If the popup closes while you're filling this in (it does when you click away), the links you typed, the lists you ticked and a list you were typing under **+ New list** are still there when you reopen it, until the browser quits or you send (a list deleted in the meantime is simply no longer ticked). After sending, the next form starts empty with your default lists ticked.
+
 Click **Preview**. The button shows how many people and artifacts are involved.
 
 ### 4. Check the preview
@@ -101,17 +107,23 @@ Each artifact's link has a **copy** button beside it that copies the link to the
 
 On Claude Team and Enterprise plans, people added directly as organization members are not in the invitation list ArtiShare reads. Preview may show them under **To invite**. Check their access in Claude's Share menu before sending; inviting them may change that direct access. This does not apply to personal Pro, Max, or Ultra plans.
 
-If something looks wrong, click **Back** and change it. When it's right, click **Send** and confirm.
+If the popup closes while you're looking at the preview, or before it has finished loading, reopening it shows the preview again (it checks access again if it hadn't finished), with **Back** and **Send**, until the browser quits, you click **Back**, or you send.
+
+If something looks wrong, click **Back** and change it: the form comes back with the links and ticks you had. When it's right, click **Send** and confirm.
 
 ### 5. Watch it run
 
-Invites go out one at a time from the background, with a short pause between them, so you can close the side panel or keep working. Each address moves from _Pending_ to _Invited_ (or _Failed_ / _Skipped_, with the reason). The artifact links here have the same copy button, while the run is going and after.
+Invites go out one at a time from the background, with a short pause between them, so you can close the popup or keep working: closing it doesn't stop the run, and reopening it shows how far it has got and keeps updating while it runs. **Stop** and **Resume** work the same after reopening. Each address moves from _Pending_ to _Invited_ (or _Failed_ / _Skipped_, with the reason). The artifact links here have the same copy button, while the run is going and after.
 
 - **Stop** pauses the run. **Resume** continues where it left off.
 - If the browser restarts mid-run, the run is kept and can be resumed.
 - A run stays tied to the claude.ai account used for Preview. If you switch accounts, sign back in as that account before resuming.
 - A stopped run saved by an older version without account verification cannot resume. Start a new share; Preview will recheck who has already been invited.
-- When it's done, the panel says so (_Share finished: …_). Click **Start a new share** for a fresh Share form with the cursor in **Artifacts**. If you stopped a run that still has invites left, you're asked before it's discarded.
+- When it's done, the popup says so (_Share finished: …_). Click **Start a new share** for a fresh Share form with the cursor in **Artifacts**. If you stopped a run that still has invites left, you're asked before it's discarded.
+
+### Optional: Manage access
+
+When the tab you opened the popup over is an artifact, a small **Manage access** link sits at the bottom of the Share tab, under the form or the run. It opens **People with access**: you (the owner) first, then everyone already invited, with _Pending_ or _Accepted_ and their permission, which you can change from the drop-down beside each person (it saves straight away and the row says _Saved_). **Remove** asks first ("Their invitation will stop working."), then takes the person off the artifact. If claude.ai refuses a change or removal (say the person joined your organization), the reason shows on that row and nothing changes; if the list itself can't be loaded you get the reason and **Retry**. It reads from claude.ai each time it opens, and **Refresh** reads it again (the list stays on screen while it does, and if that fails you keep the last copy and see why). With nobody invited it says "Only you have access." and points you to Share. While a run is sending to this artifact a note says the list may be behind, so press Refresh to see the latest. **Back** returns to the Share tab exactly as you left it. On any other page there is no link.
 
 ## Good to know
 
@@ -201,17 +213,21 @@ npm run typecheck
 npm run lint       # Oxlint, type-aware (config in .oxlintrc.json)
 npm run format     # Prettier, rewrites files in place (format:check only checks)
 npm run build:fake # fake build in .output/chrome-mv3-fake
+npm run screenshots # rebuilds the fake build and rewrites docs/images and store/images
 ```
 
 Linting uses [Oxlint](https://oxc.rs/docs/guide/usage/linter) rather than ESLint, because typescript-eslint doesn't support TypeScript 7 yet. Its type-aware rules run on `oxlint-tsgolint`, which is built on TypeScript 7.
 
 The dev server listens on port **47613** (set in `wxt.config.ts`). If that port is busy, WXT moves to the next free one. The built extension uses no port; it only talks to claude.ai over HTTPS.
 
-**Fake mode** lets you click through the whole flow safely. The screenshots in this README come from it. Its fake claude.ai behaves like this:
+**Fake mode** lets you click through the whole flow safely. The screenshots in this README and the store listing come from it (`scripts/screenshots.spec.ts`, using made-up addresses and artifact ids). Its fake claude.ai behaves like this:
 
-- an artifact whose ID contains `Forbidden` rejects every invite
+- an artifact whose ID contains `Forbidden` rejects every invite, permission change and removal
+- an artifact whose ID contains `Shared` starts with three people invited: `viewer@example.com` (accepted, Can view), `commenter@example.com` (pending, Commenter) and `locked@example.com`, who joined the organization, so their permission can't be changed or removed
+- an artifact whose ID contains `Missing` can't be found: its invitations can't be listed
 - an address starting with `fail` is rejected
 - an address starting with `slow` is rate-limited once, then succeeds
+- an address starting with `locked` can't have its permission changed or be removed
 
 ### Project layout
 
@@ -220,8 +236,8 @@ src/
   core/         framework-free logic, unit-tested: email parsing, artifact links, saved lists
                 (schema and upgrade from 0.1.0), planner (who to invite), runner (queue, retry, stop)
   claude/       ShareClient interface, the claude.ai client, the fake client, and in-page fetch
-  lib/          chrome.storage access and the side panel ↔ background message types
-  entrypoints/  background worker (runs invites) and the side panel
+  lib/          chrome.storage access and the popup ↔ background message types
+  entrypoints/  background worker (runs invites) and the popup
   ui/           shared React components and styles
 tests/          Vitest specs for src/core
 docs/           claude.ai sharing API notes and README screenshots

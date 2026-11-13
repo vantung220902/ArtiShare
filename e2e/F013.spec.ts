@@ -1,54 +1,66 @@
-import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
-// Pastes into a scratch textarea, since reading the clipboard directly needs a permission.
-async function expectClipboard(panel: Page, expected: string) {
-  await panel.evaluate(() => {
-    const field = document.createElement('textarea');
-    field.id = 'paste-probe';
-    document.body.append(field);
-    field.focus();
-  });
-  await panel.keyboard.press('ControlOrMeta+V');
-  await expect(panel.locator('#paste-probe')).toHaveValue(expected);
-  await panel.locator('#paste-probe').evaluate((el) => el.remove());
-}
+// F013: in Manage access, changing a person's permission saves it on claude.ai.
 
-// F013: the run view's artifact links have the same copy button, during and after the run.
-test('the run view has a copy button beside each artifact link, running and done', async ({ panel }) => {
+const SHARED = 'https://claude.ai/artifact/SharedExampleArtifact01';
+
+test.beforeEach(async ({ context }) => {
+  // Serve the pages ourselves: nothing may reach claude.ai or anywhere else.
+  await context.route(/^https:\/\/(claude\.ai|example\.com)\//, (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<title>page</title>' }),
+  );
+});
+
+test("changing a person's permission shows Saved on their row only, and sticks after reopening", async ({
+  context,
+  panel,
+}) => {
+  const tab = await context.newPage();
+  await tab.goto(SHARED);
+  await tab.bringToFront();
+  await panel.reload();
+
   const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await share.getByLabel('List name').fill('Run copy team');
-  // "slow" is rate-limited once by the fake, which keeps the run going long enough to click.
-  await share.getByLabel('Email addresses').fill('ana@example.com\nslow@example.com');
-  const first = 'https://claude.ai/artifact/RunCopyArtifact001';
-  const second = 'https://claude.ai/artifact/RunCopyArtifact002';
-  await share.getByLabel(/Artifacts/).fill(`${first}\n${second}`);
+  await share.getByRole('button', { name: 'Manage access' }).click();
+  const rows = share.locator('ul.people > li');
+  await expect(rows).toHaveCount(4);
+
+  const viewer = rows.nth(1);
+  const select = viewer.getByRole('combobox', { name: /viewer@example.com/ });
+  await expect(select).toHaveValue('view');
+  await select.selectOption('edit');
+
+  // In flight: the select is disabled and shows the new value, and no Saved yet.
+  await expect(select).toBeDisabled();
+  await expect(select).toHaveValue('edit');
+  await expect(viewer.getByText('Saved')).toHaveCount(0);
+
+  await expect(viewer.getByText('Saved')).toBeVisible();
+  await expect(select).toBeEnabled();
+  await expect(select).toHaveValue('edit');
+
+  // No other row changed or says Saved.
+  await expect(rows.nth(2).getByRole('combobox')).toHaveValue('comment');
+  await expect(rows.nth(3).getByRole('combobox')).toHaveValue('view');
+  await expect(share.getByText('Saved')).toHaveCount(1);
+  await expect(share.locator('.alert')).toHaveCount(0);
+
+  // 'Saved' is short-lived.
+  await expect(viewer.getByText('Saved')).toBeHidden({ timeout: 6_000 });
+
+  // Close and reopen the popup, then open Manage access again.
+  await panel.reload();
+  await share.getByRole('button', { name: 'Manage access' }).click();
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(1).getByRole('combobox')).toHaveValue('edit');
+
+  // The Share preview sees the same person at Can edit under Already have access.
+  await share.getByRole('button', { name: 'Back' }).click();
+  await share.getByLabel('Email addresses').fill('viewer@example.com\nsomeone.new@example.com');
   await share.getByRole('button', { name: /^Preview/ }).click();
-  await share.getByRole('button', { name: 'Send 4 invitations' }).click();
-
-  // While the run is running.
-  await expect(share.getByText('Running', { exact: true })).toBeVisible();
-  const rows = share.locator('.artifact-row');
-  await expect(rows).toHaveCount(2);
-  await rows.nth(0).getByRole('button', { name: 'Copy link' }).click();
-  await expect(rows.nth(0).getByRole('button', { name: 'Copied' })).toBeVisible();
-  // Still running after the click, so this really was the running view.
-  await expect(share.getByText('Running', { exact: true })).toBeVisible();
-  await expectClipboard(panel, first);
-
-  // The link text still opens the artifact in a new tab.
-  const link = rows.nth(0).getByRole('link');
-  await expect(link).toHaveAttribute('href', first);
-  await expect(link).toHaveAttribute('target', '_blank');
-
-  // After the run is done.
-  await expect(share.getByText('Done', { exact: true })).toBeVisible({ timeout: 30_000 });
-  await expect(share.getByText('4 invited')).toBeVisible();
-  await expect(rows).toHaveCount(2);
-  await expect(share.getByRole('button', { name: 'Copy link' })).toHaveCount(2);
-  await rows.nth(1).getByRole('button', { name: 'Copy link' }).click();
-  await expect(rows.nth(1).getByRole('button', { name: 'Copied' })).toBeVisible();
-  await expectClipboard(panel, second);
-  // It goes back to 'Copy link' after a moment, as in the Preview.
-  await expect(rows.nth(1).getByRole('button', { name: 'Copy link' })).toBeVisible({ timeout: 3500 });
+  const card = share.locator('section.card');
+  await card.locator('summary', { hasText: 'Existing email access' }).click();
+  await expect(card.locator('details', { hasText: 'Existing email access' }).locator('li')).toHaveText([
+    'viewer@example.com · Can edit',
+  ]);
 });

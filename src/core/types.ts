@@ -20,6 +20,8 @@ export interface ArtifactRef {
 
 /** Someone who already has access to an artifact, or has a pending invitation. */
 export interface Sharee {
+  /** The invitation's id, which changing or removing the invitation needs. Absent for the owner. */
+  id?: string;
   email: string;
   access: AccessLevel | 'owner' | 'unknown';
   status: 'active' | 'pending';

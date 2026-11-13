@@ -4,6 +4,258 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-12 · F017 · Docs describe the popup and Manage access (done)
+
+- **Did:** Made the three `.claude/` edits that unattended sessions were not allowed to make (from the interactive session): `.claude/commands/harness-work.md:23`, `.claude/commands/harness-plan.md:27` and `.claude/agents/feature-verifier.md:20` now say popup instead of side panel. The rest of F017 was done in 214a445, 477e280 and 22c47be.
+- **Verified:** `grep -rIi 'side panel'` finds only `docs/claude-share-api.md` (claude.ai's own Share UI) and `e2e/F001.spec.ts` (asserts there is no side panel) outside `harness/`. `npm run check` (175 unit tests) and `npm run e2e` (74 specs) pass. feature-verifier: PASS.
+- **State:** F017 passes. All 18 features pass; the goal is done.
+- **Next:** Review the branch and open a PR into `develop`. Before release, check the real claude.ai PATCH/DELETE invite endpoints by hand, since they were only tested against the fake and a stub transport.
+- **Notes:** `harness/run.sh` stopped at its 20-session cap; sessions 17–20 were spent on this blocked feature. A feature that needs `.claude/` edits needs a human or the interactive session.
+
+### 2026-11-12 · F017 · Still blocked on the three `.claude/` edits (nothing else left)
+
+- **Did:** Re-tried the edit to `.claude/commands/harness-work.md:23`; refused again, so no workaround was used and the other two were not tried. Found and fixed one more leftover: the comment in `docs/site.css:168` said 'side-panel captures', now 'popup captures'. F018 is already done, so no other feature is open.
+- **Verified:** Searched the repo for 'side panel' (case-insensitive, excluding `node_modules`, `.git`, build output, untracked `video/`). What is left: the three `.claude/` lines, `docs/claude-share-api.md:159` (claude.ai's own Share UI, correct), `e2e/F001.spec.ts` (asserts there is no side panel, correct), and `harness/` history. The verifier was not run: F017 step 4 would fail. `npm run check` passes (175 unit tests); `e2e` was not re-run for a comment-only CSS change.
+- **State:** F017 `passes: false`. 1 feature left.
+- **Next:** A human makes the three edits: `.claude/commands/harness-work.md:23` ('in the side panel and asserts' → 'in the popup and asserts'), `.claude/commands/harness-plan.md:27` ('in the side panel of the fake build' → 'in the popup of the fake build'), `.claude/agents/feature-verifier.md:20` ('from the side panel through' → 'from the popup through'). Then a session runs `npm run check`, the verifier for F017, and flips `passes`.
+
+### 2026-11-12 · F018 · README and store screenshots show the popup
+
+- **Did:** F017 is still blocked on a human (the three `.claude/` edits; an edit to `.claude/commands/harness-work.md` was refused again), so this session took F018 as the log allows. New `scripts/screenshots.spec.ts` (+ `scripts/playwright.config.ts`, `npm run screenshots`) drives the fake build's popup at 380×600, 2x, with made-up addresses and ids (`Ex4mple…`), and writes `docs/images/share|preview|done|manage.png` (760 px wide) and `store/images/screenshot-1-share|2-preview|3-done.png` (1280×800, headline left, popup in a frame right, rendered in a separate 1x browser). README: four images with alt text naming the popup (manage.png is new), a `npm run screenshots` line under Develop, the fake-mode sentence mentions the script. `e2e/F018.spec.ts` checks the PNG sizes, the README tags and alt text, and that the generator only uses made-up ids and addresses. `e2e/node-shims.d.ts` declares the few `node:fs`/`node:url` calls, because the project has no `@types/node`.
+- **Verified:** `npm run check` (175 unit tests) and `npm run e2e` (74 specs incl. F018's 4) pass; I looked at every image. feature-verifier: PASS (it could not run commands, so it read files and viewed the images).
+- **State:** F018 passes. F017 still `passes: false`, blocked on the three `.claude/` edits: `.claude/commands/harness-work.md:23` ('in the side panel and asserts' → 'in the popup and asserts'), `.claude/commands/harness-plan.md:27` ('in the side panel of the fake build' → 'in the popup of the fake build'), `.claude/agents/feature-verifier.md:20` ('from the side panel through' → 'from the popup through'). 1 feature left.
+- **Next:** A human makes those three edits, then a session runs the verifier for F017 and flips `passes`.
+- **Notes:**
+  - The Share screenshots are scrolled to the bottom so the Preview button shows (the form is taller than a 600 px popup); the top shows a cut-off bit of the Artifacts box.
+  - Don't run `npm run screenshots` casually: it rewrites the PNGs (they are not byte-identical between runs).
+  - A freshly saved list starts unticked in Share; tick it before Preview.
+  - Heredocs and `python3 -` are refused here; use Edit/Write.
+
+### 2026-11-12 · F017 · Still blocked on the three `.claude/` edits (nothing changed)
+
+- **Did:** Nothing in the code or docs. Re-tried the edit to `.claude/commands/harness-work.md:23`; the permission was refused again, so the other two were not tried and no workaround (shell `sed`) was used, since sessions are not meant to edit their own config.
+- **Verified:** Only that `grep -rIi 'side panel'` still finds exactly the three `.claude/` lines above (plus `docs/claude-share-api.md`, `video/`, `harness/`, `e2e/F001.spec.ts`). The verifier was not run: step 4 of F017 would fail.
+- **State:** F017 `passes: false`. F018 is untouched and also still `false`; it is next in order, but it is not started because F017 is first.
+- **Next:** A human makes the three edits listed in the entry below (or lets a session edit `.claude/`), then a session runs the verifier for F017 and flips `passes`.
+
+### 2026-11-12 · F017 · Docs describe the popup and Manage access (partly done, blocked on `.claude/` edits)
+
+- **Did:** README: flowchart, Install step 5, update note, Use it, 'the popup says so', Develop project layout now say popup; the Manage access section is headed 'Optional: Manage access'. `store/listing.md`: description and test steps say popup, the `sidePanel` permission row is gone, the single-purpose text mentions managing existing invitations, the description has a Manage access bullet and says closing the popup doesn't stop a run. `docs/index.html`: no 'side panel', plus a Manage access line under Good to know. `CLAUDE.md` layout says popup and `popup/`. Icon SVG comments and `docs/site.css` say popup.
+- **Verified:** `npm run check` and `npm run e2e` (70 specs) pass. The feature-verifier was **not** run, because the feature is incomplete.
+- **State:** F017 stays `passes: false`. Three one-line edits are left, and this session's permission mode refused edits under `.claude/` (sessions can't edit their own config): `.claude/commands/harness-work.md:23` ('in the side panel and asserts' → 'in the popup and asserts'), `.claude/commands/harness-plan.md:27` ('in the side panel of the fake build' → 'in the popup of the fake build') and `.claude/agents/feature-verifier.md:20` ('from the side panel through' → 'from the popup through').
+- **Next:** A human makes those three edits (or allows edits under `.claude/`). Then: run `grep -ri 'side panel'` (it should find only `docs/claude-share-api.md:159`, which is claude.ai's own Share UI, the untracked `video/` folder and `harness/`), run the verifier for F017, set `passes: true`. Then F018 (screenshots).
+- **Notes:**
+  - An e2e run overlapping with a background `harness/init.sh` produced one random failure in each run (F001, F008). Run `npm run e2e` alone: 70/70.
+  - `video/` is untracked and still says side panel; left alone.
+
+### 2026-11-12 · F016 · Manage access handles nobody invited, a stale list and repeated clicks
+
+- **Did:** `ManageView.tsx`: 'Only you have access.' plus 'Nobody is invited yet. Use Share to invite people.' when the list is empty (the 'You (owner)' row stays). New **Refresh** button beside Back (shown once a first read succeeded): it re-reads without blanking the list ('Refreshing…' while it runs); a failed refresh keeps the last list and shows 'Could not refresh: …' above it. The first-load error with Retry is unchanged (only while there is no list). `ManageView` takes a new `run` prop from `App.tsx` and shows an `<output>` note 'A share is in progress for this artifact. Refresh shows the latest.' while `run.status === 'running'` with a pending item for this artifact. `PersonRow` got a synchronous `inFlight` ref so a second change or remove can't start before React re-renders the disabled controls. README paragraph extended. `e2e/F016.spec.ts` (4 tests): the empty artifact; Refresh after a second popup sent invitations; the in-progress note during a real run and Refresh after it; repeated change/remove/confirm counting `chrome.runtime.sendMessage` calls by type (exactly 1 `change-access`, 1 `remove-invite`).
+- **Verified:** `npm run check` (175 unit tests) and `npm run e2e` (70 specs) pass; F016 spec 3× in a row (12/12). feature-verifier: PASS.
+- **State:** F016 passes. 2 features left (F017 docs, F018).
+- **Next:** F017: docs sweep (README, store/listing.md, docs/index.html, CLAUDE.md, harness-work.md, feature-verifier.md say popup instead of side panel; the 'never removes anyone' sentence already says Remove + confirm since F015). Start with `grep -ri 'side panel'`.
+- **Notes:**
+  - The failed-Refresh path ('Could not refresh') has no e2e (not one of the steps); the fake has no way to fail a read of an already-loaded artifact.
+  - The hidden run view also lists invited addresses, so `share.getByText('ana@example.com')` matches twice once a run exists; scope assertions to `ul.people > li` rows.
+  - A second popup (`context.newPage()` + `goto(panel.url())`) shares the background's fake state and run storage, which is how the spec makes the list go stale on purpose.
+  - Lint prefers `<output>` over `role="status"`, and forbids referencing an unbound method like `descriptor.set` in a `.call` chain on a destructured value.
+
+### 2026-11-12 · F015 · Manage access explains refused changes and removals, and a list that can't load
+
+- **Did:** No source change: F013/F014 had already built the row error (`role="alert"`, controls re-enabled, select back to the old value) and F012 the load error with Retry. Added `e2e/F015.spec.ts` (4 tests): the `locked…` change and removal errors on the row with other rows still working and the row kept after reopening; a `ForbiddenSharedArtifact1` artifact listing people while a change and a removal both say 'Only the owner can change access'; a `Missing` artifact showing 'Artifact not found' with Retry and no list, where Retry goes back to loading and fails again, and Back still works. README: one sentence on the errors, and the line that said ArtiShare 'never removes anyone' now says it does so only on Remove + confirm.
+- **Verified:** `npm run check` (175 unit tests) and `npm run e2e` (66 specs) pass; the new spec passed 3× in a row. feature-verifier: PASS.
+- **State:** F015 passes. 3 features left (F016–F018).
+- **Next:** F016: edge cases in Manage access: 'Only you have access.' with a hint that Share invites people when nobody is invited, a Refresh button (new, there is none yet) that re-reads the list, one request per action under repeated clicks (rows already disable while in flight; check the confirm path too), and a note when a run is sending to this artifact.
+- **Notes:**
+  - To get seeded people and a refusal at once use an id containing both words, e.g. `ForbiddenSharedArtifact1`.
+  - `retry.click()` returns before React re-renders, so a test asserting the loading line must wait for it (the spec uses a MutationObserver flag plus `waitForFunction`); the fake answers in 150 ms, too fast to poll.
+  - The e2e lint forbids `import('…')` type annotations; use `import type`.
+  - Shell heredocs and compound `sed … && …` commands are refused; use Edit/Write.
+
+### 2026-11-12 · F014 · Removing a person's invitation in Manage access asks first, then removes it
+
+- **Did:** New message `remove-invite` (`src/lib/messages.ts`, handled in `background.ts` by `client.removeInvite`). `PersonRow` in `src/entrypoints/popup/ManageView.tsx` has a Remove button (aria-label `Remove <email>`, shown for any row with an `id`) that asks through `useConfirm` ('Remove <email> from this artifact?' / 'Their invitation will stop working.', danger), then disables the row's select and button (`busy`) while in flight and drops the row via `onRemoved`. On failure it re-enables the row and shows the error on it (the `role="alert"` already used for changes; F015 tests it). Style `.people li > button`; README sentence added. `e2e/F014.spec.ts`.
+- **Verified:** `npm run check` (175 unit tests) and `npm run e2e` (62 specs) pass. feature-verifier: PASS.
+- **State:** F014 passes. 4 features left (F015–F018).
+- **Next:** F015: error handling in Manage access: the `locked…` person's change and removal errors on the row, `Forbidden` artifact messages, and a `Missing` artifact showing the error with Retry (the load-error Retry already exists in `ManageView`; check it and add e2e for all four steps).
+- **Notes:**
+  - The popup code lives in `src/entrypoints/popup/`, not `sidepanel/` as older entries say.
+  - The verifier flagged that a plain `.people button` rule would also shrink the confirm dialog's buttons, since the `<dialog>` is rendered inside the `<li>`; the rule is scoped to `.people li > button`. Keep that in mind if more rules go under `.people`.
+  - The preview groups are 'Will be invited' (not 'To invite', which is the stat label), and a newly invited person gets the list's permission.
+
+### 2026-11-12 · F013 · Changing a person's permission in Manage access saves it on claude.ai
+
+- **Did:** New message `change-access` (`src/lib/messages.ts`, handled in `background.ts` by `client.changeAccess`). `ManageView.tsx` now has a `PersonRow` per invitee: an `AccessSelect` (new optional `disabled` and `label` props) that is disabled while saving and shows the chosen value, then a short 'Saved' (`.saved`, 2.5 s) on that row only; on success the parent's list is updated in place. On failure it clears `saving`, so the select falls back to the old value, and the error shows as a `role="alert"` on the row (F015 will test and polish that). Rows without an `id` or with an unknown role stay a plain tag. Styles in `src/ui/styles.css`; README sentence updated. `e2e/F013.spec.ts`.
+- **Verified:** `npm run check` (175 unit tests) and `npm run e2e` (61 specs) pass. feature-verifier: PASS.
+- **State:** F013 passes. 5 features left (F014–F018). There is no Remove button yet.
+- **Next:** F014: a Remove button per row with an in-popup confirmation (reuse the F004 confirm component), a `remove-invite` message (background → `client.removeInvite(artifact, inviteId)`), and drop the row on success. Disable the row's controls while in flight.
+- **Notes:**
+  - The preview only lists people who are also in the addresses being sent, so an e2e that checks 'Existing email access' must include that address in the list.
+  - The failure path in `PersonRow` is written but has no e2e yet; F015 covers it.
+  - The fake's state is in the background worker's memory, which is what makes 'close and reopen' show the change in e2e.
+
+### 2026-11-12 · F012 · A 'Manage access' link opens the list of people already invited
+
+- **Did:** New message `sharees` (`src/lib/messages.ts`, answered in `background.ts` by `client.listSharees`). New `src/entrypoints/popup/ManageView.tsx`: 'People with access', the artifact link with copy, a Back button, 'You (owner)' always first and not editable (the owner entry claude.ai sends, if any, is filtered out), then each invitee with address, Pending/Accepted and permission as plain text. It has a loading line and, for a failed read, the error with a Retry link (F015 will test and extend that). `App.tsx` reads the active tab's artifact once (`currentTabArtifact`, moved from `ShareView.tsx` to `viewUtils.ts`) and, when there is one, shows a quiet `button.link` 'Manage access' under the Share form or the run view. The form or run stays mounted but `hidden` while Manage access shows, so Back finds it exactly as it was. Styles `.people`, `.manage-link` in `styles.css`. README has a 'Who already has access' section. `e2e/F012.spec.ts` (3 tests): the Shared artifact (link position below Preview, not a tab or primary; the four rows; Back keeps the typed text), under a finished run view, and no link on a non-artifact page.
+- **Verified:** `npm run check` (175 unit tests) and `npm run e2e` (60 specs) pass. feature-verifier: PASS, with command output quoted.
+- **State:** F012 passes. 6 features left (F013–F018). Manage access is read-only; the permission is text, not a select yet.
+- **Next:** F013: replace the permission text with `AccessSelect` per invitee row, calling a new `change-access` message (background → `client.changeAccess(artifact, inviteId, access)`); disable the select while in flight, show 'Saved' on that row, leave other rows alone. Use `Sharee.id` for the row key. Needs an `ArtifactRef` and invite id in the message.
+- **Notes:**
+  - The Manage access view is not saved across the popup closing (not asked for); reopening shows the Share tab.
+  - The link appears for the tab the popup opened over, read once on mount. In e2e that is why the spec brings the artifact tab to the front and reloads the panel, as F003 does.
+  - Fake artifact ids containing `Shared` are seeded: don't use that word in an id for a clean artifact in a spec (I hit that once).
+  - Shell heredocs and `>>` redirects are refused here; use Edit/Write. A `while`/`until` loop in Bash is refused too; poll with `pgrep`.
+
+### 2026-11-12 · F011 · The claude.ai client can change an invitation's permission and remove it
+
+- **Did:** `ShareClient` (`src/claude/shareClient.ts`) gained `changeAccess(artifact, inviteId, access)` and `removeInvite(artifact, inviteId)`. `apiShareClient.ts` implements them as PATCH `{ role }` and DELETE on `/api/frame/invite/{uuid}/{inviteId}?org=…` with `X-Frame-CP: go`; the org lookup that `invite` did inline is now `orgFor()`, shared by all three. `listSharees` fills `Sharee.id` from the invitation's `id` (omitted if claude.ai sends none). `manageError()` maps 409 `invitee_joined_org` to the 'joined your organization' message, 403 to 'Only the owner can change access', 404 to 'The invitation no longer exists', 429 to rate-limited, and a Cloudflare challenge to `auth`. Added the error code `managed-elsewhere` (`src/core/runner.ts`), which the fake now throws too (it was `unknown`). `FakeShareClient` is gone; the fake returns `ShareClient`. `docs/claude-share-api.md` documents both endpoints and the refusal table. Tests: 12 new in `tests/apiShareClient.test.ts` (stub transport), and `tests/runManager.test.ts`'s client stub got the two methods.
+- **Verified:** `npm run check` (175 unit tests) and `npm run e2e` (57 specs) pass. feature-verifier: PASS.
+- **State:** F011 passes. 7 features left (F012–F018). No e2e spec for F011: it has no UI, and its steps are about docs, the interface and unit tests.
+- **Next:** F012: the 'Manage access' link on an artifact tab and the read-only 'People with access' view. `listSharees` already returns ids and the fake has the `Shared…` artifact to click through.
+- **Notes:**
+  - The PATCH/DELETE request and response shapes come from the Share menu's code, not a live artifact; the doc's 'Not verified yet' list says so. Whether a pending invitation can have its role changed is unchecked.
+  - `changeAccess` and `removeInvite` throw `ShareError`s with the exact messages above, so the UI can show `err.message` and branch on `managed-elsewhere`.
+
+### 2026-11-12 · F010 · The fake claude.ai can change and remove invitations, and has seeded artifacts
+
+- **Did:** `src/claude/fakeShareClient.ts`: ids containing `Shared` start with the owner plus viewer@ (accepted, Can view), commenter@ (pending, Commenter) and locked@example.com; `Missing` makes `listSharees` throw not-found; `changeAccess(artifact, inviteId, access)` and `removeInvite(artifact, inviteId)` (300 ms each) throw 'Only the owner can change access' (forbidden) for `Forbidden`, 'The invitation no longer exists' (not-found) for an unknown id, and 'This person joined your organization, so their access is managed in claude.ai.' for `locked…`. `Sharee` (`src/core/types.ts`) gained an optional `id` (the invitation id, none for the owner); the fake gives every invitation one (`inv-N`), including ones from `invite`. The new methods live on an exported `FakeShareClient` type, not yet on `ShareClient`. Rules are at the top of the file and in the README's fake-mode list. Tests: `tests/fakeShareClient.test.ts` (9) and `e2e/F010.spec.ts` (2: Shared preview lists the three people with permissions; Missing preview says not found).
+- **Verified:** `npm run check` (163 unit tests) and `npm run e2e` (57 specs) pass. feature-verifier: PASS on its second run, with real command output (its first run was a FAIL only because Bash was denied).
+- **State:** F010 passes. 8 features left (F011–F018).
+- **Next:** F011: add `changeAccess` and `removeInvite` to `ShareClient` (src/claude/shareClient.ts) and implement them in `apiShareClient.ts` (PATCH/DELETE `/api/frame/invite/{uuid}/{inviteId}`), make `listSharees` fill `Sharee.id`, document them in `docs/claude-share-api.md`, and then drop `FakeShareClient` in favour of `ShareClient`.
+- **Notes:**
+  - The fake's methods take an invite id, not an email, to match what F011's real client needs. The id is optional on `Sharee` only because the owner has none.
+  - The preview's group is titled 'Existing email access (left unchanged)' and only lists people whose addresses are in the lists being previewed, so the F010 step's 'Already have access' is checked with a list holding the three seeded addresses plus a new one. Manage access (F012+) is what shows everyone.
+  - The fake's locked error uses code `unknown`; F011 may add a dedicated code.
+
+### 2026-11-12 · F009 · Closing the popup mid-run doesn't stop the run, and reopening shows live progress
+
+- **Did:** No source change was needed: the run already lives in the background and `chrome.storage.local`, and the run view follows it. Added `e2e/F009.spec.ts` (2 tests): (1) four addresses with a `slow-…` one last, closed (`goto('about:blank')`) once one is invited, reopened 1.5 s later: Running, Stop visible, more invited than before and fewer than 4, and the count keeps rising with the popup open; Stop, close, reopen: Stopped, same invited count (nothing sent while closed), "N left"; Resume ends with "Share finished: 4 invited" and Done. (2) A two-address run that finishes while the popup is closed shows "Share finished: 2 invited" on reopening. README (Run section) says closing doesn't stop the run and reopening shows progress.
+- **Verified:** `npm run check` (154 unit tests) and `npm run e2e` (55 specs) pass; F009 `--repeat-each=5` 10/10 passed. feature-verifier: PASS on its second run, with real command output (check, full e2e 55 passed, F009 x3 6 passed).
+- **State:** F009 passes. 9 features left (F010–F018).
+- **Next:** F010, the fake claude.ai's `changeAccess` and `removeInvite`, plus seeded artifacts ('Shared', 'Missing', `locked…`). That is the base for the Manage access view.
+- **Notes:**
+  - The verifier's first run was a FAIL only because its Bash was denied (no commands run); I re-ran it and it passed. Check that a PASS quotes real command output.
+  - Timing in the spec: the run is ~4.6 s minimum (0.3 s per invite, 0.8 s+ between, 1 s rate limit on the slow address), so reopening at ~2 s still finds it running. The first draft waited 2.5 s and the run had only the last address left, so the chips (hidden once finished) vanished; 1.5 s is the safe wait.
+  - Shell heredocs are refused here; use Edit/Write.
+
+### 2026-11-12 · F008 · A preview survives the popup closing, even while it is loading
+
+- **Did:** `PopupState` gained `preview: PreviewState | null` (`src/core/popupState.ts`: `label`, `artifacts`, `invites`, `results` or null while loading, `accountEmail`; `parsePreviewState` validates what is read back). `storage.ts` exports `currentPopupState()` so `ShareView`, which mounts after the App has loaded the state, starts from the stored preview. `ShareView.tsx`: Preview click now stores and shows the preview at once with `results: null` ("Checking current access…", Send disabled); an effect asks the background for any preview without results (so a popup that closed mid-load asks again on reopening) and saves the answer. Back, an error, or Send clears the stored preview; a late answer after Back is ignored (`stale` flag). A failed preview goes back to the form with the error. README (step 4) says what reopening shows.
+- **Verified:** `npm run check` (154 unit tests) and `npm run e2e` (53 specs) pass. New `e2e/F008.spec.ts` (3 tests): close mid-load, reopen (preview with both cards, Send 4), reopen again, Back, reopen (form); Back while loading stays on the form after the late answer; Send from a restored preview, then Start a new share and reopen give an empty form. feature-verifier: PASS (ran check, full e2e 53 passed, and F008 `--repeat-each=3` 9 passed).
+- **State:** F008 passes. 10 features left (F009–F018).
+- **Next:** F009, closing the popup mid-run doesn't stop the run and reopening shows live progress. The run already lives in the background and `chrome.storage.local`, so likely mostly an e2e spec; check Stop/Resume after reopening.
+- **Notes:**
+  - A preview with `results: null` stored while another view is open (e.g. switching to Lists tab doesn't unmount Share) is fine; only unmounting makes it stale and it re-asks on next mount.
+  - The spec doesn't assert the visible "Checking current access…" text on reopen: the fake answers in ~300 ms, too quick to assert without flakiness.
+  - Shell heredocs are refused here; use Edit/Write.
+
+### 2026-11-12 · F007 · Verifier verdict for the reconciled restored draft
+
+- **Did:** No code change. The previous session finished F007 (spec `e2e/F007.spec.ts`, README) but couldn't get a verdict because the verifier's Bash was denied. This session re-ran the baseline and the verifier, then flipped `passes`.
+- **Verified:** `harness/init.sh` (check: 141 unit tests; e2e: 50 specs) passed. feature-verifier: PASS on the second run, with real output: `e2e/F007.spec.ts` 4 passed, `npm run check` 141 passed, full e2e 50 passed.
+- **State:** F007 passes. 11 features left (F008–F018).
+- **Next:** F008, a preview survives the popup closing, even while it is loading.
+- **Notes:**
+  - The verifier's first run this session said PASS but its tool log showed only Grep and Read, so its claims about running commands were unsupported. I discarded it and asked again, requiring Bash output quoted; check the verifier's tool count when its report quotes command results.
+  - Popup state is shared by every window, so two popups both editing lists would overwrite each other's `lists` draft. Fine for one popup at a time.
+
+### 2026-11-12 · F007 · A restored draft is reconciled with what changed while the popup was closed
+
+- **Did:** No source change was needed: F005/F006 already drop deleted lists from restored ticks, `open` and `edits` (`reconcileListsDraft`), and a restored edit keeps its `baseline`, so `ListForm`'s existing conflict warning and Reload saved appear when the list changed meanwhile. Added `e2e/F007.spec.ts` (4 tests): (1) Alpha and Beta ticked with an artifact typed, popup closed, Beta deleted from a second popup page, reopen: artifact kept, Alpha ticked, Beta gone, no `.alert`; (2) an unsaved edit of Beta and an open Alpha, Beta deleted meanwhile: no Beta, Alpha still open and untouched, no stray expanded form; (3) an unsaved edit of Alpha, Alpha's addresses changed from another window: draft kept as typed, "This list changed in another window." shown, Save and Delete disabled, Reload saved loads the other window's addresses, clears the warning and the stored edit; (4) an edit of an unchanged list is restored without any warning. 'Close' is `goto('about:blank')`; 'another window' is a second popup page that sends `config-get`/`config-change` (the same messages Save and Delete use), then closes. README (Lists and Share sections) says what happens to drafts of deleted or changed lists.
+- **Verified:** `npm run check` (141 unit tests) and `npm run e2e` (50 specs) pass. feature-verifier: **not obtained.** It was run twice and returned FAIL both times only because its Bash calls were denied in this session (it ran no commands; its read-only review of the spec and `ListForm` found no defect). So `passes` was not flipped.
+- **State:** F007 passes **false**, though the work is complete and green. 12 features left (F007–F018).
+- **Next:** Run the feature-verifier on F007 again (it needs Bash allowed; run `npm run e2e` first so the fake build is current). On PASS, set F007 `passes: true` and commit with `F007: ...`, then go on with F008 (a preview survives the popup closing, even while loading). If the verifier FAILs for a real reason, fix that first.
+- **Notes:**
+  - A second popup page that merely opens writes nothing to `popupState`, so it doesn't clobber the first. But popup state is shared by every window: a second popup that edits a list would overwrite `lists` for the first. Not a problem for one popup at a time.
+  - Shell heredocs, `cp` and `sed -i` are refused here; use Edit.
+
+### 2026-11-12 · F006 · A list being typed or edited, and the open tab, survive the popup closing
+
+- **Did:** New `src/core/popupState.ts` (pure, unit-tested in `tests/popupState.test.ts`): `ListFormDraft` (name, text, access, `baseline`), `ListsDraft` (`adding`, `newList`, `open`, `edits` by list id), `PopupState` (`tab` + `lists`), with `parsePopupState`, `parseListFormDraft`, `reconcileListsDraft` (drops deleted lists) and `sameListFormDraft`. `src/lib/storage.ts`: `loadPopupState` / `patchPopupState` (key `popupState` in `chrome.storage.session`; keeps an in-memory copy and writes in order so pieces patched by different components don't clobber each other). `ListForm` takes `initial` (restored draft, only read on mount) and `onUnsavedChange` (reports `{name,text,access,baseline}` whenever the form is dirty, else null). `App.tsx` loads the popup state before drawing anything (`tab = tabChoice ?? stored.tab`) and saves the tab on change. `ListsView.tsx` keeps `adding`/`newList`/`open`/`edits` and saves them (skipping the first run); each saved list is now a `ListCard` component with a stable callback and a controlled `<details open>`. `ShareDraft` gained optional `creating` and `newList`, so the inline form in Share is saved and cleared with the rest of the Share draft (`ShareView.tsx`). `EmailListSchema` is now exported from `config.ts`. README updated (Lists section, Share section).
+- **Verified:** `npm run check` (141 unit tests) and `npm run e2e` (46 specs) pass. New `e2e/F006.spec.ts` (6 tests): new list in Lists (name, two addresses, Can edit, tab) returns after a reload and goes on Cancel and on Save list; an open empty form stays open; an unsaved edit returns expanded with Save/Revert enabled, and goes on Revert and on Save; a collapsed list stays collapsed; the inline Share form returns and goes on Cancel and Save list (also with only a permission picked); with no lists the inline form keeps its text. feature-verifier: PASS.
+- **State:** F006 passes. 12 features left (F007–F018).
+- **Next:** F007, reconcile a restored draft with changes made while the popup was closed. Much is already in place: deleted lists are dropped from restored ticks (F005) and from `open`/`edits` (`reconcileListsDraft`); a restored edit keeps its `baseline`, so `ListForm`'s existing `conflict` ("This list changed in another window", Reload saved) should already appear when the list changed meanwhile. Write the e2e for the four steps, fix whatever doesn't hold (e.g. a draft whose list was deleted should not leave an empty expanded form), and flip it.
+- **Notes:**
+  - The popup now reopens on the tab it was closed on. E2E that clicks Lists, reloads, then looks at the Share tab must click Share first (changed in F005's specs).
+  - Role-based locators skip the hidden tab panel: to look at the Lists tab while Share is showing, use `panel.locator('details', …)`.
+  - Every saved list's form is in the DOM even when collapsed, so a 'no form showing' check must filter `visible: true`.
+  - The e2e run must follow `npm run build:fake`; `npx playwright test` alone uses the last build.
+
+### 2026-11-12 · F005 · The Share form survives the popup closing
+
+- **Did:** The Share form's draft (Artifacts text and ticked list ids) is saved to `chrome.storage.session` on every change and restored on open. New `src/core/shareDraft.ts` (`parseShareDraft`, `restoreSelection`, pure and unit-tested in `tests/shareDraft.test.ts`); `loadShareDraft`/`saveShareDraft` in `src/lib/storage.ts`. In `ShareView.tsx`, `ShareView` now only loads the draft and renders `ShareForm` (the old body) with it as `initial`, so the first state is the restored one. The "default selection changed" effect no longer runs on mount (it used to overwrite restored ticks), and the save effect skips its first run so untouched defaults aren't stored as a choice. `Preview.start` clears the draft once `send('start')` succeeds, so the next form is empty with defaults ticked. Deleted lists are dropped from restored ticks. README 'Pick artifacts and lists' updated.
+- **Verified:** `npm run check` (122 unit tests) and `npm run e2e` (40 specs) pass. New `e2e/F005.spec.ts` (5 tests): typed links and ticks return after a reload (including unticking everything); a deleted list isn't ticked; after a run and Start a new share the form is empty, also after a reload; a reopened untouched form still follows a changed default; a restored draft isn't overwritten by the tab's artifact (F003 prefill). feature-verifier: PASS on its second run (the first was a FAIL only because Bash was refused).
+- **State:** F005 passes. 13 features left (F006–F018).
+- **Next:** F006, keep a list being typed or edited (new-list form, an edited saved list, the inline form in Share) and which tab was open. Reuse the `shareDraft` pattern: pure parse in `src/core`, session-storage helpers in `src/lib/storage.ts`, load before mounting, skip the first save. `ListForm` already reports `onDraftChange`.
+- **Notes:**
+  - 'Close the popup' in e2e is `panel.reload()`. Wait for the draft to be in `chrome.storage.session` (poll `storedDraft(panel)` in F005) before reloading rather than sleeping.
+  - Known small gap: the draft is cleared after `send('start')` resolves; if the popup closed in that gap, a stale draft would come back after the next Start a new share. Clearing earlier would lose the draft if the send failed, so left as is.
+  - One full e2e run had a one-off F002 real-popup failure that didn't repeat (3 isolated runs and 2 more full runs passed). Watch for flakiness there under load.
+  - Shell heredocs and `sed -i` are refused in this environment; use Edit.
+
+### 2026-11-12 · F004 · Confirmations are shown inside the popup
+
+- **Did:** Added `src/ui/useConfirm.tsx` (`useConfirm()` returns `{ ask, dialog }`; `ask` resolves true/false) and `src/ui/ConfirmDialog.tsx` (a modal `<dialog role="alertdialog">`: Cancel is focused, Escape cancels, danger styling via `.confirm` in `styles.css`). Replaced the three `window.confirm` calls: delete list (`ListForm`), Send (`ShareView` Preview), discard a stopped run (`RunView`). The `panel` fixture no longer auto-accepts dialogs: it dismisses any native `dialog` event and fails the test; it also exports `confirmation(page)` and `answer(page, name)`. Existing specs that click Send (smoke, F001, share-ux-fixes F013–F017) now answer the in-popup confirmation; F016/F017 assert on it instead of counting dialogs. New `e2e/F004.spec.ts` covers the three confirmations with Cancel, Escape and confirm.
+- **Verified:** `npm run check` (109 unit tests) and `npm run e2e` (35 specs) pass. feature-verifier: PASS.
+- **State:** F004 passes. 14 features left (F005–F018).
+- **Next:** F005, keep the Share form draft (artifacts typed, lists ticked) across popup closes. `useConfirm` is reusable for F014 (Remove in Manage access): `answer(page, 'Remove')`.
+- **Notes:**
+  - The dialog's text has no separator between title and detail, so assert them with two `toContainText` calls.
+  - Both buttons in a confirmation can share a name with a button behind it ('Delete', 'Send'); scope to `confirmation(page)` / `answer`.
+  - oxlint prints a pre-existing 'Unused oxlint-disable directive' warning at `ShareView.tsx:70`; not from this feature.
+  - The `useConfirm` hook lives in its own file because oxlint's only-export-components rule warns when a component file also exports a hook.
+
+### 2026-11-12 · F003 · The popup picks up the artifact in the tab it was opened over
+
+- **Did:** No `src/` change: `ShareView.tsx` already prefilled Artifacts from the active tab (`currentTabArtifact`) and had `+ Current tab` from the side-panel days, and `chrome.tabs.query({ active, lastFocusedWindow })` works the same from a popup. The session added `e2e/F003.spec.ts` (artifact tab: prefill, `+ Current tab` once, no duplicate on a second click; non-claude.ai page: empty and the 'not a claude.ai artifact' error; claude.ai home page: same; and the **real action popup** opened over a cowork tab, prefilled). Moved the CDP real-popup helper out of `e2e/F002.spec.ts` into `e2e/realPopup.ts` (`openRealPopup(context)` returns an `evaluate(expression)`), and F002 now uses it. The helper evaluates with `awaitPromise: true`.
+- **Verified:** `npm run check` (109 unit tests) and `npm run e2e` (32 specs) pass. Mutation checks: removing the prefill, and removing the dedupe in `addCurrentTab`, each fail F003 tests 1 and 4. feature-verifier: PASS (its first run was a FAIL only because Bash was refused; the second ran everything).
+- **State:** F003 passes. 15 features left (F004–F018).
+- **Next:** F004, in-popup confirmations instead of `window.confirm` (delete a list, send, discard a stopped run). Remove the `dialog` auto-accept from the `panel` fixture for those specs once the confirmations are in-popup; existing specs that rely on it (smoke, share-ux-fixes F016/F017) will need updating to click the new buttons.
+- **Notes:**
+  - To wait for an async handler before a negative assertion, query `chrome.tabs` yourself and wait a frame (in the real popup, `evaluate` awaits promises). Don't use fixed sleeps.
+  - The non-artifact cases use the popup page as a tab (another tab is active); only the artifact case uses the real popup.
+  - Tool permissions in this session refused compound shell commands, `sed -i` and `git checkout`; use Edit for file changes.
+
+### 2026-11-12 · F002 · The popup is laid out like other extensions' popups
+
+- **Did:** `App.tsx` now renders `.popup` > `.popup-top` (header + tabs, fixed), `.popup-body` (both tab panels, the only scroller) and a `<footer className="footer">`. Removed the 'Close ArtiShare' button (and the `CloseIcon` import there). The loading and error states use the same shell. `styles.css`: `html { width: 380px }`, `.popup { max-height: 600px }` as a flex column, `.popup-body { overflow-y: auto; overflow-x: hidden; overflow-wrap: anywhere }`; `.popup-top` and `.footer` are also `position: sticky` as a fallback, see Notes. The old `.panel` rule is gone.
+- **Verified:** `npm run check` (109 unit tests) and `npm run e2e` (28 specs) pass. New `e2e/F002.spec.ts` has five tests: 380 × ≤600 with three expanded lists, and header, tabs and footer boxes unchanged after scrolling the body; a short popup (empty Lists tab) with the footer right under the content; a 122-character address, a 110-character artifact ID and a 110-character list name with zero horizontal overflow; no close button and the Tab order; and a measurement of the **real action popup** over CDP. feature-verifier: PASS (its first run was a FAIL only because it could not run node, so the real-popup check moved into the spec).
+- **State:** F002 passes. 16 features left (F003–F018).
+- **Next:** F003, pick up the artifact in the tab the popup was opened over (`+ Current tab`, and prefill Artifacts). Check what `ShareView` already does with the active tab from the side panel days, since a popup opened over a tab no longer has a "sidebar next to the page".
+- **Notes:**
+  - The headless Chromium window gives the real popup only about 498 px, not 600, and the popup's `innerWidth` is then 395 (380 + a 15 px scrollbar Chrome reserves when content is taller than the window). The 410 the earlier verifier saw was probably the same thing. The page itself is exactly 380 wide with no horizontal overflow; the spec accepts `innerWidth` 380–395. With a 600 px window it should be 380.
+  - Because the window can be shorter than 600 px, the header and footer are sticky: if the window is short the document scrolls as a whole and they stay in view. The real-popup test checks the footer is in view but doesn't scroll the real popup.
+  - In the e2e `panel` tab the popup.html target and the real popup share a URL. The real-popup test navigates the tab to `about:blank` first, so the only `popup.html` target is the real one. Playwright's `CDPSession` has no per-target sessions, so it uses `Target.attachToTarget` with `flatten: false` and `Target.sendMessageToTarget` from `browser.newBrowserCDPSession()`. Reusable for later real-popup checks.
+  - The header has nothing focusable, so Tab goes tabs → form.
+  - `npx oxlint` warns about an unused `oxlint-disable` in `ShareView.tsx:69` (pre-existing, not an error).
+
+### 2026-11-12 · F001 · The toolbar icon opens a popup instead of the side panel
+
+- **Did:** `git mv src/entrypoints/sidepanel src/entrypoints/popup`, so WXT sets `action.default_popup: popup.html`. Removed `sidePanel` from the permissions in `wxt.config.ts` (the `key` is untouched) and the `chrome.sidePanel.setPanelBehavior` call in `background.ts`. Set `body { width: 380px }` in `src/ui/styles.css`, since a popup is sized from its content. Comments in styles.css, messages.ts, configController.ts, App.tsx and tests/configController.test.ts now say popup. The `panel` fixture in `e2e/fixtures.ts` opens `popup.html`. New `e2e/F001.spec.ts` has three tests: the manifest (default_popup, no side_panel or sidePanel, extension ID still the key-pinned `eeihicglfclmofckclcpjleekpddjflg`); `chrome.action.openPopup()` from the worker, then `chrome.runtime.getContexts` lists one POPUP at `/popup.html` and no SIDE_PANEL; and header, account, tabs and version plus list → preview → send → 'Share finished: 1 invited'.
+- **Verified:** `harness/init.sh` at start. `npm run check` (109 unit tests) and `npm run e2e` (23 specs: 3 new, plus smoke and e2e/share-ux-fixes/) pass. feature-verifier: PASS. It also opened the real action popup over CDP and ran a whole share in it.
+- **State:** F001 passes. 17 features left (F002–F018).
+- **Next:** F002, the popup layout. Pin the header and tabs, scroll only the content (max 600 px tall), pin the footer, stop long addresses and links from scrolling sideways, and remove the 'Close ArtiShare' button from `App.tsx`. The verifier saw the real popup's innerWidth at 410 against the 380 px body, so check for extra margin or a scrollbar gutter.
+- **Notes:**
+  - Playwright doesn't expose an action popup as a page; `context.waitForEvent('page')` never fires. Use `chrome.runtime.getContexts({ contextTypes: [chrome.runtime.ContextType.POPUP] })` from the worker, or the `panel` fixture (the popup page in a tab).
+  - In the real popup, Send still uses `window.confirm`, and Chrome showed it without closing the popup in the verifier's run. F004 replaces those dialogs anyway.
+  - README, store listing, docs/ and CLAUDE.md still say side panel; F017 updates them.
+
+### 2026-11-12 · Planning · Popup instead of side panel, and Manage access
+
+- **Did:** Planned a new goal on `harness/popup-and-manage-access` (from `develop`), replacing the finished share-ux-fixes list (all 18 passed and merged in PR 13). 18 features, F001–F018. Nothing built.
+- **Goal:** Turn the side panel into a toolbar popup laid out like other extensions' popups, keep drafts and runs safe when it closes, and add a secondary 'Manage access' view to change or remove people already invited to the artifact you're on.
+- **Decisions (from the user):**
+  - **Popup only.** No side panel, no 'Open in side panel' or 'open in a tab' fallback. Drop the `sidePanel` permission and `setPanelBehavior` in `background.ts`; keep the manifest `key` untouched. WXT makes `src/entrypoints/popup/` the `default_popup`; moving `sidepanel/` there is the expected route.
+  - **Manage access is secondary.** The user wants it available "when the user is at the artifact page", but "not a core feature so don't confuse user about it". So: a small link shown only when the active tab is an artifact, never a third tab or a primary button.
+- **Research (popup patterns):** Grammarly (the user's reference screenshot), 1Password, Bitwarden: a narrow popup (~360–400 px, Chrome caps popups at 800×600) with a fixed header (brand, account), a scrolling body, and a footer; settings that need room go elsewhere, but the user chose popup only. Two popup traps drive F004–F009: a popup closes (and its JS stops) as soon as it loses focus, and `window.alert`/`confirm` in a popup can take focus and close it. Hence in-popup confirmations, and drafts, the preview and the open tab saved to storage (`chrome.storage.session` is a reasonable home for drafts; the run is already in `chrome.storage.local`).
+- **Housekeeping:** The previous goal's specs moved from `e2e/F0xx.spec.ts` to `e2e/share-ux-fixes/` so the new F001–F018 specs don't collide with them. They are regression tests: keep them passing.
+- **Risky areas:**
+  - F001 moves every e2e spec to the popup page. The `panel` fixture can keep its name; only the URL changes. The current-tab trick in F003's spec (bring the claude.ai page to front, reload the panel tab) should keep working.
+  - F008: Preview is a `send('preview')` round trip; if the popup closes, the reply is lost. The background probably has to store the preview (or the popup re-sends it on open).
+  - F011: PATCH/DELETE `/api/frame/invite/{uuid}/{inviteId}` come from reading the Share menu's code (`docs/claude-share-api.md`), not from a live check. Error messages in F011's steps are the target wording. `Sharee` has no invitation id today; `listSharees` has to carry it. A human must try change and remove on a real artifact before release; sessions must never call the real endpoints.
+  - F010 adds fake rules (`Shared` artifacts seeded with three invitees, `locked…` refuses change/removal, `Missing` fails to list). Keep the rules comment at the top of `fakeShareClient.ts` and the README list in step.
+- **Next:** `/harness-work` takes F001.
+
 ### 2026-11-11 · F007 · The name placeholder stays fixed; the automatic name appears once saved (reworked at the user's request)
 
 - **Did:** The user asked to drop the live preview of the automatic name in the List name placeholder and keep the normal one. F007's description and steps were changed to match (with the user's approval). `src/ui/ListForm.tsx`: the placeholder is always 'List name, e.g. Acme clients'; saving with an empty name still uses the automatic name, which then shows in the list's name field. `e2e/F007.spec.ts` rewritten; README 'Make a list' updated.

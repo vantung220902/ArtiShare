@@ -1,236 +1,229 @@
 {
-  "goal": "Fix the Current tab button for claude.ai/cowork artifact links, make list names optional (named after their addresses) with required fields marked, add a copy button to artifact links, and make starting a new share after a run obvious.",
-  "branch": "harness/share-ux-fixes",
+  "goal": "Turn the side panel into a toolbar popup laid out like other extensions' popups, keep drafts and runs safe when it closes, and add a secondary 'Manage access' view to change or remove the people already invited to the artifact you're on.",
+  "branch": "harness/popup-and-manage-access",
   "features": [
     {
       "id": "F001",
       "category": "functional",
-      "description": "A claude.ai/cowork link with an artifact open (…/cowork/{session}?artifact={uuid}#…) is accepted as an artifact in the Share tab",
+      "description": "Clicking the ArtiShare toolbar icon opens a popup with the Share and Lists tabs, instead of a side panel",
       "steps": [
-        "Open the side panel of the fake build and go to the Share tab",
-        "Paste https://claude.ai/cowork/cse_01ExampleCoworkSession00?artifact=c0ffee00-1234-4abc-8def-000000000001#example into Artifacts",
-        "See the Artifacts count show 1 and no 'Not artifact links' hint",
-        "Tick a list and click Preview",
-        "See one artifact card whose link is the matching https://claude.ai/artifact/{base58 id} link (the same id a claude.ai/chat/…?artifact= link with that uuid gives), with its To invite numbers"
+        "Run `npm run build:fake` and open the built manifest (.output/chrome-mv3-fake/manifest.json)",
+        "See `action.default_popup` set to the popup page, no `side_panel` entry and no `sidePanel` permission, and the same `key` as before (wxt.config.ts unchanged there)",
+        "Load the fake build (`npm run dev:fake`) and click the ArtiShare icon in the toolbar",
+        "See a popup (not a side panel) with the ArtiShare header, the account pill reading owner@example.com, the Share and Lists tabs, and 'Version …' at the bottom",
+        "Make a list, preview and send to one artifact from the popup and see the run finish ('Share finished: …'), as it did in the side panel",
+        "In e2e, the `panel` fixture opens the popup page as a tab, and every existing spec (e2e/smoke.spec.ts and e2e/share-ux-fixes/*, from the previous goal) still passes against it"
       ],
       "passes": true
     },
     {
       "id": "F002",
-      "category": "edge-case",
-      "description": "A cowork link and the claude.ai/artifact link for the same artifact count as one artifact, and cowork links without a valid artifact uuid are rejected",
+      "category": "ux",
+      "description": "The popup is sized and laid out like other extensions' popups: fixed width, a header and tabs that stay put, content that scrolls, a footer, and no close button",
       "steps": [
-        "In the Share tab, paste the cowork link from F001 and, on the next line, the claude.ai/artifact link it maps to",
-        "See the Artifacts count show 1, and Preview shows one artifact card",
-        "Replace the text with https://claude.ai/cowork/cse_01ExampleCoworkSession00 (no ?artifact=)",
-        "See the hint 'Not artifact links: …' naming that link",
-        "Replace it with https://claude.ai/cowork/cse_01ExampleCoworkSession00?artifact=not-a-uuid and see the same hint"
+        "Open the popup with three saved lists and the Lists tab showing every list expanded",
+        "See the popup 380 px wide and no taller than 600 px; the header (logo, account pill) and the Share/Lists tabs stay at the top while only the content below scrolls",
+        "See the footer with 'Version …' pinned at the bottom, visible without scrolling",
+        "Paste a 120-character email address and a long artifact link: see them wrap or truncate with no horizontal scrollbar",
+        "See no 'Close ArtiShare' button in the header (a popup closes when you click away)",
+        "Open the popup again: focus is not trapped in a text field, and Tab moves through the header, the tabs, then the form"
       ],
       "passes": true
     },
     {
       "id": "F003",
       "category": "functional",
-      "description": "+ Current tab adds the artifact open in a claude.ai/cowork tab, and opening the panel on such a tab fills it in",
+      "description": "The popup picks up the artifact in the tab it was opened over: Artifacts is filled in, and + Current tab adds it",
       "steps": [
-        "Open https://claude.ai/cowork/cse_01ExampleCoworkSession00?artifact=c0ffee00-1234-4abc-8def-000000000001#example in the active tab (in e2e, serve the page with a route so nothing reaches claude.ai)",
-        "Open the side panel: see Artifacts already filled with the matching https://claude.ai/artifact/{id} link",
-        "Clear Artifacts and click + Current tab",
-        "See the same link added once, with no error; click + Current tab again and see it is not added twice"
+        "Make https://claude.ai/cowork/cse_01ExampleCoworkSession00?artifact=c0ffee00-1234-4abc-8def-000000000001#example the active tab (in e2e, served by a route so nothing reaches claude.ai)",
+        "Open the popup: see Artifacts already filled with https://claude.ai/artifact/QqHHsBLXBfYKJD5NqJ8PeY",
+        "Clear Artifacts and click + Current tab: see the same link added once and no error",
+        "Make a non-claude.ai page the active tab, reopen the popup: Artifacts is empty, and + Current tab shows 'The current tab is not a claude.ai artifact.'"
       ],
       "passes": true
     },
     {
       "id": "F004",
-      "category": "error-handling",
-      "description": "+ Current tab on a cowork session with no artifact open explains why nothing was added",
+      "category": "ux",
+      "description": "Confirmations are shown inside the popup instead of browser dialogs (which can close a popup): deleting a list, sending, and discarding a stopped run",
       "steps": [
-        "Make https://claude.ai/cowork/cse_01ExampleCoworkSession00 (no ?artifact=) the active tab",
-        "Type a valid artifact link into Artifacts, then click + Current tab",
-        "See the error 'The current tab is not a claude.ai artifact.'",
-        "See the Artifacts text unchanged"
+        "In the Lists tab, open a list and click Delete: see an in-popup confirmation 'Delete the list \"…\"?' with Delete and Cancel buttons, and no browser dialog",
+        "Click Cancel (and, again, press Escape): the list stays. Click Delete then confirm: the list is gone",
+        "In Share, preview one artifact and click Send: see an in-popup confirmation stating how many invitations go to how many artifacts; Cancel keeps the preview, confirming starts the run",
+        "Stop a run with invites left and click Start a new share: see the in-popup 'Discard this run? The remaining invites will not be sent.' Cancel keeps the stopped run and Resume; confirming opens a fresh Share form",
+        "In e2e, no `dialog` event fires during any of this (the fixture's auto-accept is removed from these specs)"
       ],
       "passes": true
     },
     {
       "id": "F005",
-      "category": "ux",
-      "description": "Required fields are marked with *, and the list name is labelled as optional",
+      "category": "functional",
+      "description": "Closing the popup doesn't lose the Share form: the artifacts typed and the lists ticked come back when it reopens",
       "steps": [
-        "In the Lists tab, click New list",
-        "See the label 'Email addresses *' and the label 'List name (optional)'; the * is visual only and the addresses field is marked required for screen readers (aria-required)",
-        "Open an existing list from the Lists tab and see the same labels",
-        "In the Share tab, see the label 'Artifacts *', and the same labels in the inline + New list form"
+        "Save lists Alpha and Beta with 'Only these' set to Alpha",
+        "Open the popup, type two artifact links into Artifacts, untick Alpha and tick Beta",
+        "Close the popup (click away) and open it again",
+        "See the same two links in Artifacts, Alpha unticked and Beta ticked, and the Share tab showing",
+        "Send a run from that form and let it finish, then click Start a new share: see an empty form with Alpha ticked; close and reopen the popup and see that empty form, not the old draft"
       ],
       "passes": true
     },
     {
       "id": "F006",
       "category": "functional",
-      "description": "A new list saved without a name is named after its addresses: one address → that address; two → 'a & b'; more → 'a & b +N emails'",
+      "description": "Closing the popup doesn't lose a list being typed or edited, or which tab was open",
       "steps": [
-        "In the Lists tab, click New list, leave the name empty, enter ana@example.com and click Save list",
-        "See a list named 'ana@example.com' with 1 person",
-        "Make another list with no name and ana@example.com, bo@example.com",
-        "See a list named 'ana@example.com & bo@example.com'",
-        "Make a list with no name and four addresses cy@example.com, di@example.com, ed@example.com, fi@example.com",
-        "See a list named 'cy@example.com & di@example.com +2 emails' (with three addresses it reads '+1 email')",
-        "The addresses used are the first ones in the order they were entered, after duplicates are dropped"
+        "In the Lists tab, click New list, type a name, two addresses and pick Can edit; don't save",
+        "Close and reopen the popup: see the Lists tab open with the new-list form showing that name, both addresses and Can edit",
+        "Open a saved list, change its permission without saving, close and reopen: see that list expanded with the unsaved permission and Save / Revert enabled",
+        "In Share, click + New list, type one address, close and reopen: see the inline form with that address",
+        "Save or Cancel each form: reopening the popup no longer shows the draft"
       ],
       "passes": true
     },
     {
       "id": "F007",
-      "category": "ux",
-      "description": "The name field keeps its normal placeholder; the automatic name is filled in only once the list is saved",
+      "category": "edge-case",
+      "description": "A restored draft is reconciled with what changed while the popup was closed",
       "steps": [
-        "In the Lists tab, click New list and leave the name empty",
-        "See the name placeholder 'List name, e.g. Acme clients'",
-        "Type ana@example.com and bo@example.com into Email addresses",
-        "See the name placeholder stay 'List name, e.g. Acme clients' (it does not preview the automatic name)",
-        "Click Save list, open the new list and see its name field filled with 'ana@example.com & bo@example.com'",
-        "Type a name instead: it is the name that gets saved"
+        "In the popup, tick lists Alpha and Beta in Share and close the popup",
+        "Delete Beta from another window (open the popup page in a tab) and close that too",
+        "Reopen the popup: see Alpha ticked, Beta gone, and no error",
+        "Start an unsaved edit of list Alpha, close the popup, change Alpha's addresses from another window, reopen: see the draft kept and the existing 'This list changed in another window' warning with Reload saved"
       ],
       "passes": true
     },
     {
       "id": "F008",
-      "category": "edge-case",
-      "description": "An automatic name never clashes with an existing list, and a name of only spaces counts as empty",
+      "category": "functional",
+      "description": "A preview survives the popup closing, even while it is still loading",
       "steps": [
-        "Save a list with no name and ana@example.com: it is named 'ana@example.com'",
-        "Save another list with no name and ana@example.com",
-        "See it saved as 'ana@example.com (2)' with no 'already exists' error; a third becomes 'ana@example.com (3)'",
-        "Save a list whose name is only spaces, with bo@example.com",
-        "See it named 'bo@example.com'",
-        "Typing an existing list's name by hand still shows 'A list called \"…\" already exists.'"
+        "Fill Artifacts with two links, tick a list, click Preview and close the popup before the results appear",
+        "Reopen the popup: see the preview (loading, then both artifact cards with To invite / Already have access), not the blank form",
+        "Close and reopen again: the same preview shows, with Back and Send",
+        "Click Back: see the form with the same artifacts and ticks; reopening now shows the form, not the preview"
       ],
       "passes": true
     },
     {
       "id": "F009",
-      "category": "functional",
-      "description": "Clearing the name of an existing list and saving names it after its addresses",
+      "category": "edge-case",
+      "description": "Closing the popup mid-run doesn't stop the run, and reopening it shows live progress",
       "steps": [
-        "Make a list named 'Design team' with ana@example.com and bo@example.com",
-        "Open it in the Lists tab, clear the name and click Save",
-        "See the list renamed 'ana@example.com & bo@example.com' with no 'Give the list a name.' error",
-        "Its addresses and permission are unchanged"
+        "Send invitations to four addresses including a `slow…` one, and close the popup while the run is going",
+        "Wait a few seconds and reopen the popup: see the run view with more addresses Invited than before, still updating",
+        "Click Stop, close and reopen: see Stopped with Resume; click Resume and see it finish ('Share finished: …')"
       ],
       "passes": true
     },
     {
       "id": "F010",
       "category": "functional",
-      "description": "In the Share tab, an unnamed new list typed in the inline form is saved with its automatic name when you click Preview",
+      "description": "The fake claude.ai can change an invitation's permission and remove it, and has artifacts that start with people already invited",
       "steps": [
-        "In the Share tab, add an artifact link and click + New list",
-        "Leave the name empty, enter ana@example.com and bo@example.com",
-        "Click Preview",
-        "See the preview header label 'ana@example.com & bo@example.com', and the Lists tab now has a list with that name, ticked in Share with"
+        "Read the rules at the top of src/claude/fakeShareClient.ts and the README's fake-mode list: they describe an artifact id containing 'Shared' starting with three invitees (one accepted Can view, one pending Commenter, and a `locked…` address that refuses changes and removal because the person joined the organization), and an artifact id containing 'Missing' whose invitation list can't be loaded (not found)",
+        "In the popup, preview https://claude.ai/artifact/SharedExampleArtifact01 (or any link whose id contains Shared) with a list holding one new address",
+        "See the three seeded people under Already have access, with their permissions",
+        "Unit tests show the fake's `changeAccess` updates a person's permission, `removeInvite` removes them, both throw for a `locked…` address and for a 'Forbidden' artifact, `listSharees` throws for a 'Missing' artifact, and the next `listSharees` reflects each change"
       ],
       "passes": true
     },
     {
       "id": "F011",
-      "category": "error-handling",
-      "description": "A list with neither a name nor addresses, or with invalid addresses, still can't be saved",
+      "category": "functional",
+      "description": "The claude.ai client can change an invitation's permission and remove it, using the Share menu's own requests",
       "steps": [
-        "In the Lists tab, click New list and click Save list with everything empty",
-        "See 'Add at least one email address.' and no list created",
-        "Leave the name empty and enter ana@example.com and not@an-email, then click Save list",
-        "See 'Fix or remove the invalid addresses: not@an-email' and no list created",
-        "In the Share tab, the same empty or invalid inline form makes Preview show the same message and not preview"
+        "Read `docs/claude-share-api.md`: PATCH and DELETE `/api/frame/invite/{uuid}/{inviteId}` are listed under the endpoints the extension uses, with their refusals",
+        "Read `ShareClient` in src/claude/shareClient.ts: it has `changeAccess` and `removeInvite`, and `listSharees` returns each invitation's id",
+        "Run `npm test`: apiShareClient tests (with a stub transport, nothing sent) show PATCH with `{ role: 'reader' | 'commenter' | 'editor' }` and DELETE are sent to the right URL with `X-Frame-CP: go` and the artifact's org",
+        "The same tests show a 409 `invitee_joined_org` becomes 'This person joined your organization, so their access is managed in claude.ai.', a 403 'Only the owner can change access', a 404 'The invitation no longer exists', and a 429 a rate-limit error"
       ],
       "passes": true
     },
     {
       "id": "F012",
       "category": "functional",
-      "description": "Each artifact link in the Preview has a copy button that copies the link",
+      "description": "On an artifact tab, a quiet 'Manage access' link opens a list of the people already invited to that artifact",
       "steps": [
-        "Make a list, add an artifact link in the Share tab and click Preview",
-        "See a copy button (accessible name 'Copy link') beside each artifact's link",
-        "Click it",
-        "The clipboard holds that artifact's full https://claude.ai/artifact/… link, and the button shows a check with the name 'Copied' for about 2 seconds, then goes back to 'Copy link'",
-        "Clicking the link text itself still opens the artifact in a new tab",
-        "Copying needs no new manifest permission (no clipboardWrite), so updating the extension shows no new permission prompt"
+        "Make https://claude.ai/artifact/SharedExampleArtifact01 the active tab and open the popup",
+        "See a small 'Manage access' link at the bottom of the Share tab, under the Share form or the run view (a secondary link, not a tab or a primary button)",
+        "Click it: see a 'People with access' view naming the artifact's link, with a Back button, 'You (owner)' first and not editable, then each invitee with their address, a Pending or Accepted label and their permission",
+        "Click Back: see the Share form with whatever was typed before still there",
+        "Make a non-artifact page the active tab and reopen the popup: see no 'Manage access' link"
       ],
       "passes": true
     },
     {
       "id": "F013",
       "category": "functional",
-      "description": "Each artifact link in the run view has the same copy button, while the run is going and after it has finished",
+      "description": "In Manage access, changing a person's permission saves it on claude.ai",
       "steps": [
-        "Send invites to two artifacts",
-        "While the run is running, click the copy button beside the first artifact and see the clipboard hold its link and the button show 'Copied'",
-        "When the run is Done, click the copy button beside the second artifact",
-        "See the clipboard hold the second artifact's link"
+        "Open Manage access on a 'Shared' artifact",
+        "Change the accepted Can view person to Can edit",
+        "See the select disabled briefly, then a short 'Saved' next to that row, and no other row changed",
+        "Close and reopen the popup and open Manage access again: see that person at Can edit",
+        "Preview the same artifact from Share: see them under Already have access at Can edit"
       ],
       "passes": true
     },
     {
       "id": "F014",
-      "category": "error-handling",
-      "description": "If the clipboard refuses, the copy button says it couldn't copy instead of failing silently",
+      "category": "functional",
+      "description": "In Manage access, removing a person's invitation asks first, then removes it from claude.ai",
       "steps": [
-        "Make the clipboard write fail (in e2e, make navigator.clipboard.writeText reject)",
-        "In the Preview, click the copy button beside an artifact",
-        "See the button show 'Couldn't copy' (accessible name and tooltip) for a moment, then return to 'Copy link'",
-        "The panel keeps working: the link can still be opened, and Send still works"
+        "Open Manage access on a 'Shared' artifact and click Remove on the pending Commenter",
+        "See an in-popup confirmation 'Remove … from this artifact? Their invitation will stop working.' with Remove and Cancel",
+        "Click Cancel: the person stays. Click Remove again and confirm: the row disappears",
+        "Close and reopen the popup and open Manage access: they are still gone",
+        "Preview the artifact from Share with a list containing that address: they are now under To invite"
       ],
       "passes": true
     },
     {
       "id": "F015",
-      "category": "ux",
-      "description": "When a run finishes, the run view says it's finished and offers one obvious primary 'Start a new share' button",
+      "category": "error-handling",
+      "description": "When claude.ai refuses a change or removal, or the list can't be loaded, Manage access says why and leaves things as they were",
       "steps": [
-        "Send invites to a list with ana@example.com and fail@example.com and wait for Done",
-        "At the top of the run card, see a message saying the share is finished, with what happened (e.g. '1 invited, 1 failed')",
-        "See a primary (filled), full-width 'Start a new share' button in the run card; no other button competes with it",
-        "Reload the panel and see the same finished view and button"
+        "In Manage access on a 'Shared' artifact, change the `locked…` person's permission: see the select go back to its old value and an error on that row ('This person joined your organization, so their access is managed in claude.ai.'); other rows still work",
+        "Click Remove on the `locked…` person and confirm: see the same error on the row and the row kept",
+        "Open Manage access on an artifact whose id contains 'Forbidden': see the people listed, and any change shows 'Only the owner can change access'",
+        "Open Manage access on an artifact whose id contains 'Missing': see the error ('Artifact not found' or similar) with a Retry button instead of an empty list; Retry asks again"
       ],
       "passes": true
     },
     {
       "id": "F016",
-      "category": "functional",
-      "description": "'Start a new share' after a finished run goes straight to a fresh Share form, without a confirmation",
+      "category": "edge-case",
+      "description": "Manage access handles an artifact with nobody invited, a list that changed meanwhile, and repeated clicks",
       "steps": [
-        "Finish a run as in F015, with the Lists tab's default selection set to one list",
-        "Click 'Start a new share'",
-        "See no confirmation dialog",
-        "See the Share form: Artifacts empty (or the current tab's artifact if it is one), Share with ticked per the default selection, no preview, no leftover error, and focus in the Artifacts field",
-        "Add an artifact link, Preview and Send, and see a new run start"
+        "Open Manage access on a new artifact nobody was invited to: see 'Only you have access.' with a hint that Share invites people",
+        "Click Refresh after sending invitations to that artifact from Share: see the new people appear",
+        "Click Remove and confirm twice quickly, or change a select twice quickly: see only one request per action (controls are disabled while it's in flight) and no error",
+        "While a run is sending to this artifact, open Manage access: see a note that a share is in progress and that Refresh shows the latest"
       ],
       "passes": true
     },
     {
       "id": "F017",
-      "category": "edge-case",
-      "description": "A stopped run with invites left asks before it is discarded, and Cancel keeps it resumable",
+      "category": "docs",
+      "description": "README, store listing, website and contributor docs describe the popup and Manage access",
       "steps": [
-        "Send invites to a list of several addresses and click Stop while some are still pending",
-        "See the run Stopped with Resume and a 'Start a new share' button (Resume is the primary one)",
-        "Click 'Start a new share' and dismiss the confirmation: the stopped run stays, with Resume",
-        "Click 'Start a new share' again and accept: see the fresh Share form as in F016",
-        "A stopped run with nothing left goes to the Share form without a confirmation"
+        "README: 'click the ArtiShare icon to open the popup' (flowchart, Install step 5, Use it, Develop), that drafts and previews are kept when the popup closes and runs continue, a short 'Manage access' section after Watch it run marked as optional, the fake rules for 'Shared' and `locked…`, and the 'never removes anyone' sentence changed to say it only removes someone when you click Remove in Manage access",
+        "store/listing.md: description and test instructions say popup; the `sidePanel` permission justification is removed; the single-purpose text mentions managing existing invitations",
+        "docs/index.html: no 'side panel' left",
+        "CLAUDE.md layout, .claude/commands/harness-work.md and .claude/agents/feature-verifier.md say popup instead of side panel (the e2e fixture name may stay `panel`)",
+        "`npm run check` passes (Prettier clean), and `grep -ri 'side panel'` outside harness/progress.md and node_modules finds nothing that describes the current UI"
       ],
       "passes": true
     },
     {
       "id": "F018",
       "category": "docs",
-      "description": "The README describes the optional list name, the required-field markers, cowork links, the copy button and 'Start a new share'",
+      "description": "The README and store screenshots show the popup",
       "steps": [
-        "Read README 'Use it': Make a list says the name is optional and how the automatic name is made; fields marked * are required",
-        "Pick artifacts says links from a chat or a cowork session with the artifact open work, as do + Current tab",
-        "Check the preview / Watch it run mention the copy button beside each artifact link",
-        "Watch it run and the How it works flowchart say 'Start a new share'",
-        "docs/claude-share-api.md lists the claude.ai/cowork/{session}?artifact={uuid} link form",
-        "npm run check passes (Prettier formats the Markdown)"
+        "Regenerate docs/images/share.png, preview.png and done.png from the fake build's popup (380 px wide), plus a new docs/images/manage.png of Manage access on a 'Shared' artifact",
+        "Regenerate store/images/screenshot-1-share.png, -2-preview.png and -3-done.png at the store's 1280×800 with the popup shown",
+        "See the README's images and alt text match, and no screenshot shows real email addresses or real artifact ids"
       ],
       "passes": true
     }

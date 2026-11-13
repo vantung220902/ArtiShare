@@ -20,7 +20,7 @@ Run `harness/init.sh`. If it fails, the last session left something broken: fixi
 - Read the code it touches and follow `CLAUDE.md`'s conventions.
 - Write the tests with the change:
   - unit tests in `tests/` for logic in `src/core` and `src/lib`;
-  - an end-to-end spec, `e2e/<feature id>.spec.ts`, that performs the feature's `steps` in the side panel and asserts what the user should see. Use the `panel` fixture from `e2e/fixtures.ts`.
+  - an end-to-end spec, `e2e/<feature id>.spec.ts`, that performs the feature's `steps` in the popup and asserts what the user should see. Use the `panel` fixture from `e2e/fixtures.ts`.
 - Stay inside this one feature. If it turns out bigger than a session, finish a coherent part, leave `passes` at `false`, and write what's left in the progress entry.
 - If you run low on context, stop at a point where the checks pass, then go straight to step 5.
 

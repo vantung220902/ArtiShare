@@ -123,18 +123,37 @@ The extension stops on ambiguous network or server failures and rechecks the inv
 Resume before sending the pending address again. A `403`/`404` with the header
 `cf-mitigated: challenge` is a Cloudflare human check.
 
+### Change access: `PATCH /api/frame/invite/{uuid}/{inviteId}?org={org}`
+
+Body (JSON): `{ "role": "reader" | "commenter" | "editor" }`. `{inviteId}` is the `id` from
+`GET …/invites`. `200` on success. Used by `changeAccess` in `src/claude/apiShareClient.ts`.
+
+### Remove: `DELETE /api/frame/invite/{uuid}/{inviteId}?org={org}`
+
+No body. `200` on success. Used by `removeInvite`.
+
+Both calls send `X-Frame-CP: go`, and refusals are mapped by `manageError()`:
+
+| answer                                   | extension says                                                                 | code                |
+| ---------------------------------------- | ------------------------------------------------------------------------------ | ------------------- |
+| `409`, reason `invitee_joined_org`       | This person joined your organization, so their access is managed in claude.ai. | `managed-elsewhere` |
+| `403`                                    | Only the owner can change access                                               | `forbidden`         |
+| `404`                                    | The invitation no longer exists                                                | `not-found`         |
+| `429`                                    | rate-limited (`Retry-After` honoured)                                          | `rate-limited`      |
+| `5xx`, a Cloudflare check, anything else | the generic message for the status                                             | `server`, `auth`, … |
+
+Not verified against a live artifact yet: the shapes above come from the Share menu's code.
+
 ### Other Share menu calls (not used by the extension)
 
 - `POST /api/frame/invite/{uuid}/check?org={org}` with `{ "emails": [...] }` → `{ "company": [bool, …] }`,
   saying which addresses are in the owner's organization.
-- `PATCH /api/frame/invite/{uuid}/{inviteId}?org={org}` with `{ "role": "…" }` changes an invitation's access.
-- `DELETE /api/frame/invite/{uuid}/{inviteId}?org={org}` removes an invitation
-  (`409` with reason `invitee_joined_org` if the person has since joined the org).
 - `GET /api/frame/perm/{uuid}?org={org}` returns the artifact's sharing settings, including
   `peopleMax` (200 on a Pro account) and the member lists.
 
 ## Not verified yet
 
+- A live `PATCH`/`DELETE …/invite/{inviteId}` response, and whether a pending invitation can be changed.
 - A live `POST …/invite` response. The shape above comes from the Share menu's code.
 - The exact per-artifact cap. The help article says 50 people outside the organization, and the
   side panel mentions that; `peopleMax` reads 200. The extension doesn't count toward a cap itself:

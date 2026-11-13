@@ -1,6 +1,6 @@
 {
   "name": "artishare",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Chrome extension that invites lists of email addresses to claude.ai artifacts in bulk.",
   "type": "module",
@@ -20,6 +20,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "npm run build:fake && playwright test",
+    "screenshots": "npm run build:fake && playwright test -c scripts",
     "postinstall": "wxt prepare",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",

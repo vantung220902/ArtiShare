@@ -1,51 +1,67 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Account } from '../../claude/shareClient';
-import { parseArtifactList, parseArtifactRef } from '../../core/artifactUrl';
-import { type Config, defaultListIds, type Invitee, resolveInvites } from '../../core/config';
-import { ACCESS_LABELS, type AccessLevel, type ArtifactRef } from '../../core/types';
+import { parseArtifactList } from '../../core/artifactUrl';
+import { type Config, defaultListIds, resolveInvites } from '../../core/config';
+import { ACCESS_LABELS, type AccessLevel } from '../../core/types';
+import type { ListFormDraft, PreviewState } from '../../core/popupState';
+import { restoreSelection, type ShareDraft } from '../../core/shareDraft';
 import { type PreviewResult, send } from '../../lib/messages';
+import { currentPopupState, loadShareDraft, patchPopupState, saveShareDraft } from '../../lib/storage';
 import { BackIcon, PlusIcon, SendIcon } from '../../ui/icons';
+import { useConfirm } from '../../ui/useConfirm';
 import { ListBadge } from '../../ui/ListBadge';
 import { type ListDraft, ListForm, type ListFormHandle } from '../../ui/ListForm';
 import { RequiredMark } from '../../ui/RequiredMark';
 import { ArtifactLink, EmailGroup } from './viewComponents';
-import { byName, people, plural, type Save } from './viewUtils';
+import { byName, currentTabArtifact, people, plural, type Save } from './viewUtils';
 
-/** The artifact open in the active tab, if any. The claude.ai host permission exposes those tabs' URLs. */
-async function currentTabArtifact(): Promise<ArtifactRef | null> {
-  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-
-  return tab?.url ? parseArtifactRef(tab.url) : null;
-}
-
-interface Draft {
-  label: string;
-  artifacts: ArtifactRef[];
-  invites: Invitee[];
-}
-
-export function ShareView({
-  config,
-  save,
-  onAccount,
-  focusArtifacts = false,
-  onArtifactsFocused,
-}: {
+interface ShareViewProps {
   focusArtifacts?: boolean;
   /** Called once the focus asked for by `focusArtifacts` is done, so a later mount doesn't repeat it. */
   onArtifactsFocused?: () => void;
   config: Config;
   save: Save;
   onAccount: (account: Account) => void;
-}) {
-  const [artifactText, setArtifactText] = useState('');
-  const [selected, setSelected] = useState<string[]>(() => defaultListIds(config));
-  const [creating, setCreating] = useState(false);
-  const [preview, setPreview] = useState<{
-    draft: Draft;
-    results: PreviewResult[];
-    accountEmail: string;
-  } | null>(null);
+}
+
+/** Loads what was typed before the popup last closed, then shows the form starting from it. */
+export function ShareView(props: ShareViewProps) {
+  const [draft, setDraft] = useState<ShareDraft | null | undefined>(undefined);
+
+  useEffect(() => {
+    // A draft is a convenience: if it can't be read, start with an empty form.
+    void loadShareDraft().then(setDraft, () => setDraft(null));
+  }, []);
+
+  // Not rendered before the draft is known: the form's first state must be the restored one.
+  return draft === undefined ? null : <ShareForm {...props} initial={draft} />;
+}
+
+function ShareForm({
+  config,
+  save,
+  onAccount,
+  focusArtifacts = false,
+  onArtifactsFocused,
+  initial,
+}: ShareViewProps & { initial: ShareDraft | null }) {
+  const [artifactText, setArtifactText] = useState(initial?.artifactText ?? '');
+  const [selected, setSelected] = useState<string[]>(() =>
+    restoreSelection(
+      initial,
+      config.lists.map((list) => list.id),
+      defaultListIds(config),
+    ),
+  );
+  const [creating, setCreating] = useState(initial?.creating ?? false);
+  // What is typed in the inline form, kept with the rest of the draft.
+  const [newList, setNewList] = useState<ListFormDraft | null>(initial?.newList ?? null);
+  // The preview being looked at, kept across the popup closing. Already loaded by the App.
+  const [preview, setPreviewState] = useState<PreviewState | null>(() => currentPopupState().preview);
+  const setPreview = (next: PreviewState | null) => {
+    setPreviewState(next);
+    void patchPopupState({ preview: next });
+  };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [draft, setDraft] = useState<ListDraft | null>(null);
@@ -64,10 +80,34 @@ export function ShareView({
     void currentTabArtifact().then((ref) => ref && setArtifactText((text) => (text.trim() ? text : ref.url)));
   }, []);
 
-  // Changing the default selection in the Lists tab re-applies it here.
+  // Changing the default selection in the Lists tab re-applies it here. Not on mount, which
+  // would undo the ticks restored from the draft.
   const defaultKey = JSON.stringify(config.defaultSelection);
-  // oxlint-disable-next-line react/set-state-in-effect, react-hooks/exhaustive-deps -- keyed on the default selection only, not every config change
-  useEffect(() => setSelected(defaultListIds(config)), [defaultKey]);
+  const appliedDefaultKey = useRef(defaultKey);
+  useEffect(() => {
+    if (appliedDefaultKey.current === defaultKey) return;
+    appliedDefaultKey.current = defaultKey;
+    setSelected(defaultListIds(config));
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- keyed on the default selection only, not every config change
+  }, [defaultKey]);
+
+  // Keep the form across the popup closing. Skips the first run: nothing has changed yet, and
+  // saving the untouched defaults would make a later change to the defaults look like a choice.
+  const firstRun = useRef(true);
+  const showingForm = creating || config.lists.length === 0;
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    const shown = showingForm ? newList : null;
+    void saveShareDraft({
+      artifactText,
+      selected,
+      ...(creating && { creating }),
+      ...(shown && { newList: shown }),
+    }).catch(() => {});
+  }, [artifactText, selected, creating, showingForm, newList]);
 
   // In "All lists" mode, include lists created in the Lists tab without losing manual unticks.
   useEffect(() => {
@@ -127,24 +167,51 @@ export function ShareView({
       .filter((l) => current.selected.includes(l.id))
       .map((l) => l.name)
       .join(', ');
-    const next: Draft = { label, artifacts: artifacts.refs, invites: current.invites };
-    setBusy(true);
-
-    try {
-      const { account, results } = await send('preview', {
-        artifacts: next.artifacts,
-        invites: next.invites,
-      });
-      onAccount(account);
-      setPreview({ draft: next, results, accountEmail: account.email });
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    // Shown at once, while loading, and saved at once: closing the popup now still leaves it to come back to.
+    setPreview({
+      label,
+      artifacts: artifacts.refs,
+      invites: current.invites,
+      results: null,
+      accountEmail: null,
+    });
   };
 
-  if (preview) return <Preview {...preview} onBack={() => setPreview(null)} />;
+  // Asks for the results of a preview that has none yet: one just started, or one the popup
+  // closed on before the answer came. Reading access changes nothing, so asking twice is harmless.
+  const loading = preview !== null && preview.results === null;
+  useEffect(() => {
+    if (!preview || preview.results) return;
+    let stale = false;
+
+    send('preview', { artifacts: preview.artifacts, invites: preview.invites }).then(
+      ({ account, results }) => {
+        if (stale) return;
+        onAccount(account);
+        setPreview({ ...preview, results, accountEmail: account.email });
+      },
+      (e: Error) => {
+        if (stale) return;
+        setPreview(null);
+        setError(e.message);
+      },
+    );
+
+    return () => {
+      stale = true;
+    };
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- only when a preview starts loading or stops
+  }, [loading, preview?.artifacts, preview?.invites]);
+
+  if (preview)
+    return (
+      <Preview
+        label={preview.label}
+        results={preview.results}
+        accountEmail={preview.accountEmail}
+        onBack={() => setPreview(null)}
+      />
+    );
 
   return (
     <div className="stack">
@@ -201,16 +268,32 @@ export function ShareView({
               ref={form}
               config={config}
               save={save}
+              initial={newList}
+              onUnsavedChange={setNewList}
               onSaved={(list) => {
                 setSelected((ids) => [...ids, list.id]);
                 setCreating(false);
+                setNewList(null);
               }}
-              onCancel={lists.length ? () => setCreating(false) : undefined}
+              onCancel={
+                lists.length
+                  ? () => {
+                      setCreating(false);
+                      setNewList(null);
+                    }
+                  : undefined
+              }
               onDraftChange={setDraft}
             />
           </div>
         ) : (
-          <button className="dashed" onClick={() => setCreating(true)}>
+          <button
+            className="dashed"
+            onClick={() => {
+              setNewList(null);
+              setCreating(true);
+            }}
+          >
             <PlusIcon size={14} /> New list
           </button>
         )}
@@ -229,32 +312,42 @@ export function ShareView({
   );
 }
 
+/** `results` is null while they are still being read. */
 function Preview({
-  draft,
+  label,
   results,
   accountEmail,
   onBack,
 }: {
-  draft: Draft;
-  results: PreviewResult[];
-  accountEmail: string;
+  label: string;
+  results: PreviewResult[] | null;
+  accountEmail: string | null;
   onBack: () => void;
 }) {
   const [error, setError] = useState('');
   const [starting, setStarting] = useState(false);
-  const plans = results.flatMap((r) => (r.plan ? [r.plan] : []));
+  const { ask, dialog } = useConfirm();
+  const plans = (results ?? []).flatMap((r) => (r.plan ? [r.plan] : []));
   const total = plans.reduce((n, p) => n + p.toInvite.length, 0);
 
   const start = async () => {
-    const ok = window.confirm(
-      `Send ${plural(total, 'invitation')} across ${plural(plans.length, 'artifact')} as ${accountEmail}?\n\n` +
-        'People outside your organization will get an email from Claude.',
-    );
-    if (!ok) return;
+    // Held while the question is open so a second click can't stack another one.
     setStarting(true);
+    const ok = await ask({
+      title: `Send ${plural(total, 'invitation')} across ${plural(plans.length, 'artifact')} as ${accountEmail}?`,
+      detail: 'People outside your organization will get an email from Claude.',
+      confirmLabel: 'Send',
+    });
+
+    if (!ok) {
+      setStarting(false);
+      return;
+    }
 
     try {
-      await send('start', { label: draft.label, plans, accountEmail });
+      await send('start', { label, plans, accountEmail: accountEmail! });
+      // The links and ticks are now a run. The next form starts empty, not on this preview.
+      await Promise.all([saveShareDraft(null).catch(() => {}), patchPopupState({ preview: null })]);
     } catch (e) {
       setError((e as Error).message);
       setStarting(false);
@@ -263,14 +356,16 @@ function Preview({
 
   return (
     <div className="stack">
+      {dialog}
       <div className="row spread">
         <button className="ghost" onClick={onBack}>
           <BackIcon size={14} /> Back
         </button>
-        <span className="hint truncate">{draft.label}</span>
+        <span className="hint truncate">{label}</span>
       </div>
-      <p className="hint">Sending as {accountEmail}</p>
-      {results.map((r) => (
+      {results === null && <output className="hint">Checking current access…</output>}
+      {accountEmail && <p className="hint">Sending as {accountEmail}</p>}
+      {(results ?? []).map((r) => (
         <section key={r.artifact.id} className="card stack">
           <ArtifactLink url={r.artifact.url} />
           {r.error ? (
@@ -322,7 +417,7 @@ function Preview({
         the rest of its invites are skipped.
       </p>
       {error && <p className="alert">{error}</p>}
-      <button className="primary block" disabled={!total || starting} onClick={start}>
+      <button className="primary block" disabled={!total || starting || results === null} onClick={start}>
         {total ? (
           <>
             <SendIcon size={15} /> Send {plural(total, 'invitation')}

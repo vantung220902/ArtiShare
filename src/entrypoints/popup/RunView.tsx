@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { summarize } from '../../core/runner';
 import { send } from '../../lib/messages';
 import type { RunState } from '../../lib/storage';
+import { useConfirm } from '../../ui/useConfirm';
 import { ArtifactLink } from './viewComponents';
 
 const RUN_STATUS_LABELS: Record<RunState['status'], string> = {
@@ -12,6 +13,7 @@ const RUN_STATUS_LABELS: Record<RunState['status'], string> = {
 
 export function RunView({ run, onStartNew }: { run: RunState; onStartNew: (starting: boolean) => void }) {
   const [error, setError] = useState('');
+  const { ask, dialog } = useConfirm();
   const s = summarize(run.items, run.reason);
   const done = run.items.length - s.pending;
   const pct = run.items.length ? Math.round((done / run.items.length) * 100) : 100;
@@ -36,8 +38,17 @@ export function RunView({ run, onStartNew }: { run: RunState; onStartNew: (start
   ]
     .filter(Boolean)
     .join(', ');
-  const startNew = () => {
-    if (s.pending > 0 && !window.confirm('Discard this run? The remaining invites will not be sent.')) return;
+  const startNew = async () => {
+    if (
+      s.pending > 0 &&
+      !(await ask({
+        title: 'Discard this run?',
+        detail: 'The remaining invites will not be sent.',
+        confirmLabel: 'Discard',
+        danger: true,
+      }))
+    )
+      return;
     // The Share form mounts as soon as the run is gone, so it has to know before the clear lands.
     onStartNew(true);
     void act('clear').then((cleared) => cleared || onStartNew(false));
@@ -53,6 +64,7 @@ export function RunView({ run, onStartNew }: { run: RunState; onStartNew: (start
 
   return (
     <div className="stack">
+      {dialog}
       <section className="card stack">
         {finished && <output className="alert ok">Share finished: {outcome}</output>}
         <div className="row spread">
