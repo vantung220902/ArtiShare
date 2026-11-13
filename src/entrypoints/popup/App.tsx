@@ -1,4 +1,4 @@
-import { useEffect, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { Account } from '../../claude/shareClient';
 import type { ArtifactRef } from '../../core/types';
 import { emptyPopupState, type PopupState, reconcileListsDraft, type Tab } from '../../core/popupState';
@@ -25,6 +25,7 @@ export function App() {
   const [tabArtifact, setTabArtifact] = useState<ArtifactRef | null>(null);
   // Set while People with access is open, whichever tab it was opened from.
   const [managing, setManaging] = useState<ArtifactRef | null>(null);
+  const manageIconRef = useRef<HTMLButtonElement>(null);
   const setTab = (next: Tab) => {
     // Choosing a tab shows that tab, so People with access closes.
     setManaging(null);
@@ -89,7 +90,15 @@ export function App() {
     );
 
   const manageView = (artifact: ArtifactRef) => (
-    <ManageView artifact={artifact} run={run} onBack={() => setManaging(null)} />
+    <ManageView
+      artifact={artifact}
+      run={run}
+      onBack={() => {
+        setManaging(null);
+        // The icon opened this and is still in the header, so focus returns to it.
+        manageIconRef.current?.focus();
+      }}
+    />
   );
 
   return (
@@ -108,6 +117,7 @@ export function App() {
           {/* Only where it works: an artifact tab. In the header so it never scrolls out of reach. */}
           {tabArtifact && (
             <button
+              ref={manageIconRef}
               className="ghost icon-btn"
               aria-label="Manage access"
               title="Manage access to this artifact"

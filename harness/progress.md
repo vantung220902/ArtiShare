@@ -4,6 +4,17 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-13 · F007 · Manage access icon: keyboard focus and header fit
+
+- **Did:** `ManageView.tsx`: focus moves to Back when People with access opens (`backRef`). `App.tsx`: `manageIconRef`; Back returns focus to the icon (the icon toggle itself keeps focus). Nothing else needed: the icon already hid off artifact tabs, `button:focus-visible` already draws the ring, and `.account` (min-width 0, truncates) plus `icon-btn` (flex none) already fit 380 px. New `e2e/F007.spec.ts` covers all six steps (no icon and no gap, Tab/Enter/Back focus, a long address truncating at 380 px, the in-progress note during a run, tooltip and dark-mode colour).
+- **Verified:** `npm run check` (197 unit tests) and `npm run e2e` (87) pass. feature-verifier: **PASS** on all six steps.
+- **State:** F007 passes. 7 of 18 features pass.
+- **Next:** F008 (side panel page and manifest).
+- **Notes:**
+  - The verifier's tool log again showed only Read, so its "ran check and e2e" lines were not its own; the green runs above are this session's own.
+  - The native tooltip can't be rendered headless, so only the `title` attribute is asserted.
+  - Still stale from F006: `scripts/screenshots.spec.ts:167`, `store/listing.md`, `docs/index.html` still describe the old bottom link.
+
 ### 2026-11-13 · F006 · Manage access icon in the header
 
 - **Did:** `App.tsx`: the bottom "Manage access" link is gone; a `UsersIcon` button (`aria-label` "Manage access", title "Manage access to this artifact", `aria-pressed` while open) sits in the header after the account pill, only when the active tab is an artifact. Clicking it toggles `managing`. `ManageView` renders inside whichever tabpanel is active (Share or Lists), so the old specs' `share` locator still finds it; the Share form and `ListsView` are only hidden meanwhile, so rows and an open list's unsaved edit survive Back. Choosing a tab (`setTab`) closes it. CSS: `.manage-link` removed, `button.icon-btn[aria-pressed='true']` added. README Manage access section. New `e2e/F006.spec.ts` covers all seven steps; `popup-and-manage-access` F012–F016 now click the icon through `panel`.

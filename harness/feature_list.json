@@ -99,7 +99,7 @@
         "Start a run that sends to this artifact, then click the icon while the run view is showing: People with access opens with the note 'A share is in progress for this artifact. Refresh shows the latest.'",
         "Hover the icon: see the tooltip; in dark mode the icon is as visible as the other header controls"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F008",
