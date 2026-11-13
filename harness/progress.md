@@ -4,6 +4,16 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F010 · Use popup instead icon
+
+- **Did:** `src/lib/surface.ts`: `moveToPopup` (`chooseSurface('popup')`). `App.tsx`: the header's switch button is "Open in side panel" in the popup and "Use popup instead" in the side panel, where it calls `moveToPopup()` and then `window.close()`. If switching fails, the page stays open and shows "Could not switch: …" (it was "Could not open the side panel: …"). `icons.tsx`: new `PopupIcon`. README: the Side panel paragraph now describes the icon and switching back and forth. New `e2e/F010.spec.ts` (4 tests) covers all five steps.
+- **Verified:** `npm run check` (204 unit tests) and `npm run e2e` (101) pass, re-run just before this commit. feature-verifier: **PASS** on all five steps, from its own `npm run check`, `npm run e2e` and `npx playwright test e2e/F010.spec.ts`.
+- **State:** F010 passes. 10 of 18 features pass.
+- **Next:** F011 (the popup-or-side-panel choice survives a Chrome restart and an extension update, and people coming from 0.3.0 start with the popup). `applyStoredSurface` at background start is the restart path, and it still has no e2e test.
+- **Notes:**
+  - The session that built F010 hit the usage limit right after it set `passes: true`, before it wrote this entry or committed. The entry and the commit were made afterwards from that session's transcript, with the checks re-run first.
+  - e2e can see the side panel page close, but not Chrome's real side panel. No spec covers a failing `chooseSurface`; in that case the page stays open and shows the error.
+
 ### 2026-11-13 · F009 · Open in side panel icon
 
 - **Did:** New `src/core/surface.ts` (`Surface` = `'popup' | 'sidepanel'`, `parseSurface`, default popup) with `tests/surface.test.ts`. `src/lib/storage.ts`: `loadSurface`/`saveSurface` (`chrome.storage.local` key `surface`). New `src/lib/surface.ts`: `applySurface` (`sidePanel.setPanelBehavior` + `action.setPopup`, `''` for the side panel), `chooseSurface` (save then apply), `applyStoredSurface`, `moveToSidePanel` (`sidePanel.open` first, while the click is still a gesture, then `chooseSurface('sidepanel')`). `background.ts` calls `applyStoredSurface()` on every start because `setPopup` is forgotten on browser restart. `App` takes `surface` (default `'popup'`); the popup shows a `SidePanelIcon` button "Open in side panel" in the header after Manage access, which closes the popup (`window.close()`) once the panel is open, or shows "Could not open the side panel: …". `sidepanel/main.tsx` passes `surface="sidepanel"`, so no icon there. README: new "Side panel" paragraph. New `e2e/F009.spec.ts`; `popup-and-manage-access/F002.spec.ts` now expects the first Tab stop to be the new icon.

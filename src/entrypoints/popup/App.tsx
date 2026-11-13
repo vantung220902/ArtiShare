@@ -4,17 +4,17 @@ import type { Surface } from '../../core/surface';
 import type { ArtifactRef } from '../../core/types';
 import { emptyPopupState, type PopupState, reconcileListsDraft, type Tab } from '../../core/popupState';
 import { send } from '../../lib/messages';
-import { moveToSidePanel } from '../../lib/surface';
+import { moveToPopup, moveToSidePanel } from '../../lib/surface';
 import { loadPopupState, patchPopupState } from '../../lib/storage';
 import { useConfig, useRun } from '../../ui/hooks';
-import { SendIcon, SidePanelIcon, UsersIcon } from '../../ui/icons';
+import { PopupIcon, SendIcon, SidePanelIcon, UsersIcon } from '../../ui/icons';
 import { ListsView } from './ListsView';
 import { ManageView } from './ManageView';
 import { RunView } from './RunView';
 import { ShareView } from './ShareView';
 import { currentTabArtifact } from './viewUtils';
 
-/** In the popup there is an "Open in side panel" icon; the side panel itself has no use for it. */
+/** The header has an icon that moves ArtiShare to the other surface: the popup offers the side panel and the side panel offers the popup. */
 export function App({ surface = 'popup' }: { surface?: Surface }) {
   const [config, save, configError] = useConfig();
   const [run, runError] = useRun();
@@ -38,6 +38,8 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
   const [account, setAccount] = useState<Account | null>(null);
   const [accountError, setAccountError] = useState('');
   const [surfaceError, setSurfaceError] = useState('');
+  const inPopup = surface === 'popup';
+  const switchLabel = inPopup ? 'Open in side panel' : 'Use popup instead';
   // Set by "Start a new share", so the fresh Share form is ready to type in. Not on a plain panel open.
   const [focusArtifacts, setFocusArtifacts] = useState(false);
 
@@ -131,25 +133,23 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
               <UsersIcon size={16} />
             </button>
           )}
-          {surface === 'popup' && (
-            <button
-              className="ghost icon-btn"
-              aria-label="Open in side panel"
-              title="Open in side panel"
-              onClick={() => {
-                // Nothing is left for the popup to do once the panel is open, so it closes.
-                moveToSidePanel().then(
-                  () => window.close(),
-                  (e: Error) => setSurfaceError(e.message),
-                );
-              }}
-            >
-              <SidePanelIcon size={16} />
-            </button>
-          )}
+          <button
+            className="ghost icon-btn"
+            aria-label={switchLabel}
+            title={switchLabel}
+            onClick={() => {
+              // Nothing is left for this page to do once the other surface is chosen, so it closes.
+              (inPopup ? moveToSidePanel : moveToPopup)().then(
+                () => window.close(),
+                (e: Error) => setSurfaceError(e.message),
+              );
+            }}
+          >
+            {inPopup ? <SidePanelIcon size={16} /> : <PopupIcon size={16} />}
+          </button>
         </header>
 
-        {surfaceError && <p className="alert">Could not open the side panel: {surfaceError}</p>}
+        {surfaceError && <p className="alert">Could not switch: {surfaceError}</p>}
 
         {accountError && (
           <p className="alert">

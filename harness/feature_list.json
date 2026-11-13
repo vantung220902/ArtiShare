@@ -137,7 +137,7 @@
         "In the popup, see no 'Use popup instead' icon",
         "Switch to the side panel and back twice: each switch leaves the toolbar icon opening the last thing chosen"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F011",

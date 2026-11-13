@@ -83,6 +83,14 @@ export const UsersIcon = (p: IconProps) => (
   </Icon>
 );
 
+/** A window with a bar across its top: the popup, the counterpart of the side panel icon. */
+export const PopupIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M3 9h18" />
+  </Icon>
+);
+
 /** A window with a panel down its right-hand side. */
 export const SidePanelIcon = (p: IconProps) => (
   <Icon {...p}>
