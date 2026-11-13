@@ -178,7 +178,7 @@
         "In one claude.ai tab, open a different artifact in place (the URL's ?artifact= changes without a new tab): within a second it is added with the badge",
         "Click + Current tab while on One: it adds nothing new and shows no error, since the tab that is active now (not the one the panel opened over) is already in the list"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F014",

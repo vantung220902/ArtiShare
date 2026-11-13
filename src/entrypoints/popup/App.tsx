@@ -196,6 +196,7 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
             ) : (
               <ShareView
                 focusArtifacts={focusArtifacts}
+                followTab={!inPopup}
                 onArtifactsFocused={() => setFocusArtifacts(false)}
                 config={config}
                 save={save}

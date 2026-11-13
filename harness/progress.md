@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F013 · The side panel follows the tab you're on
+
+- **Did:** New hook `src/entrypoints/popup/useTabArtifact.ts`: the artifact of the active tab, read on mount and, with `follow`, again on `tabs.onActivated`, `tabs.onUpdated` (active tab, URL changed, which covers in-place `?artifact=` changes) and `windows.onFocusChanged`; stale answers are dropped and the same artifact keeps the same value. `ShareView.tsx` uses it in place of the one-time read: the artifact is added unless it is a row or was removed, and `thisTab` (the badge) follows it, going null on a non-artifact tab. New `followTab` prop on ShareView, passed by `App.tsx` as `!inPopup`, so the popup still reads once. README: the Side panel paragraph says the panel follows the tab. New `e2e/F013.spec.ts` (4 tests) covers all 8 steps plus the popup not following.
+- **Verified:** `harness/init.sh` OK at the start (204 unit, 114 e2e). After the change `npm run check` (204 unit) and `npm run e2e` (118) pass; F013 passed 12 of 12 with `--repeat-each=3`. feature-verifier: **PASS** on all 8 steps.
+- **State:** F013 passes. 13 of 18 features pass. The tree is clean after the commit. `stash@{0}` (the stray debug spec) is still there; drop it whenever.
+- **Next:** F014 (in the side panel, the Manage access icon follows the tab you're on, and an open Manage access stays on the artifact it was opened for). `App.tsx` still reads `tabArtifact` once (`currentTabArtifact()` in an effect); `useTabArtifact(!inPopup)` can replace it, with `managing` already holding the artifact an open view is for.
+- **Notes:** In e2e, a new tab (`newPage`) is brought to the front, so a side panel that is already open follows it at once. The spec therefore creates the artifact tabs first and opens `sidepanel.html` after them. A uuid `?artifact=` is shown as a derived artifact link, so the spec compares rows with each other, not with the uuid.
+
 ### 2026-11-14 · F012 · Re-verified after removing the stray debug spec
 
 - **Did:** No code change. `rm` of the untracked `e2e/zz-dbg.spec.ts` needed approval, so it was set aside with `git stash push -u` instead (`stash@{0}`; drop it with `git stash drop` whenever). Set F012 `passes` to true.
