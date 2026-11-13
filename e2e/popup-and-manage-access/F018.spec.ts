@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test';
 // and that none of them carries a real address or artifact id (the generator only knows made-up ones,
 // so the same list of ids is checked in its source).
 
-const root = new URL('..', import.meta.url);
+const root = new URL('../..', import.meta.url);
 const read = (path: string) => readFileSync(new URL(path, root));
 
 /** Width and height from a PNG's IHDR chunk. */

@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
-import { expect, test } from './fixtures';
-import { openRealPopup } from './realPopup';
+import { expect, test } from '../fixtures';
+import { openRealPopup } from '../realPopup';
 
 // F002: the popup is 380 px wide and at most 600 px tall; the header and tabs stay at the top, only
 // the content scrolls, the footer stays at the bottom, and there is no close button.

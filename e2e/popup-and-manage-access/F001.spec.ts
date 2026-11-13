@@ -1,4 +1,4 @@
-import { answer, expect, test } from './fixtures';
+import { answer, expect, test } from '../fixtures';
 
 // F001: clicking the ArtiShare toolbar icon opens a popup with the Share and Lists tabs, instead
 // of a side panel.

@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F006: closing the popup doesn't lose a list being typed or edited, or the tab that was open.
 // Closing is simulated by reloading the popup page, which throws away all of its state just as

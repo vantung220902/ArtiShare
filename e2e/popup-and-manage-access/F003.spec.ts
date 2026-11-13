@@ -1,5 +1,5 @@
-import { expect, test } from './fixtures';
-import { openRealPopup } from './realPopup';
+import { expect, test } from '../fixtures';
+import { openRealPopup } from '../realPopup';
 
 // F003: the popup picks up the artifact in the tab it was opened over, and + Current tab adds it.
 const COWORK =

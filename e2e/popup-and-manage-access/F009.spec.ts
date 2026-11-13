@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { answer, expect, test } from './fixtures';
+import { answer, expect, test } from '../fixtures';
 
 // F009: the run lives in the background, so closing the popup mid-run doesn't stop it, and the
 // reopened popup shows where it has got to. Closing is leaving the popup page (about:blank), which

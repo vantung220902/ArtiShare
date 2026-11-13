@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F010: the fake claude.ai has artifacts that start with people already invited. Preview is the
 // only place the popup shows them so far; Manage access comes in later features.
