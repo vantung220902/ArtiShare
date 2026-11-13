@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { answer, expect, test } from './fixtures';
+import { answer, expect, test } from '../fixtures';
 
 // F008: closing the popup doesn't lose a preview, even one still loading. Closing is simulated by
 // reloading the popup page, which throws away all of its state just as a real close does.

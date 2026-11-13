@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F014: in Manage access, removing a person's invitation asks first, then removes it on claude.ai.
 

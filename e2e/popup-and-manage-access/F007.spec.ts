@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F007: a draft restored when the popup reopens is reconciled with what changed while it was
 // closed. Closing is simulated by sending the popup page to about:blank (so it can't write

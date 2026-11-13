@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F015: when claude.ai refuses a change or removal, or the list can't be loaded, Manage access says
 // why on the row (or in the card) and leaves things as they were.

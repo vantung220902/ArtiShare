@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F012: on an artifact tab, a quiet 'Manage access' link opens the people already invited to it.
 

@@ -1,231 +1,203 @@
 {
-  "goal": "Turn the side panel into a toolbar popup laid out like other extensions' popups, keep drafts and runs safe when it closes, and add a secondary 'Manage access' view to change or remove the people already invited to the artifact you're on.",
-  "branch": "harness/popup-and-manage-access",
+  "goal": "For v0.4.0: let people move ArtiShare from the popup into a side panel and back (remembered), make the Artifacts box treat the current tab the same way every time, and move Manage access from the bottom of the Share tab to an icon in the header.",
+  "branch": "harness/side-panel-mode",
   "features": [
     {
       "id": "F001",
       "category": "functional",
-      "description": "Clicking the ArtiShare toolbar icon opens a popup with the Share and Lists tabs, instead of a side panel",
+      "description": "When the Artifacts box already has links, opening ArtiShare over another artifact keeps them and offers that artifact with a one-click Add, the same for the second and third artifact as for the first",
       "steps": [
-        "Run `npm run build:fake` and open the built manifest (.output/chrome-mv3-fake/manifest.json)",
-        "See `action.default_popup` set to the popup page, no `side_panel` entry and no `sidePanel` permission, and the same `key` as before (wxt.config.ts unchanged there)",
-        "Load the fake build (`npm run dev:fake`) and click the ArtiShare icon in the toolbar",
-        "See a popup (not a side panel) with the ArtiShare header, the account pill reading owner@example.com, the Share and Lists tabs, and 'Version …' at the bottom",
-        "Make a list, preview and send to one artifact from the popup and see the run finish ('Share finished: …'), as it did in the side panel",
-        "In e2e, the `panel` fixture opens the popup page as a tab, and every existing spec (e2e/smoke.spec.ts and e2e/share-ux-fixes/*, from the previous goal) still passes against it"
+        "In the fake build, make https://claude.ai/artifact/ExampleArtifactOne01 the active tab (in e2e, served by a route so nothing reaches claude.ai) and open the popup with an empty Artifacts box: see the box filled with that link and no hint under it",
+        "Close the popup, make https://claude.ai/artifact/ExampleArtifactTwo02 the active tab and open the popup again: see Artifacts still holding only the first link, unchanged, and under the box the hint 'This tab's artifact isn't in the list.' with an Add button",
+        "Click Add: see the second link added on its own line, the Artifacts count reading 2, and the hint gone",
+        "Make https://claude.ai/artifact/ExampleArtifactThree3 the active tab and reopen the popup: see the same hint and Add; click Add and see three links",
+        "Make the second artifact the active tab again and reopen the popup: no hint, since it is already in the list, and the box is unchanged",
+        "Make a non-claude.ai page the active tab and reopen the popup: no hint, and the three links are unchanged",
+        "Clear the box, make an artifact the active tab and reopen the popup: see the box filled with that artifact, as on the first open",
+        "Preview and send a run from this form, let it finish, make an artifact the active tab and click Start a new share: see the fresh form filled with that tab's artifact"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "F002",
-      "category": "ux",
-      "description": "The popup is sized and laid out like other extensions' popups: fixed width, a header and tabs that stay put, content that scrolls, a footer, and no close button",
+      "category": "edge-case",
+      "description": "The 'isn't in the list' hint knows the same artifact written another way, works next to lines that aren't links, and never adds a link twice",
       "steps": [
-        "Open the popup with three saved lists and the Lists tab showing every list expanded",
-        "See the popup 380 px wide and no taller than 600 px; the header (logo, account pill) and the Share/Lists tabs stay at the top while only the content below scrolls",
-        "See the footer with 'Version …' pinned at the bottom, visible without scrolling",
-        "Paste a 120-character email address and a long artifact link: see them wrap or truncate with no horizontal scrollbar",
-        "See no 'Close ArtiShare' button in the header (a popup closes when you click away)",
-        "Open the popup again: focus is not trapped in a text field, and Tab moves through the header, the tabs, then the form"
+        "Type https://claude.ai/artifact/QqHHsBLXBfYKJD5NqJ8PeY into Artifacts, make https://claude.ai/cowork/cse_01ExampleCoworkSession00?artifact=c0ffee00-1234-4abc-8def-000000000001#example the active tab and reopen the popup: no hint, because it is the same artifact",
+        "Type 'not a link' on a second line, make https://claude.ai/artifact/ExampleArtifactTwo02 the active tab and reopen the popup: see the hint; click Add and see the new link on its own line, 'not a link' kept, and the 'Not artifact links: not a link' warning still shown",
+        "Leave blank lines and spaces after the last link, then click Add for another artifact tab: see exactly one link per line, with no empty line left between the old links and the new one",
+        "Double-click Add quickly: the link is added once",
+        "With the hint showing, click + Current tab instead: the link is added once and the hint disappears",
+        "Close the popup without clicking Add and reopen it over the same tab: the box is unchanged (opening never adds by itself) and the hint shows again"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "F003",
       "category": "functional",
-      "description": "The popup picks up the artifact in the tab it was opened over: Artifacts is filled in, and + Current tab adds it",
+      "description": "On an artifact tab, a Manage access icon in the header opens People with access from the Share or the Lists tab, without scrolling, and the old link at the bottom is gone",
       "steps": [
-        "Make https://claude.ai/cowork/cse_01ExampleCoworkSession00?artifact=c0ffee00-1234-4abc-8def-000000000001#example the active tab (in e2e, served by a route so nothing reaches claude.ai)",
-        "Open the popup: see Artifacts already filled with https://claude.ai/artifact/QqHHsBLXBfYKJD5NqJ8PeY",
-        "Clear Artifacts and click + Current tab: see the same link added once and no error",
-        "Make a non-claude.ai page the active tab, reopen the popup: Artifacts is empty, and + Current tab shows 'The current tab is not a claude.ai artifact.'"
+        "Save three lists, make https://claude.ai/artifact/ExampleSharedArtifact01 the active tab and open the popup on the Share tab",
+        "See, in the header beside the account pill and visible without scrolling, a people icon button named 'Manage access' with the tooltip 'Manage access to this artifact'; scroll to the bottom of the Share tab and see no 'Manage access' link there",
+        "Click the icon: see People with access with You (owner), viewer@example.com (Can view), commenter@example.com (Pending, Commenter) and locked@example.com",
+        "While it is open, see the icon shown as pressed (aria-pressed=true); click it again and see the Share tab back, as when clicking Back",
+        "Type a link into Artifacts, open Manage access, click Back: see the Share tab exactly as left, with the typed link",
+        "Switch to the Lists tab, open a saved list and change its permission without saving, then click the icon: Manage access opens; click Back and see the Lists tab with that list still open and its unsaved permission",
+        "Change commenter@example.com to Can view and remove viewer@example.com from this view: both work as before (the existing Manage access e2e specs pass using the header icon)"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "F004",
       "category": "ux",
-      "description": "Confirmations are shown inside the popup instead of browser dialogs (which can close a popup): deleting a list, sending, and discarding a stopped run",
+      "description": "The Manage access icon only appears where it works, is easy to use with the keyboard, and fits in the header",
       "steps": [
-        "In the Lists tab, open a list and click Delete: see an in-popup confirmation 'Delete the list \"…\"?' with Delete and Cancel buttons, and no browser dialog",
-        "Click Cancel (and, again, press Escape): the list stays. Click Delete then confirm: the list is gone",
-        "In Share, preview one artifact and click Send: see an in-popup confirmation stating how many invitations go to how many artifacts; Cancel keeps the preview, confirming starts the run",
-        "Stop a run with invites left and click Start a new share: see the in-popup 'Discard this run? The remaining invites will not be sent.' Cancel keeps the stopped run and Resume; confirming opens a fresh Share form",
-        "In e2e, no `dialog` event fires during any of this (the fixture's auto-accept is removed from these specs)"
+        "Open the popup over a non-claude.ai page, and again over https://claude.ai/ (no artifact open): no Manage access icon and no empty gap where it would be",
+        "Open the popup over an artifact tab and press Tab from the top: focus reaches the Manage access icon with a visible focus ring; press Enter and see People with access, with focus on its Back button",
+        "Press Back (or Enter on it): the previous tab shows again and focus returns to the Manage access icon",
+        "At the popup's 380 px width, see the logo, the wordmark, the account pill and the header icons on one line: the account pill truncates if needed and the icons are never cut off or wrapped",
+        "Start a run that sends to this artifact, then click the icon while the run view is showing: People with access opens with the note 'A share is in progress for this artifact. Refresh shows the latest.'",
+        "Hover the icon: see the tooltip; in dark mode the icon is as visible as the other header controls"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "F005",
       "category": "functional",
-      "description": "Closing the popup doesn't lose the Share form: the artifacts typed and the lists ticked come back when it reopens",
+      "description": "The extension has a side panel again that shows the same ArtiShare (header, Share and Lists tabs, footer), filling the panel's height",
       "steps": [
-        "Save lists Alpha and Beta with 'Only these' set to Alpha",
-        "Open the popup, type two artifact links into Artifacts, untick Alpha and tick Beta",
-        "Close the popup (click away) and open it again",
-        "See the same two links in Artifacts, Alpha unticked and Beta ticked, and the Share tab showing",
-        "Send a run from that form and let it finish, then click Start a new share: see an empty form with Alpha ticked; close and reopen the popup and see that empty form, not the old draft"
+        "Run `npm run build:fake` and open .output/chrome-mv3-fake/manifest.json: see `side_panel.default_path` pointing at the side panel page, `sidePanel` in `permissions`, `action.default_popup` still the popup page, and the same `key` as before (wxt.config.ts key unchanged)",
+        "Open the side panel page (in e2e, sidepanel.html opened as a tab at 400×900): see the ArtiShare header, the account pill reading owner@example.com, the Share and Lists tabs, and 'Version …' at the bottom",
+        "See it fill the whole height: header and tabs at the top, the footer at the very bottom, only the content between them scrolling, and no 600 px cap",
+        "Make a list, preview and send to one artifact from the side panel: see the run finish ('Share finished: …')",
+        "Every existing popup spec still passes"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "F006",
       "category": "functional",
-      "description": "Closing the popup doesn't lose a list being typed or edited, or which tab was open",
+      "description": "The popup's 'Open in side panel' icon moves ArtiShare into the side panel, and from then on the toolbar icon opens the side panel",
       "steps": [
-        "In the Lists tab, click New list, type a name, two addresses and pick Can edit; don't save",
-        "Close and reopen the popup: see the Lists tab open with the new-list form showing that name, both addresses and Can edit",
-        "Open a saved list, change its permission without saving, close and reopen: see that list expanded with the unsaved permission and Save / Revert enabled",
-        "In Share, click + New list, type one address, close and reopen: see the inline form with that address",
-        "Save or Cancel each form: reopening the popup no longer shows the draft"
+        "Open the popup: see a header icon button named 'Open in side panel' with that tooltip",
+        "Click it: the side panel opens in the current window showing ArtiShare, and the popup closes",
+        "Click the ArtiShare toolbar icon again: the side panel opens, not the popup (in e2e: `chrome.action.getPopup({})` returns '' and `chrome.sidePanel.getPanelBehavior()` reports `openPanelOnActionClick: true`, and the stored choice says side panel)",
+        "In the side panel, see no 'Open in side panel' icon"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "F007",
-      "category": "edge-case",
-      "description": "A restored draft is reconciled with what changed while the popup was closed",
+      "category": "functional",
+      "description": "The side panel's 'Use popup instead' icon switches back: the side panel closes and the toolbar icon opens the popup again",
       "steps": [
-        "In the popup, tick lists Alpha and Beta in Share and close the popup",
-        "Delete Beta from another window (open the popup page in a tab) and close that too",
-        "Reopen the popup: see Alpha ticked, Beta gone, and no error",
-        "Start an unsaved edit of list Alpha, close the popup, change Alpha's addresses from another window, reopen: see the draft kept and the existing 'This list changed in another window' warning with Reload saved"
+        "With the side panel chosen, open it: see a header icon button named 'Use popup instead' with that tooltip",
+        "Click it: the side panel closes",
+        "Click the ArtiShare toolbar icon: the popup opens (in e2e: `chrome.action.getPopup({})` ends with popup.html and `openPanelOnActionClick` is false, and the stored choice says popup)",
+        "In the popup, see no 'Use popup instead' icon",
+        "Switch to the side panel and back twice: each switch leaves the toolbar icon opening the last thing chosen"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "F008",
-      "category": "functional",
-      "description": "A preview survives the popup closing, even while it is still loading",
+      "category": "edge-case",
+      "description": "The popup-or-side-panel choice survives restarting Chrome and updating the extension, and people coming from 0.3.0 start with the popup",
       "steps": [
-        "Fill Artifacts with two links, tick a list, click Preview and close the popup before the results appear",
-        "Reopen the popup: see the preview (loading, then both artifact cards with To invite / Already have access), not the blank form",
-        "Close and reopen again: the same preview shows, with Back and Send",
-        "Click Back: see the form with the same artifacts and ticks; reopening now shows the form, not the preview"
+        "On a fresh install, click the toolbar icon: the popup opens (getPopup returns popup.html, openPanelOnActionClick false)",
+        "Choose the side panel, then reload the extension (chrome://extensions ↻; in e2e, `chrome.runtime.reload()` and wait for the new service worker): the toolbar icon still opens the side panel",
+        "Choose the popup and reload the extension: the toolbar icon opens the popup",
+        "Start from a profile holding 0.3.0's storage (saved lists, a default selection, no stored choice): after loading this build, every list is still there and the toolbar icon opens the popup",
+        "Put an unknown value in the stored choice: the toolbar icon opens the popup"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "F009",
-      "category": "edge-case",
-      "description": "Closing the popup mid-run doesn't stop the run, and reopening it shows live progress",
+      "category": "functional",
+      "description": "Moving between the popup and the side panel keeps your work: the Share form, a list being typed, a preview, a run and the open tab",
       "steps": [
-        "Send invitations to four addresses including a `slow…` one, and close the popup while the run is going",
-        "Wait a few seconds and reopen the popup: see the run view with more addresses Invited than before, still updating",
-        "Click Stop, close and reopen: see Stopped with Resume; click Resume and see it finish ('Share finished: …')"
+        "In the popup, type two artifact links into Share, untick Alpha and tick Beta; switch to Lists, click New list and type a name and one address without saving",
+        "Click Open in side panel: see the side panel on the Lists tab with that new-list form, name and address; switch to Share and see the two links with Beta ticked and Alpha unticked",
+        "Click Preview in the side panel, then Use popup instead and open the popup: see the same preview with Back and Send",
+        "Click Send and confirm; while it runs, switch to the side panel: see live progress, and Stop then Resume work there; the run is not interrupted by the switch and finishes ('Share finished: …')"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "F010",
       "category": "functional",
-      "description": "The fake claude.ai can change an invitation's permission and remove it, and has artifacts that start with people already invited",
+      "description": "The side panel follows the tab you're on: the Artifacts box and its hint update as you switch tabs, without adding anything to a box that has links",
       "steps": [
-        "Read the rules at the top of src/claude/fakeShareClient.ts and the README's fake-mode list: they describe an artifact id containing 'Shared' starting with three invitees (one accepted Can view, one pending Commenter, and a `locked…` address that refuses changes and removal because the person joined the organization), and an artifact id containing 'Missing' whose invitation list can't be loaded (not found)",
-        "In the popup, preview https://claude.ai/artifact/SharedExampleArtifact01 (or any link whose id contains Shared) with a list holding one new address",
-        "See the three seeded people under Already have access, with their permissions",
-        "Unit tests show the fake's `changeAccess` updates a person's permission, `removeInvite` removes them, both throw for a `locked…` address and for a 'Forbidden' artifact, `listSharees` throws for a 'Missing' artifact, and the next `listSharees` reflects each change"
+        "Open the side panel with an empty Artifacts box over a non-claude.ai tab: the box stays empty, no hint",
+        "Switch to https://claude.ai/artifact/ExampleArtifactOne01: the box fills with that link",
+        "Switch to https://claude.ai/artifact/ExampleArtifactTwo02: the box still holds only the first link, and the hint 'This tab's artifact isn't in the list.' shows with Add; click Add and see both links",
+        "Switch to a non-claude.ai tab: the hint is gone and the links are unchanged",
+        "In one claude.ai tab, open a different artifact in place (the URL's ?artifact= changes without a new tab): within a second the hint offers that artifact",
+        "Click + Current tab: it adds the artifact of the tab that is active now, not the one the panel opened over"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "F011",
       "category": "functional",
-      "description": "The claude.ai client can change an invitation's permission and remove it, using the Share menu's own requests",
+      "description": "In the side panel, the Manage access icon follows the tab you're on, and an open Manage access stays on the artifact it was opened for",
       "steps": [
-        "Read `docs/claude-share-api.md`: PATCH and DELETE `/api/frame/invite/{uuid}/{inviteId}` are listed under the endpoints the extension uses, with their refusals",
-        "Read `ShareClient` in src/claude/shareClient.ts: it has `changeAccess` and `removeInvite`, and `listSharees` returns each invitation's id",
-        "Run `npm test`: apiShareClient tests (with a stub transport, nothing sent) show PATCH with `{ role: 'reader' | 'commenter' | 'editor' }` and DELETE are sent to the right URL with `X-Frame-CP: go` and the artifact's org",
-        "The same tests show a 409 `invitee_joined_org` becomes 'This person joined your organization, so their access is managed in claude.ai.', a 403 'Only the owner can change access', a 404 'The invitation no longer exists', and a 429 a rate-limit error"
+        "Open the side panel over a non-claude.ai tab: no Manage access icon",
+        "Switch to https://claude.ai/artifact/ExampleSharedArtifact01: the icon appears; click it and see People with access for that artifact, with its link at the top",
+        "With Manage access open, switch to https://claude.ai/artifact/ExampleArtifactTwo02: the view stays on the first artifact (its link still shown) and nothing is changed",
+        "Click Back, then the icon: Manage access opens for the second artifact, the tab you're on now",
+        "Open Manage access, switch to a non-claude.ai tab: the view stays; click Back and see the icon gone"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "F012",
-      "category": "functional",
-      "description": "On an artifact tab, a quiet 'Manage access' link opens a list of the people already invited to that artifact",
+      "category": "error-handling",
+      "description": "If Chrome can't open the side panel, the popup stays open, says why, and the toolbar icon keeps opening the popup",
       "steps": [
-        "Make https://claude.ai/artifact/SharedExampleArtifact01 the active tab and open the popup",
-        "See a small 'Manage access' link at the bottom of the Share tab, under the Share form or the run view (a secondary link, not a tab or a primary button)",
-        "Click it: see a 'People with access' view naming the artifact's link, with a Back button, 'You (owner)' first and not editable, then each invitee with their address, a Pending or Accepted label and their permission",
-        "Click Back: see the Share form with whatever was typed before still there",
-        "Make a non-artifact page the active tab and reopen the popup: see no 'Manage access' link"
+        "Make `chrome.sidePanel.open` reject (in e2e, replace it in the popup page before clicking) and click Open in side panel: the popup stays open and shows 'Couldn't open the side panel: …' with the reason",
+        "See the toolbar icon still opening the popup (getPopup returns popup.html, the stored choice says popup) and the Share form unchanged",
+        "Make `chrome.sidePanel` undefined (a Chrome without side panels) and reopen the popup: no Open in side panel icon is shown"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "F013",
-      "category": "functional",
-      "description": "In Manage access, changing a person's permission saves it on claude.ai",
+      "category": "ux",
+      "description": "The side panel is comfortable for long lists: it uses the panel's width and height, and nothing scrolls sideways at any width",
       "steps": [
-        "Open Manage access on a 'Shared' artifact",
-        "Change the accepted Can view person to Can edit",
-        "See the select disabled briefly, then a short 'Saved' next to that row, and no other row changed",
-        "Close and reopen the popup and open Manage access again: see that person at Can edit",
-        "Preview the same artifact from Share: see them under Already have access at Can edit"
+        "Open the side panel page at 320, 400 and 600 px wide (900 tall): the content uses the full width (no fixed 380 px column), there is no horizontal scrollbar, and the header's logo, account pill and icons stay on one line",
+        "Save a list with 200 addresses and open it in the Lists tab of the side panel at 900 px tall: the address box shows more lines than it does in the popup, and Save is reachable by scrolling",
+        "Paste a 120-character address and a long artifact link: they wrap or truncate without widening the panel",
+        "Open the popup: it is unchanged, 380 px wide and no taller than 600 px"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "F014",
-      "category": "functional",
-      "description": "In Manage access, removing a person's invitation asks first, then removes it from claude.ai",
+      "category": "docs",
+      "description": "README, store listing, website and contributor docs describe the side panel choice, the Manage access icon and how the Artifacts box treats the current tab",
       "steps": [
-        "Open Manage access on a 'Shared' artifact and click Remove on the pending Commenter",
-        "See an in-popup confirmation 'Remove … from this artifact? Their invitation will stop working.' with Remove and Cancel",
-        "Click Cancel: the person stays. Click Remove again and confirm: the row disappears",
-        "Close and reopen the popup and open Manage access: they are still gone",
-        "Preview the artifact from Share with a list containing that address: they are now under To invite"
+        "README: Use it explains Open in side panel and Use popup instead, that the toolbar icon remembers the choice, and that work carries over; Pick artifacts describes the empty-box fill and the 'isn't in the list' hint with Add; Optional: Manage access describes the header icon (no 'bottom of the Share tab' wording left)",
+        "store/listing.md: the permissions table justifies `sidePanel` again, and the description mentions the side panel option",
+        "docs/index.html mentions the side panel option and the Manage access icon",
+        "CLAUDE.md's layout names the side panel entrypoint next to popup/",
+        "`grep -rn 'bottom of the Share tab' README.md store docs` finds nothing"
       ],
-      "passes": true
+      "passes": false
     },
     {
       "id": "F015",
-      "category": "error-handling",
-      "description": "When claude.ai refuses a change or removal, or the list can't be loaded, Manage access says why and leaves things as they were",
-      "steps": [
-        "In Manage access on a 'Shared' artifact, change the `locked…` person's permission: see the select go back to its old value and an error on that row ('This person joined your organization, so their access is managed in claude.ai.'); other rows still work",
-        "Click Remove on the `locked…` person and confirm: see the same error on the row and the row kept",
-        "Open Manage access on an artifact whose id contains 'Forbidden': see the people listed, and any change shows 'Only the owner can change access'",
-        "Open Manage access on an artifact whose id contains 'Missing': see the error ('Artifact not found' or similar) with a Retry button instead of an empty list; Retry asks again"
-      ],
-      "passes": true
-    },
-    {
-      "id": "F016",
-      "category": "edge-case",
-      "description": "Manage access handles an artifact with nobody invited, a list that changed meanwhile, and repeated clicks",
-      "steps": [
-        "Open Manage access on a new artifact nobody was invited to: see 'Only you have access.' with a hint that Share invites people",
-        "Click Refresh after sending invitations to that artifact from Share: see the new people appear",
-        "Click Remove and confirm twice quickly, or change a select twice quickly: see only one request per action (controls are disabled while it's in flight) and no error",
-        "While a run is sending to this artifact, open Manage access: see a note that a share is in progress and that Refresh shows the latest"
-      ],
-      "passes": true
-    },
-    {
-      "id": "F017",
       "category": "docs",
-      "description": "README, store listing, website and contributor docs describe the popup and Manage access",
+      "description": "The README and store screenshots show the new header icons, and a new screenshot shows the side panel with a long list",
       "steps": [
-        "README: 'click the ArtiShare icon to open the popup' (flowchart, Install step 5, Use it, Develop), that drafts and previews are kept when the popup closes and runs continue, a short 'Manage access' section after Watch it run marked as optional, the fake rules for 'Shared' and `locked…`, and the 'never removes anyone' sentence changed to say it only removes someone when you click Remove in Manage access",
-        "store/listing.md: description and test instructions say popup; the `sidePanel` permission justification is removed; the single-purpose text mentions managing existing invitations",
-        "docs/index.html: no 'side panel' left",
-        "CLAUDE.md layout, .claude/commands/harness-work.md and .claude/agents/feature-verifier.md say popup instead of side panel (the e2e fixture name may stay `panel`)",
-        "`npm run check` passes (Prettier clean), and `grep -ri 'side panel'` outside harness/progress.md and node_modules finds nothing that describes the current UI"
+        "Run `npm run screenshots`: docs/images/share.png, preview.png, done.png and manage.png show the header with the Manage access and Open in side panel icons",
+        "See a new docs/images/sidepanel.png of the side panel with a long list open in the Lists tab, and the README showing it with alt text naming the side panel",
+        "store/images screenshots are regenerated the same way, at 1280×800",
+        "Every screenshot uses only made-up addresses and artifact ids, and the screenshot e2e checks (sizes, README tags and alt text, made-up ids) pass with the new image"
       ],
-      "passes": true
-    },
-    {
-      "id": "F018",
-      "category": "docs",
-      "description": "The README and store screenshots show the popup",
-      "steps": [
-        "Regenerate docs/images/share.png, preview.png and done.png from the fake build's popup (380 px wide), plus a new docs/images/manage.png of Manage access on a 'Shared' artifact",
-        "Regenerate store/images/screenshot-1-share.png, -2-preview.png and -3-done.png at the store's 1280×800 with the popup shown",
-        "See the README's images and alt text match, and no screenshot shows real email addresses or real artifact ids"
-      ],
-      "passes": true
+      "passes": false
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F013: in Manage access, changing a person's permission saves it on claude.ai.
 

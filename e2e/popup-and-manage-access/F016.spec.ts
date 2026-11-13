@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { answer, expect, test } from './fixtures';
+import { answer, expect, test } from '../fixtures';
 
 // F016: Manage access with nobody invited, a list that went stale, and repeated clicks.
 

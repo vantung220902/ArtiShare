@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { answer, confirmation, expect, test } from './fixtures';
+import { answer, confirmation, expect, test } from '../fixtures';
 
 // F004: confirmations are drawn inside the popup. The fixture fails any test in which a native
 // dialog opens, so every spec here also proves none did.
