@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Account } from '../../claude/shareClient';
-import { addArtifactText } from '../../core/artifactRows';
+import { addArtifactText, sameArtifact } from '../../core/artifactRows';
 import { parseArtifactList } from '../../core/artifactUrl';
 import { type Config, defaultListIds, resolveInvites } from '../../core/config';
-import { ACCESS_LABELS, type AccessLevel } from '../../core/types';
+import { ACCESS_LABELS, type AccessLevel, type ArtifactRef } from '../../core/types';
 import type { ListFormDraft, PreviewState } from '../../core/popupState';
 import { restoreSelection, type ShareDraft } from '../../core/shareDraft';
 import { type PreviewResult, send } from '../../lib/messages';
@@ -79,12 +79,18 @@ function ShareForm({
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- only when the form mounts
   }, []);
 
-  // Start from the artifact you're looking at.
+  // The artifact in the tab the popup opened over. It is added when it isn't a row yet, and its row
+  // is marked, so the artifact you're looking at is shared without a click, the second and third
+  // one the same as the first.
+  const [thisTab, setThisTab] = useState<ArtifactRef | null>(null);
   useEffect(() => {
-    void currentTabArtifact().then(
-      (ref) =>
-        ref && setArtifacts((a) => (a.rows.length || a.text.trim() ? a : { rows: [ref], text: a.text })),
-    );
+    void currentTabArtifact().then((ref) => {
+      if (!ref) return;
+      setThisTab(ref);
+      setArtifacts((a) =>
+        a.rows.some((row) => sameArtifact(row, ref)) ? a : { rows: [...a.rows, ref], text: a.text },
+      );
+    });
   }, []);
 
   // Changing the default selection in the Lists tab re-applies it here. Not on mount, which
@@ -217,7 +223,13 @@ function ShareForm({
 
   return (
     <div className="stack">
-      <ArtifactsField value={artifacts} onChange={setArtifacts} pending={pending} onError={setError} />
+      <ArtifactsField
+        value={artifacts}
+        onChange={setArtifacts}
+        pending={pending}
+        thisTab={thisTab}
+        onError={setError}
+      />
 
       <section className="card stack">
         <h2 className="title">Share with</h2>

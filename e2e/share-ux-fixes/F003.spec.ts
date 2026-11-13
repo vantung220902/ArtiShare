@@ -20,7 +20,8 @@ test('the panel and + Current tab pick up the artifact open in a cowork tab', as
   await panel.getByRole('tab', { name: 'Share' }).click();
   const share = panel.getByRole('tabpanel', { name: 'Share' });
   const artifacts = share.getByLabel(/Artifacts/);
-  const rows = share.locator('.artifact-item');
+  // The link alone: the row also carries a 'This tab' badge.
+  const rows = share.locator('.artifact-item .truncate');
   const error = share.locator('.err');
 
   // Opening the panel adds it to Artifacts.
