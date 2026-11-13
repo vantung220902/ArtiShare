@@ -64,6 +64,8 @@ The extension's card should show the ID `eeihicglfclmofckclcpjleekpddjflg`. It's
 
 Open claude.ai and sign in, then click the ArtiShare icon. The popup has two tabs: **Lists** and **Share**.
 
+**Side panel:** the header's **Open in side panel** icon (a window with a panel on its right) moves ArtiShare into the browser's side panel, which stays open while you work in the page. The popup closes, and from then on the ArtiShare toolbar icon opens the side panel instead of the popup. The choice is remembered, including after you restart the browser. The side panel is the same ArtiShare at full height, and has no such icon.
+
 ### 1. Make a list
 
 In the **Lists** tab, click **New list**. A `*` after a label marks a field you must fill in; here that's only **Email addresses**.

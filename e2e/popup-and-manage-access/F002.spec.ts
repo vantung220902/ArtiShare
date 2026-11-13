@@ -128,7 +128,9 @@ test('there is no close button, and focus starts on nothing, then moves header, 
   const active = () => panel.evaluate(() => document.activeElement?.tagName.toLowerCase());
   expect(await active()).toBe('body');
 
-  // Tab goes to the tabs first (the header has nothing to focus), then into the form.
+  // Tab goes to the header's "Open in side panel" icon first (F009), then the tabs, then into the form.
+  await panel.keyboard.press('Tab');
+  await expect(panel.getByRole('button', { name: 'Open in side panel' })).toBeFocused();
   await panel.keyboard.press('Tab');
   await expect(panel.getByRole('tab', { name: 'Share' })).toBeFocused();
   await panel.keyboard.press('Tab');

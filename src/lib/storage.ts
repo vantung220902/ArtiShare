@@ -2,11 +2,13 @@ import { type Config, ConfigSchema, loadStoredConfig } from '../core/config';
 import type { RunItem } from '../core/runner';
 import { emptyPopupState, parsePopupState, type PopupState } from '../core/popupState';
 import { parseShareDraft, type ShareDraft } from '../core/shareDraft';
+import { parseSurface, type Surface } from '../core/surface';
 
 const CONFIG_KEY = 'config';
 const RUN_KEY = 'run';
 const SHARE_DRAFT_KEY = 'shareDraft';
 const POPUP_STATE_KEY = 'popupState';
+const SURFACE_KEY = 'surface';
 
 export interface RunState {
   id: string;
@@ -40,6 +42,15 @@ export async function loadRun(): Promise<RunState | null> {
 export async function saveRun(run: RunState | null): Promise<void> {
   if (run) await chrome.storage.local.set({ [RUN_KEY]: run });
   else await chrome.storage.local.remove(RUN_KEY);
+}
+
+// Local, so the choice outlives a browser restart: it is a setting, not a draft.
+export async function loadSurface(): Promise<Surface> {
+  return parseSurface((await chrome.storage.local.get(SURFACE_KEY))[SURFACE_KEY]);
+}
+
+export async function saveSurface(surface: Surface): Promise<void> {
+  await chrome.storage.local.set({ [SURFACE_KEY]: surface });
 }
 
 // Session storage, not local: a draft is only worth keeping until the browser closes, and it
