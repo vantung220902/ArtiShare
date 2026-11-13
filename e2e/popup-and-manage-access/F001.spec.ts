@@ -6,15 +6,15 @@ import { answer, expect, test } from '../fixtures';
 // The ID the manifest `key` pins (see wxt.config.ts). Users' saved lists depend on it.
 const PINNED_ID = 'eeihicglfclmofckclcpjleekpddjflg';
 
-test('the manifest opens a popup from the toolbar icon, with no side panel and the same key', async ({
+test('the manifest opens a popup from the toolbar icon and keeps the same key', async ({
   context,
   panel,
 }) => {
   const manifest = await panel.evaluate(() => chrome.runtime.getManifest());
 
   expect(manifest.action?.default_popup).toBe('popup.html');
-  expect(manifest).not.toHaveProperty('side_panel');
-  expect(manifest.permissions ?? []).not.toContain('sidePanel');
+  // 0.4.0 brought the side panel back as an alternative (see e2e/F008.spec.ts); the toolbar icon
+  // still opens the popup unless the user chose the side panel.
   // A changed or missing key would give the extension another ID.
   const worker = context.serviceWorkers()[0]!;
   expect(new URL(worker.url()).host).toBe(PINNED_ID);

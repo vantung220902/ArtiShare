@@ -106,6 +106,18 @@ label {
 html {
   width: 380px;
 }
+/* The side panel is as wide as the user drags it and as tall as the window: the popup's fixed
+   width and 600 px cap are dropped, and .popup fills the height so only .popup-body scrolls. */
+html.sidepanel,
+html.sidepanel body {
+  width: auto;
+  height: 100%;
+}
+html.sidepanel #root,
+html.sidepanel .popup {
+  height: 100%;
+  max-height: none;
+}
 /* Chrome can give a popup less than 600 px on a short screen. The page then scrolls as a whole,
    and the sticky header and footer below keep the tabs and version in view. */
 .popup {
