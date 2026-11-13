@@ -4,6 +4,29 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-13 · F001 · Artifacts as rows with a Remove (×) button
+
+- **Did:** Turned the Artifacts textarea into rows.
+  - `src/core/artifactRows.ts` (new): `addArtifactText` (text → rows, repeats, leftover text, a line at a time), `insertPaste`, `removeArtifact` and `sameArtifact`. Artifacts are compared by the new `artifactKey` in `artifactUrl.ts` (the UUID), so a cowork link and its `/artifact/` link are one.
+  - `src/entrypoints/popup/ArtifactsField.tsx` (new): the rows, each with its `ref.url` truncated, the full link in `title` and a × named `Remove <url>`; the 'No artifacts yet…' hint; and a one-line `textarea#artifacts.paste-box`.
+    - It stays a textarea because `fill()` into an `<input>` drops newlines.
+    - Paste, Enter, or a fill or drop that adds a line break turns links into rows. Anything that isn't a link stays in the box.
+    - A repeat highlights its row (`.repeated`) and shows 'Already in the list' for 2 s.
+    - `aria-required` is only set while there are no rows.
+  - `ShareView.tsx` uses it. The draft (`shareDraft.ts`) gains `artifacts: string[]` (row urls, in order) next to `artifactText`. Text typed but not yet added still counts for the count and for Preview, after the rows.
+  - CSS 'Artifacts rows' section; README's Artifacts bullet.
+- **Verified:** `npm run check` (191 unit tests) and `npm run e2e` (75, including the new `e2e/F001.spec.ts`, which uses a real Cmd+C/Cmd+V paste). The feature-verifier first returned FAIL: a link pasted with leftover text still in the box was glued onto it, and my spec had hidden this by clearing the box. Fixed with `insertPaste`, which puts a pasted link on its own line, and a spec that pastes straight after step 4. Second verdict: **PASS**.
+- **State:** F001 passes. Old specs moved to the rows (they assert `.artifact-item` / `Remove <url>` instead of the box's value): `popup-and-manage-access/` F003, F005, F008, F012 and `share-ux-fixes/` F002, F003. Specs that `fill()` a single link still pass unchanged, because typed text counts.
+- **Next:** F002 (Undo after ×, keyboard focus).
+- **Notes:**
+  - Deliberately left for later features:
+    - The tab prefill is still the old rule: it adds the tab's artifact only when there are no rows and no text (`ShareView.tsx`, the `currentTabArtifact()` effect). F003 changes that, and must update `popup-and-manage-access/F005.spec.ts` 'a restored draft is not overwritten…', which now asserts 0 rows.
+    - A 0.3.0 draft reads as `artifacts: []` with its text left in the box (split into rows in F005).
+    - × just removes (Undo and focus are F002).
+  - Enter and Shift+Enter both add, so the box never holds a typed line break. A paste with no link in it (a fragment) is still spliced in at the caret.
+  - Known edge: typing `https://claude.ai/artifact/` and then pasting a bare 20–24-character id adds the right row but leaves the typed prefix in the box with a warning.
+  - Artifact ids in `/artifact/` links are capped at 64 characters (`SHORT_ID_RE`), so a test's "long link" must stay within that.
+
 ### 2026-11-13 · Planning · v0.4.0: side panel mode, current-tab artifact, Manage access icon
 
 - **Did:** Planned a new goal on `harness/side-panel-mode` (from `develop`), replacing the finished popup-and-manage-access list (all 18 passed and merged in PR 15, released as 0.3.0). 18 features, F001–F018. Nothing built. (First committed with 15 features and an "offer, don't add" Artifacts rule; the user then chose auto-add with easy removal, so F001–F005 and F013 were rewritten in the same planning session, before any work started.)

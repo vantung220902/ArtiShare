@@ -15,7 +15,7 @@
         "See each row show its link on one line (cut off with … when long, the full link in a tooltip) and a × button named 'Remove https://claude.ai/artifact/…'",
         "Tick a list and click Preview: the preview shows the same artifacts, in the same order as the rows"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F002",

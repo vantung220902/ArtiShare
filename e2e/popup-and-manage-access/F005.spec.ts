@@ -33,7 +33,7 @@ const storedDraft = (panel: Page) =>
   panel.evaluate(
     async () =>
       (await chrome.storage.session.get('shareDraft')).shareDraft as
-        { artifactText: string; selected: string[] } | undefined,
+        { artifacts: string[]; artifactText: string; selected: string[] } | undefined,
   );
 
 const boxes = (panel: Page) => {
@@ -42,6 +42,7 @@ const boxes = (panel: Page) => {
   return {
     share,
     artifacts: share.getByLabel(/Artifacts/),
+    rows: share.locator('.artifact-item'),
     alpha: share.locator('label.pick', { hasText: 'Alpha team' }).getByRole('checkbox'),
     beta: share.locator('label.pick', { hasText: 'Beta team' }).getByRole('checkbox'),
   };
@@ -49,20 +50,21 @@ const boxes = (panel: Page) => {
 
 test('the artifacts typed and the lists ticked come back when the popup reopens', async ({ panel }) => {
   await setUp(panel);
-  const { share, artifacts, alpha, beta } = boxes(panel);
+  const { share, artifacts, rows, alpha, beta } = boxes(panel);
   await expect(alpha).toBeChecked();
   await expect(beta).not.toBeChecked();
 
   await artifacts.fill(`${ONE}\n${TWO}`);
+  await expect(rows).toHaveText([ONE, TWO]);
   await alpha.uncheck();
   await beta.check();
   // The draft is written by an effect after the change; wait for it rather than sleeping.
-  await expect.poll(async () => (await storedDraft(panel))?.artifactText).toContain(TWO);
+  await expect.poll(async () => (await storedDraft(panel))?.artifacts).toEqual([ONE, TWO]);
   await expect.poll(async () => (await storedDraft(panel))?.selected.length).toBe(1);
 
   await panel.reload();
 
-  await expect(artifacts).toHaveValue(`${ONE}\n${TWO}`);
+  await expect(rows).toHaveText([ONE, TWO]);
   await expect(alpha).not.toBeChecked();
   await expect(beta).toBeChecked();
   await expect(panel.getByRole('tab', { name: 'Share' })).toHaveAttribute('aria-selected', 'true');
@@ -72,7 +74,7 @@ test('the artifacts typed and the lists ticked come back when the popup reopens'
   await beta.uncheck();
   await expect.poll(async () => (await storedDraft(panel))?.selected).toEqual([]);
   await panel.reload();
-  await expect(artifacts).toHaveValue(`${ONE}\n${TWO}`);
+  await expect(rows).toHaveText([ONE, TWO]);
   await expect(alpha).not.toBeChecked();
   await expect(beta).not.toBeChecked();
 });
@@ -160,7 +162,7 @@ test('a restored draft is not overwritten by the artifact in the tab the popup o
   await context.route(/^https:\/\/claude\.ai\//, (route) =>
     route.fulfill({ contentType: 'text/html', body: '<title>page</title>' }),
   );
-  const { artifacts } = boxes(panel);
+  const { artifacts, rows } = boxes(panel);
   await artifacts.fill(ONE);
   await expect.poll(async () => (await storedDraft(panel))?.artifactText).toBe(ONE);
 
@@ -169,9 +171,10 @@ test('a restored draft is not overwritten by the artifact in the tab the popup o
   await tab.bringToFront();
   await panel.reload();
 
-  // The prefill runs on every open but only fills an empty box. Wait for the tab query to have
-  // been answered and painted before reading the raw text.
+  // The prefill runs on every open but only adds a row while there are no rows and no text. Wait
+  // for the tab query to have been answered and painted before reading the rows and the text.
   await panel.evaluate(() => chrome.tabs.query({ active: true, lastFocusedWindow: true }));
   await panel.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve(null))));
   await expect(artifacts).toHaveValue(ONE);
+  await expect(rows).toHaveCount(0);
 });

@@ -97,6 +97,7 @@ describe('sameListFormDraft', () => {
 describe('parseShareDraft with the inline list form', () => {
   it('keeps whether the form is open and what is typed in it', () => {
     expect(parseShareDraft({ artifactText: '', selected: [], creating: true, newList: form })).toEqual({
+      artifacts: [],
       artifactText: '',
       selected: [],
       creating: true,
@@ -105,13 +106,19 @@ describe('parseShareDraft with the inline list form', () => {
   });
 
   it('reads a draft saved before the form was kept, and ignores a malformed or edit form', () => {
-    expect(parseShareDraft({ artifactText: 'x', selected: [] })).toEqual({ artifactText: 'x', selected: [] });
+    expect(parseShareDraft({ artifactText: 'x', selected: [] })).toEqual({
+      artifacts: [],
+      artifactText: 'x',
+      selected: [],
+    });
     expect(parseShareDraft({ artifactText: '', selected: [], newList: 3 })).toEqual({
+      artifacts: [],
       artifactText: '',
       selected: [],
     });
     expect(parseShareDraft({ artifactText: '', selected: [], newList: { ...form, baseline: list } })).toEqual(
       {
+        artifacts: [],
         artifactText: '',
         selected: [],
       },
