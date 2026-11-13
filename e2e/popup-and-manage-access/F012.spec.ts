@@ -33,7 +33,8 @@ test('Manage access lists the owner and each invitee, and Back returns to the fo
 
   // Something added before opening it.
   const SECOND = 'https://claude.ai/artifact/SecondTypedArtifact01';
-  const artifactRows = share.locator('.artifact-item');
+  // The link alone: the row also carries a 'This tab' badge.
+  const artifactRows = share.locator('.artifact-item .truncate');
   await expect(artifactRows).toHaveText([SHARED]);
   await share.getByLabel(/Artifacts/).fill(SECOND);
   await share.getByLabel(/Artifacts/).press('Enter');

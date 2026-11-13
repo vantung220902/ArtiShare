@@ -154,7 +154,7 @@ test('a reopened form with no typing in it still follows a changed default selec
   await expect(alpha).not.toBeChecked();
 });
 
-test('a restored draft is not overwritten by the artifact in the tab the popup opens over', async ({
+test('a restored draft keeps its text when the artifact in the tab the popup opens over is added', async ({
   context,
   panel,
 }) => {
@@ -171,10 +171,8 @@ test('a restored draft is not overwritten by the artifact in the tab the popup o
   await tab.bringToFront();
   await panel.reload();
 
-  // The prefill runs on every open but only adds a row while there are no rows and no text. Wait
-  // for the tab query to have been answered and painted before reading the rows and the text.
-  await panel.evaluate(() => chrome.tabs.query({ active: true, lastFocusedWindow: true }));
-  await panel.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve(null))));
+  // The tab's artifact is added as a row on every open, beside what was typed: the typed link
+  // stays in the box, still to be added by the person who typed it.
+  await expect(rows).toHaveText(['https://claude.ai/artifact/TabArtifactNotTheDraft01This tab']);
   await expect(artifacts).toHaveValue(ONE);
-  await expect(rows).toHaveCount(0);
 });

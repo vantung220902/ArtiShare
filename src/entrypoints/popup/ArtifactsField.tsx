@@ -7,7 +7,13 @@ import {
   useRef,
   useState,
 } from 'react';
-import { type AddedText, addArtifactText, insertPaste, removeArtifact } from '../../core/artifactRows';
+import {
+  type AddedText,
+  addArtifactText,
+  insertPaste,
+  removeArtifact,
+  sameArtifact,
+} from '../../core/artifactRows';
 import { artifactKey } from '../../core/artifactUrl';
 import type { ArtifactRef } from '../../core/types';
 import { CloseIcon, LinkIcon, PlusIcon } from '../../ui/icons';
@@ -39,6 +45,8 @@ interface ArtifactsFieldProps {
   onChange: (next: ArtifactsValue) => void;
   /** `value.text` added to `value.rows`: what Preview would share, and what in the box isn't a link. */
   pending: AddedText;
+  /** The artifact in the tab the popup opened over, if any: its row is marked. */
+  thisTab: ArtifactRef | null;
   onError: (message: string) => void;
 }
 
@@ -46,7 +54,7 @@ interface ArtifactsFieldProps {
  * Each artifact is a row with a ×. Links pasted, dropped or entered in the box become rows; text
  * typed without Enter stays in the box and still counts, so nothing typed is lost.
  */
-export function ArtifactsField({ value, onChange, pending, onError }: ArtifactsFieldProps) {
+export function ArtifactsField({ value, onChange, pending, thisTab, onError }: ArtifactsFieldProps) {
   const { rows, text } = value;
   // Rows the last addition named again, highlighted for a moment instead of added twice.
   const [repeated, setRepeated] = useState<string[]>([]);
@@ -151,6 +159,7 @@ export function ArtifactsField({ value, onChange, pending, onError }: ArtifactsF
               <span className="grow truncate" title={ref.url}>
                 {ref.url}
               </span>
+              {thisTab && sameArtifact(ref, thisTab) && <span className="this-tab">This tab</span>}
               <button
                 type="button"
                 className="ghost icon-btn"

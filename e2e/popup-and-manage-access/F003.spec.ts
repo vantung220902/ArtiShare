@@ -25,7 +25,8 @@ test('opening over an artifact tab adds it to Artifacts, and + Current tab adds 
 
   const share = panel.getByRole('tabpanel', { name: 'Share' });
   const artifacts = share.getByLabel(/Artifacts/);
-  const rows = share.locator('.artifact-item');
+  // The link alone: the row also carries a 'This tab' badge.
+  const rows = share.locator('.artifact-item .truncate');
   const error = share.locator('.err, p.alert');
 
   await expect(rows).toHaveText([ARTIFACT]);
@@ -96,7 +97,7 @@ test('the real action popup, opened over an artifact tab, has it in Artifacts', 
   await cowork.bringToFront();
   const evaluate = await openRealPopup(context);
 
-  const rows = `[...document.querySelectorAll('.artifact-item')].map((row) => row.textContent)`;
+  const rows = `[...document.querySelectorAll('.artifact-item .truncate')].map((row) => row.textContent)`;
   await expect.poll(() => evaluate(rows)).toEqual([ARTIFACT]);
 
   // + Current tab in the real popup adds nothing more and shows no error.

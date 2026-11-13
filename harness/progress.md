@@ -4,6 +4,19 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-13 · F003 · Add the current tab's artifact, marked 'This tab'
+
+- **Did:** `ShareView.tsx`: the old prefill (only with no rows and no text) is now "on mount, if the active tab is an artifact and no row is the same artifact (`sameArtifact`), append it". The tab's ref is kept in `thisTab` state and passed to `ArtifactsField`, which shows a `This tab` badge (`.this-tab` in `styles.css`) on the row for that artifact, whether it was just added or already there. A cowork link and its `/code/artifact/<uuid>` link match by uuid. A non-artifact tab sets nothing. README Artifacts bullet.
+- **Verified:** `npm run check` (191 unit tests) and `npm run e2e` (78, including the new `e2e/F003.spec.ts`: the three-artifact sequence, repeat, cowork-vs-code link, non-claude page, and Start a new share after a finished run). feature-verifier: **PASS** on the first run.
+- **State:** F003 passes. Updated older specs for the badge: `popup-and-manage-access/` F003 and F012 and `share-ux-fixes/F003` read the link through `.artifact-item .truncate`; `popup-and-manage-access/F005` 'a restored draft…' now expects the tab's row added with the typed text kept in the box.
+- **Next:** F004 (an artifact you removed isn't added back by itself). Needs a 'removed' list kept in the draft (`shareDraft.ts`), cleared by Start a new share, by + Current tab and by Undo; the mount effect in `ShareView.tsx` must skip refs on it.
+- **Notes:**
+  - The badge is set once on mount; it doesn't follow tab switches while the popup stays open (matches the steps, which reopen).
+  - Start a new share remounts `ShareView`, so the mount effect picks up the active tab again with no extra code.
+  - In e2e a new list isn't ticked by default: tick it before Preview.
+  - `has:` locators in `filter()` are relative to the row: build them from `panel`, not from a locator that includes the tabpanel.
+  - Shell heredocs and compound `sed ... ; ...` commands are refused here; use Edit/Write.
+
 ### 2026-11-13 · F002 · Undo after ×, and keyboard focus
 
 - **Did:** `ArtifactsField.tsx`: × now remembers the removed row and its index and shows `Removed <url> · Undo` (an `<output class="undo-bar">`, url truncated by CSS) for 5 s (`UNDO_MS`); Undo splices it back at its old index (clamped), unless the artifact was re-added meanwhile. Only the latest removal can be undone. Focus: for a keyboard activation (`click` with `detail === 0`) focus moves, after render (`useLayoutEffect`), to the × now at the removed position (the previous one when the last row went), or to the paste box when no rows are left; Undo from the keyboard focuses the restored ×. Mouse clicks don't move focus. Persistence needed no change: rows are already in the saved draft. CSS `.undo-bar`; README Artifacts bullet.

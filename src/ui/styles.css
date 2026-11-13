@@ -834,6 +834,17 @@ button.copy-btn.failed {
 .artifact-item.repeated {
   background: var(--accent-soft);
 }
+/* Marks the row for the artifact in the tab the popup opened over. */
+.this-tab {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+}
 /* 'Removed <link> · Undo': the link is cut off so Undo always stays in view. */
 .undo-bar {
   display: flex;
