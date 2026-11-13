@@ -1,4 +1,12 @@
-import { type ClipboardEvent, type KeyboardEvent, useEffect, useRef, useState } from 'react';
+import {
+  type ClipboardEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { type AddedText, addArtifactText, insertPaste, removeArtifact } from '../../core/artifactRows';
 import { artifactKey } from '../../core/artifactUrl';
 import type { ArtifactRef } from '../../core/types';
@@ -14,6 +22,15 @@ export interface ArtifactsValue {
 
 // Long enough to find the highlighted row, short enough not to linger after you've looked.
 const REPEAT_MS = 2000;
+
+// Long enough to notice the message and reach for Undo, short enough not to sit there afterwards.
+const UNDO_MS = 5000;
+
+/** The row last taken out and where it was, so Undo can put it back in the same place. */
+interface Removed {
+  ref: ArtifactRef;
+  index: number;
+}
 
 const lineBreaks = (text: string) => text.split('\n').length - 1;
 
@@ -35,6 +52,44 @@ export function ArtifactsField({ value, onChange, pending, onError }: ArtifactsF
   const [repeated, setRepeated] = useState<string[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
+
+  const [removed, setRemoved] = useState<Removed | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(undoTimer.current), []);
+
+  // Where keyboard focus goes once the rows have re-rendered: the × at that position, or the box.
+  // Set only for keyboard activations, so a mouse click doesn't pull focus around.
+  const focusAfter = useRef<number | 'box' | null>(null);
+  const list = useRef<HTMLUListElement>(null);
+  useLayoutEffect(() => {
+    const target = focusAfter.current;
+    if (target === null) return;
+    focusAfter.current = null;
+    if (target === 'box') document.getElementById('artifacts')?.focus();
+    else list.current?.querySelectorAll('button')[target]?.focus();
+  }, [rows]);
+
+  const remove = (ref: ArtifactRef, event: MouseEvent) => {
+    const index = rows.findIndex((row) => artifactKey(row) === artifactKey(ref));
+    const next = removeArtifact(rows, ref);
+    // A click made with the keyboard reports no pointer position (detail 0).
+    if (event.detail === 0) focusAfter.current = next.length ? Math.min(index, next.length - 1) : 'box';
+    onChange({ rows: next, text });
+    clearTimeout(undoTimer.current);
+    setRemoved({ ref, index });
+    undoTimer.current = setTimeout(() => setRemoved(null), UNDO_MS);
+  };
+
+  const undo = (event: MouseEvent) => {
+    if (!removed) return;
+    clearTimeout(undoTimer.current);
+    setRemoved(null);
+    // Added again meanwhile (a paste or + Current tab): nothing to put back.
+    if (rows.some((row) => artifactKey(row) === artifactKey(removed.ref))) return;
+    const index = Math.min(removed.index, rows.length);
+    if (event.detail === 0) focusAfter.current = index;
+    onChange({ rows: rows.toSpliced(index, 0, removed.ref), text });
+  };
 
   const showRepeated = (refs: ArtifactRef[]) => {
     clearTimeout(timer.current);
@@ -86,7 +141,7 @@ export function ArtifactsField({ value, onChange, pending, onError }: ArtifactsF
         </button>
       </div>
       {rows.length ? (
-        <ul className="artifact-items">
+        <ul className="artifact-items" ref={list}>
           {rows.map((ref) => (
             <li
               key={artifactKey(ref)}
@@ -101,7 +156,7 @@ export function ArtifactsField({ value, onChange, pending, onError }: ArtifactsF
                 className="ghost icon-btn"
                 aria-label={`Remove ${ref.url}`}
                 title="Remove"
-                onClick={() => onChange({ rows: removeArtifact(rows, ref), text })}
+                onClick={(event) => remove(ref, event)}
               >
                 <CloseIcon size={14} />
               </button>
@@ -130,6 +185,19 @@ export function ArtifactsField({ value, onChange, pending, onError }: ArtifactsF
       />
       {invalid.length > 0 && <span className="hint err">Not artifact links: {invalid.join(', ')}</span>}
       {repeated.length > 0 && <output className="hint">Already in the list</output>}
+      {removed && (
+        <output className="hint undo-bar">
+          {/* The spaces show nothing in a flex row, but give a screen reader and copied text their gaps. */}
+          <span>Removed</span>{' '}
+          <span className="grow truncate" title={removed.ref.url}>
+            {removed.ref.url}
+          </span>{' '}
+          <span aria-hidden>·</span>{' '}
+          <button type="button" className="link" onClick={undo}>
+            Undo
+          </button>
+        </output>
+      )}
     </section>
   );
 }

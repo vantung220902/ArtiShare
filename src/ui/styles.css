@@ -834,6 +834,21 @@ button.copy-btn.failed {
 .artifact-item.repeated {
   background: var(--accent-soft);
 }
+/* 'Removed <link> · Undo': the link is cut off so Undo always stays in view. */
+.undo-bar {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+.undo-bar .truncate {
+  font-family: var(--mono);
+}
+.undo-bar button.link {
+  flex: none;
+  color: var(--accent-ink);
+  font-weight: 600;
+}
 /* One line until something that isn't a link is left in it; then it grows to show it. */
 .paste-box {
   resize: none;
