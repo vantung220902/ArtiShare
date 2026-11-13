@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Account } from '../../claude/shareClient';
 import { addArtifactText, sameArtifact } from '../../core/artifactRows';
-import { parseArtifactList } from '../../core/artifactUrl';
+import { artifactKey, parseArtifactList } from '../../core/artifactUrl';
 import { type Config, defaultListIds, resolveInvites } from '../../core/config';
 import { ACCESS_LABELS, type AccessLevel, type ArtifactRef } from '../../core/types';
 import type { ListFormDraft, PreviewState } from '../../core/popupState';
@@ -49,6 +49,7 @@ function ShareForm({
   const [artifacts, setArtifacts] = useState<ArtifactsValue>(() => ({
     rows: parseArtifactList(initial?.artifacts ?? []).refs,
     text: initial?.artifactText ?? '',
+    removed: initial?.removed ?? [],
   }));
   const [selected, setSelected] = useState<string[]>(() =>
     restoreSelection(
@@ -81,14 +82,17 @@ function ShareForm({
 
   // The artifact in the tab the popup opened over. It is added when it isn't a row yet, and its row
   // is marked, so the artifact you're looking at is shared without a click, the second and third
-  // one the same as the first.
+  // one the same as the first. One you took out with × stays out: it is only marked, so + Current
+  // tab or a paste brings it back with the mark.
   const [thisTab, setThisTab] = useState<ArtifactRef | null>(null);
   useEffect(() => {
     void currentTabArtifact().then((ref) => {
       if (!ref) return;
       setThisTab(ref);
       setArtifacts((a) =>
-        a.rows.some((row) => sameArtifact(row, ref)) ? a : { rows: [...a.rows, ref], text: a.text },
+        a.rows.some((row) => sameArtifact(row, ref)) || a.removed.includes(artifactKey(ref))
+          ? a
+          : { ...a, rows: [...a.rows, ref] },
       );
     });
   }, []);
@@ -117,6 +121,7 @@ function ShareForm({
     void saveShareDraft({
       artifacts: artifacts.rows.map((ref) => ref.url),
       artifactText: artifacts.text,
+      ...(artifacts.removed.length > 0 && { removed: artifacts.removed }),
       selected,
       ...(creating && { creating }),
       ...(shown && { newList: shown }),

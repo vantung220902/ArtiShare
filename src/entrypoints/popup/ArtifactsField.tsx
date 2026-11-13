@@ -13,6 +13,7 @@ import {
   insertPaste,
   removeArtifact,
   sameArtifact,
+  updateRemoved,
 } from '../../core/artifactRows';
 import { artifactKey } from '../../core/artifactUrl';
 import type { ArtifactRef } from '../../core/types';
@@ -24,6 +25,8 @@ import { currentTabArtifact } from './viewUtils';
 export interface ArtifactsValue {
   rows: ArtifactRef[];
   text: string;
+  /** Keys of artifacts taken out with ×, which the tab's prefill leaves out until they are added again. */
+  removed: string[];
 }
 
 // Long enough to find the highlighted row, short enough not to linger after you've looked.
@@ -55,7 +58,7 @@ interface ArtifactsFieldProps {
  * typed without Enter stays in the box and still counts, so nothing typed is lost.
  */
 export function ArtifactsField({ value, onChange, pending, thisTab, onError }: ArtifactsFieldProps) {
-  const { rows, text } = value;
+  const { rows, text, removed: heldBack } = value;
   // Rows the last addition named again, highlighted for a moment instead of added twice.
   const [repeated, setRepeated] = useState<string[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -82,7 +85,7 @@ export function ArtifactsField({ value, onChange, pending, thisTab, onError }: A
     const next = removeArtifact(rows, ref);
     // A click made with the keyboard reports no pointer position (detail 0).
     if (event.detail === 0) focusAfter.current = next.length ? Math.min(index, next.length - 1) : 'box';
-    onChange({ rows: next, text });
+    onChange({ rows: next, text, removed: updateRemoved(heldBack, next, ref) });
     clearTimeout(undoTimer.current);
     setRemoved({ ref, index });
     undoTimer.current = setTimeout(() => setRemoved(null), UNDO_MS);
@@ -96,7 +99,8 @@ export function ArtifactsField({ value, onChange, pending, thisTab, onError }: A
     if (rows.some((row) => artifactKey(row) === artifactKey(removed.ref))) return;
     const index = Math.min(removed.index, rows.length);
     if (event.detail === 0) focusAfter.current = index;
-    onChange({ rows: rows.toSpliced(index, 0, removed.ref), text });
+    const restored = rows.toSpliced(index, 0, removed.ref);
+    onChange({ rows: restored, text, removed: updateRemoved(heldBack, restored) });
   };
 
   const showRepeated = (refs: ArtifactRef[]) => {
@@ -107,7 +111,7 @@ export function ArtifactsField({ value, onChange, pending, thisTab, onError }: A
 
   const add = (input: string) => {
     const added = addArtifactText(rows, input);
-    onChange({ rows: added.rows, text: added.leftover });
+    onChange({ rows: added.rows, text: added.leftover, removed: updateRemoved(heldBack, added.rows) });
     showRepeated(added.repeated);
   };
 
@@ -116,7 +120,7 @@ export function ArtifactsField({ value, onChange, pending, thisTab, onError }: A
     if (!ref) return onError('The current tab is not a claude.ai artifact.');
     onError('');
     const added = addArtifactText(rows, ref.url);
-    onChange({ rows: added.rows, text });
+    onChange({ rows: added.rows, text, removed: updateRemoved(heldBack, added.rows) });
     showRepeated(added.repeated);
   };
 
@@ -185,7 +189,7 @@ export function ArtifactsField({ value, onChange, pending, thisTab, onError }: A
           const next = e.target.value;
           // Enter adds instead of breaking the line, so a new line break was dropped in: add what's there.
           if (lineBreaks(next) > lineBreaks(text)) add(next);
-          else onChange({ rows, text: next });
+          else onChange({ ...value, text: next });
         }}
         onPaste={onPaste}
         onKeyDown={onKeyDown}

@@ -17,6 +17,21 @@ export interface AddedText {
 
 export const sameArtifact = (a: ArtifactRef, b: ArtifactRef) => artifactKey(a) === artifactKey(b);
 
+/**
+ * The artifacts taken out by hand, as keys, after `rows` changed: `taken` joins them, and anything
+ * that is a row again (pasted, + Current tab, Undo) is no longer held back from the tab's prefill.
+ */
+export function updateRemoved(
+  removed: readonly string[],
+  rows: readonly ArtifactRef[],
+  taken?: ArtifactRef,
+): string[] {
+  const present = new Set(rows.map(artifactKey));
+  const keys = taken ? [...removed, artifactKey(taken)] : removed;
+
+  return [...new Set(keys)].filter((key) => !present.has(key));
+}
+
 /** Adds the artifacts linked in `text` to `rows`. Read line by line so a line of words stays together. */
 export function addArtifactText(rows: readonly ArtifactRef[], text: string): AddedText {
   const next = [...rows];

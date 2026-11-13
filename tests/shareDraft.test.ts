@@ -28,6 +28,19 @@ describe('parseShareDraft', () => {
     });
   });
 
+  it('reads the removed artifacts, and leaves them out when there are none', () => {
+    const base = { artifacts: [], artifactText: '', selected: [] };
+    expect(parseShareDraft({ ...base, removed: ['k1', 'k2'] })).toEqual({ ...base, removed: ['k1', 'k2'] });
+    expect(parseShareDraft({ ...base, removed: [] })).toEqual(base);
+    expect(parseShareDraft(base)).toEqual(base);
+  });
+
+  it('drops a removed list that is not strings without losing the draft', () => {
+    const base = { artifacts: [], artifactText: 'typed', selected: [] };
+    expect(parseShareDraft({ ...base, removed: 'k1' })).toEqual(base);
+    expect(parseShareDraft({ ...base, removed: ['k1', 2] })).toEqual(base);
+  });
+
   it.each([
     undefined,
     null,
