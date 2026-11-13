@@ -85,7 +85,7 @@
         "Switch to the Lists tab, open a saved list and change its permission without saving, then click the icon: Manage access opens; click Back and see the Lists tab with that list still open and its unsaved permission",
         "Change commenter@example.com to Can view and remove viewer@example.com from this view: both work as before (the existing Manage access e2e specs pass using the header icon)"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F007",

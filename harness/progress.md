@@ -4,6 +4,16 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-13 · F006 · Manage access icon in the header
+
+- **Did:** `App.tsx`: the bottom "Manage access" link is gone; a `UsersIcon` button (`aria-label` "Manage access", title "Manage access to this artifact", `aria-pressed` while open) sits in the header after the account pill, only when the active tab is an artifact. Clicking it toggles `managing`. `ManageView` renders inside whichever tabpanel is active (Share or Lists), so the old specs' `share` locator still finds it; the Share form and `ListsView` are only hidden meanwhile, so rows and an open list's unsaved edit survive Back. Choosing a tab (`setTab`) closes it. CSS: `.manage-link` removed, `button.icon-btn[aria-pressed='true']` added. README Manage access section. New `e2e/F006.spec.ts` covers all seven steps; `popup-and-manage-access` F012–F016 now click the icon through `panel`.
+- **Verified:** `npm run check` (197 unit tests) and `npm run e2e` (82) pass. feature-verifier: **PASS** on all seven steps; it ran check and e2e itself.
+- **State:** F006 passes. 6 of 18 features pass.
+- **Next:** F007 (icon only where it works, keyboard focus ring and focus on Back, fits the header at narrow width). The icon already hides on non-artifact pages; check focus handling and layout.
+- **Notes:**
+  - Not yet updated, and scheduled in later features: `scripts/screenshots.spec.ts:167` still clicks the old link inside the Share panel (`npm run screenshots` will fail there), and `store/listing.md` (lines ~30, 114) and `docs/index.html` (~102) still describe the link.
+  - Tab-switch while Manage is open closes it (my choice; the steps don't say).
+
 ### 2026-11-13 · F005 · Mark F005 as passing
 
 - **Did:** No code change. Re-ran the feature-verifier for F005 and set `passes: true`.

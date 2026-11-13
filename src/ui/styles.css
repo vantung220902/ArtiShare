@@ -1064,15 +1064,10 @@ details[open] > summary .chev {
   font-size: 11.5px;
   font-weight: 700;
 }
-.manage-link {
-  text-align: center;
-  font-size: 12px;
-}
-.manage-link button.link {
-  color: var(--muted);
-}
-.manage-link button.link:hover:not(:disabled) {
-  color: var(--text);
+/* Pressed while People with access is open, so the icon reads as a toggle. */
+button.icon-btn[aria-pressed='true'] {
+  color: var(--accent);
+  background: var(--surface);
 }
 
 /* ---------- Lists tab ---------- */

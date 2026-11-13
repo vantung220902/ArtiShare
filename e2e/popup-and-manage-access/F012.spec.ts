@@ -21,15 +21,11 @@ test('Manage access lists the owner and each invitee, and Back returns to the fo
   await panel.reload();
 
   const share = panel.getByRole('tabpanel', { name: 'Share' });
-  const link = share.getByRole('button', { name: 'Manage access' });
-  // A secondary link at the bottom: not a tab and not a primary button.
+  // F006 moved it from the bottom of the Share tab to an icon in the header: not a tab either.
+  const link = panel.getByRole('button', { name: 'Manage access' });
   await expect(link).toBeVisible();
-  await expect(link).toHaveClass(/link/);
   await expect(link).not.toHaveClass(/primary/);
   await expect(panel.getByRole('tab', { name: /Manage access/ })).toHaveCount(0);
-  const previewButton = share.getByRole('button', { name: /^Preview/ });
-  const below = async () => (await link.boundingBox())!.y > (await previewButton.boundingBox())!.y;
-  expect(await below()).toBe(true);
 
   // Something added before opening it.
   const SECOND = 'https://claude.ai/artifact/SecondTypedArtifact01';
@@ -80,7 +76,7 @@ test('Manage access is also under the run view', async ({ context, panel }) => {
   await expect(share.getByText('Share finished: 1 invited')).toBeVisible();
 
   await expect(share.getByRole('button', { name: 'Start a new share' })).toBeVisible();
-  await share.getByRole('button', { name: 'Manage access' }).click();
+  await panel.getByRole('button', { name: 'Manage access' }).click();
   const rows = share.locator('ul.people > li');
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(1)).toContainText('a@example.com');
@@ -99,5 +95,5 @@ test('there is no Manage access link when the active tab is not an artifact', as
   await expect(share.getByRole('button', { name: /^Preview/ })).toBeVisible();
   // Give the active-tab lookup time to answer before asserting nothing appeared.
   await panel.evaluate(() => chrome.tabs.query({ active: true, lastFocusedWindow: true }));
-  await expect(share.getByRole('button', { name: 'Manage access' })).toHaveCount(0);
+  await expect(panel.getByRole('button', { name: 'Manage access' })).toHaveCount(0);
 });
