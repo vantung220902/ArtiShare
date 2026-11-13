@@ -4,6 +4,17 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F011 · The popup-or-side-panel choice survives a restart and an update
+
+- **Did:** No source change was needed: `applyStoredSurface` at background start and `parseSurface` already did this. New `e2e/F011.spec.ts` (11 tests) covers all five steps. README: the Side panel paragraph now says the choice also survives an update, and that the popup is used until the side panel is chosen.
+- **Verified:** `npm run check` (204 unit tests) and `npm run e2e` (113, counting the stray debug spec) pass. feature-verifier: **PASS** on all five steps.
+- **State:** F011 passes. 11 of 18 features pass.
+- **Next:** F012 (moving between the popup and the side panel keeps your work).
+- **Notes:**
+  - **`e2e/zz-dbg.spec.ts` is a stray throwaway file of mine, untracked and not committed. This session could not delete it (`rm` needs approval). A human, or the next session, should delete it.** It runs in `npm run e2e` and prints noise.
+  - `chrome.runtime.reload()` does not work in e2e: an extension loaded from the command line never comes back after it, so no service worker starts. The spec instead closes Chromium and relaunches it on the same profile directory (`launchPersistentContext` with `test.info().outputPath('profile')`), which keeps storage and forgets `action.setPopup`, like a real restart. The step's wording says reload; the verifier judged the relaunch a faithful, stronger stand-in.
+  - The project has no `@types/node`, so the spec uses no `node:` imports.
+
 ### 2026-11-14 · F010 · Use popup instead icon
 
 - **Did:** `src/lib/surface.ts`: `moveToPopup` (`chooseSurface('popup')`). `App.tsx`: the header's switch button is "Open in side panel" in the popup and "Use popup instead" in the side panel, where it calls `moveToPopup()` and then `window.close()`. If switching fails, the page stays open and shows "Could not switch: …" (it was "Could not open the side panel: …"). `icons.tsx`: new `PopupIcon`. README: the Side panel paragraph now describes the icon and switching back and forth. New `e2e/F010.spec.ts` (4 tests) covers all five steps.

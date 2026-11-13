@@ -150,7 +150,7 @@
         "Start from a profile holding 0.3.0's storage (saved lists, a default selection, no stored choice): after loading this build, every list is still there and the toolbar icon opens the popup",
         "Put an unknown value in the stored choice: the toolbar icon opens the popup"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F012",
