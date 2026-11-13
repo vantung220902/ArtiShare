@@ -1,39 +1,79 @@
 {
-  "goal": "For v0.4.0: let people move ArtiShare from the popup into a side panel and back (remembered), make the Artifacts box treat the current tab the same way every time, and move Manage access from the bottom of the Share tab to an icon in the header.",
+  "goal": "For v0.4.0: let people move ArtiShare from the popup into a side panel and back (remembered), make Artifacts a list of rows that always picks up the current tab's artifact and is easy to remove from, and move Manage access from the bottom of the Share tab to an icon in the header.",
   "branch": "harness/side-panel-mode",
   "features": [
     {
       "id": "F001",
       "category": "functional",
-      "description": "When the Artifacts box already has links, opening ArtiShare over another artifact keeps them and offers that artifact with a one-click Add, the same for the second and third artifact as for the first",
+      "description": "Artifacts shows each artifact as its own row with a Remove (×) button, and links can still be pasted in any number",
       "steps": [
-        "In the fake build, make https://claude.ai/artifact/ExampleArtifactOne01 the active tab (in e2e, served by a route so nothing reaches claude.ai) and open the popup with an empty Artifacts box: see the box filled with that link and no hint under it",
-        "Close the popup, make https://claude.ai/artifact/ExampleArtifactTwo02 the active tab and open the popup again: see Artifacts still holding only the first link, unchanged, and under the box the hint 'This tab's artifact isn't in the list.' with an Add button",
-        "Click Add: see the second link added on its own line, the Artifacts count reading 2, and the hint gone",
-        "Make https://claude.ai/artifact/ExampleArtifactThree3 the active tab and reopen the popup: see the same hint and Add; click Add and see three links",
-        "Make the second artifact the active tab again and reopen the popup: no hint, since it is already in the list, and the box is unchanged",
-        "Make a non-claude.ai page the active tab and reopen the popup: no hint, and the three links are unchanged",
-        "Clear the box, make an artifact the active tab and reopen the popup: see the box filled with that artifact, as on the first open",
-        "Preview and send a run from this form, let it finish, make an artifact the active tab and click Start a new share: see the fresh form filled with that tab's artifact"
+        "Open the popup over a non-claude.ai page with nothing in Artifacts: see 'No artifacts yet. Open one and click + Current tab, or paste links below.' and a box labelled Artifacts with the placeholder 'Paste artifact links (one per line)'",
+        "Paste https://claude.ai/artifact/ExampleArtifactOne01, https://claude.ai/cowork/cse_01ExampleCoworkSession00?artifact=c0ffee00-1234-4abc-8def-000000000001#example and https://claude.ai/artifact/ExampleArtifactTwo02 on three lines: see three rows at once (the cowork link shown as https://claude.ai/artifact/QqHHsBLXBfYKJD5NqJ8PeY), the count reading 3, and the box empty again",
+        "Type https://claude.ai/artifact/ExampleArtifactThree3 and press Enter: a fourth row is added",
+        "Paste 'not a link' together with a valid link: the valid link becomes a row; 'not a link' stays in the box with 'Not artifact links: not a link'",
+        "Paste https://claude.ai/artifact/ExampleArtifactOne01 again: no second row; the existing row is briefly highlighted and the box says 'Already in the list'",
+        "See each row show its link on one line (cut off with … when long, the full link in a tooltip) and a × button named 'Remove https://claude.ai/artifact/…'",
+        "Tick a list and click Preview: the preview shows the same artifacts, in the same order as the rows"
       ],
       "passes": false
     },
     {
       "id": "F002",
-      "category": "edge-case",
-      "description": "The 'isn't in the list' hint knows the same artifact written another way, works next to lines that aren't links, and never adds a link twice",
+      "category": "ux",
+      "description": "Removing an artifact is one click, can be undone, and works from the keyboard",
       "steps": [
-        "Type https://claude.ai/artifact/QqHHsBLXBfYKJD5NqJ8PeY into Artifacts, make https://claude.ai/cowork/cse_01ExampleCoworkSession00?artifact=c0ffee00-1234-4abc-8def-000000000001#example the active tab and reopen the popup: no hint, because it is the same artifact",
-        "Type 'not a link' on a second line, make https://claude.ai/artifact/ExampleArtifactTwo02 the active tab and reopen the popup: see the hint; click Add and see the new link on its own line, 'not a link' kept, and the 'Not artifact links: not a link' warning still shown",
-        "Leave blank lines and spaces after the last link, then click Add for another artifact tab: see exactly one link per line, with no empty line left between the old links and the new one",
-        "Double-click Add quickly: the link is added once",
-        "With the hint showing, click + Current tab instead: the link is added once and the hint disappears",
-        "Close the popup without clicking Add and reopen it over the same tab: the box is unchanged (opening never adds by itself) and the hint shows again"
+        "With three rows, click × on the second: it disappears at once, the count drops to 2, and 'Removed https://claude.ai/artifact/… · Undo' shows under the rows",
+        "Click Undo within 5 seconds: the row is back in its old place and the count is 3; without Undo, the message goes away after about 5 seconds",
+        "Press Tab from the top of the Share tab: focus reaches each × in order, with a visible focus ring; press Enter on the first: it is removed and focus moves to the next row's ×",
+        "Remove the last row with the keyboard: focus moves to the paste box, and the empty state 'No artifacts yet…' shows",
+        "Remove a row, close the popup and reopen it: the row is still gone (the list is saved like the rest of the draft)"
       ],
       "passes": false
     },
     {
       "id": "F003",
+      "category": "functional",
+      "description": "Opening ArtiShare over an artifact adds it to Artifacts when it isn't there yet, marked 'This tab', the same for the second and third artifact as for the first; when it's already there nothing changes",
+      "steps": [
+        "Make https://claude.ai/artifact/ExampleArtifactOne01 the active tab (in e2e, served by a route so nothing reaches claude.ai) and open the popup with no artifacts: see one row for it with a 'This tab' badge",
+        "Close the popup, make https://claude.ai/artifact/ExampleArtifactTwo02 the active tab and reopen: see two rows, One then Two, the count 2, and the 'This tab' badge now on Two only",
+        "Do the same with https://claude.ai/artifact/ExampleArtifactThree3: three rows, the badge on Three",
+        "Make Two the active tab again and reopen: still three rows, no second Two, the badge on Two",
+        "Make the cowork tab for an artifact already in the list the active tab (same artifact, other link): no new row, and that row gets the badge",
+        "Make a non-claude.ai page the active tab and reopen: the rows are unchanged and no row has the badge",
+        "Send a run from this form and let it finish, make an artifact the active tab and click Start a new share: see the fresh list holding only that tab's artifact"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F004",
+      "category": "edge-case",
+      "description": "An artifact you removed isn't added back by itself, until you add it or start a new share",
+      "steps": [
+        "Open the popup over https://claude.ai/artifact/ExampleArtifactOne01 (it is added), click × on it, close the popup and reopen it over the same tab: it is not added back, and no row has the badge",
+        "Click + Current tab: it is added back on purpose, with the badge; from then on it behaves like any other row",
+        "Remove One again, then open the popup over https://claude.ai/artifact/ExampleArtifactTwo02: Two is added (only the removed artifact is held back)",
+        "Remove One and click Undo: One is back and is treated as never removed",
+        "Remove One, send a run with the other rows and let it finish: after Start a new share, opening over One adds it again",
+        "Remove One, quit and restart the browser: opening over One adds it again (what was removed is kept with the draft, which lasts until the browser quits)"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F005",
+      "category": "edge-case",
+      "description": "A Share draft from 0.3.0 and links typed but not yet added carry over into the new rows, and every existing spec passes with them",
+      "steps": [
+        "Start from a profile holding a 0.3.0 Share draft (`artifactText` with two artifact links and the line 'not a link'): open the popup and see two rows, and 'not a link' in the box with its warning",
+        "Type a valid link into the box without pressing Enter: the Preview button already counts it; click Preview and see it included",
+        "Type a valid link without pressing Enter, close the popup and reopen it: the link is still there",
+        "Open the popup on the Share tab over a non-claude.ai page with no rows and no text, tick a list and click Preview: see 'Add at least one artifact.'",
+        "The previous goals' specs (e2e/popup-and-manage-access/, e2e/share-ux-fixes/, e2e/smoke.spec.ts) that typed into or read the old textarea are updated to the rows, and all pass"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F006",
       "category": "functional",
       "description": "On an artifact tab, a Manage access icon in the header opens People with access from the Share or the Lists tab, without scrolling, and the old link at the bottom is gone",
       "steps": [
@@ -41,14 +81,14 @@
         "See, in the header beside the account pill and visible without scrolling, a people icon button named 'Manage access' with the tooltip 'Manage access to this artifact'; scroll to the bottom of the Share tab and see no 'Manage access' link there",
         "Click the icon: see People with access with You (owner), viewer@example.com (Can view), commenter@example.com (Pending, Commenter) and locked@example.com",
         "While it is open, see the icon shown as pressed (aria-pressed=true); click it again and see the Share tab back, as when clicking Back",
-        "Type a link into Artifacts, open Manage access, click Back: see the Share tab exactly as left, with the typed link",
+        "Paste a second artifact link into Artifacts, open Manage access, click Back: see the Share tab exactly as left, with both rows",
         "Switch to the Lists tab, open a saved list and change its permission without saving, then click the icon: Manage access opens; click Back and see the Lists tab with that list still open and its unsaved permission",
         "Change commenter@example.com to Can view and remove viewer@example.com from this view: both work as before (the existing Manage access e2e specs pass using the header icon)"
       ],
       "passes": false
     },
     {
-      "id": "F004",
+      "id": "F007",
       "category": "ux",
       "description": "The Manage access icon only appears where it works, is easy to use with the keyboard, and fits in the header",
       "steps": [
@@ -62,7 +102,7 @@
       "passes": false
     },
     {
-      "id": "F005",
+      "id": "F008",
       "category": "functional",
       "description": "The extension has a side panel again that shows the same ArtiShare (header, Share and Lists tabs, footer), filling the panel's height",
       "steps": [
@@ -75,7 +115,7 @@
       "passes": false
     },
     {
-      "id": "F006",
+      "id": "F009",
       "category": "functional",
       "description": "The popup's 'Open in side panel' icon moves ArtiShare into the side panel, and from then on the toolbar icon opens the side panel",
       "steps": [
@@ -87,7 +127,7 @@
       "passes": false
     },
     {
-      "id": "F007",
+      "id": "F010",
       "category": "functional",
       "description": "The side panel's 'Use popup instead' icon switches back: the side panel closes and the toolbar icon opens the popup again",
       "steps": [
@@ -100,7 +140,7 @@
       "passes": false
     },
     {
-      "id": "F008",
+      "id": "F011",
       "category": "edge-case",
       "description": "The popup-or-side-panel choice survives restarting Chrome and updating the extension, and people coming from 0.3.0 start with the popup",
       "steps": [
@@ -113,33 +153,35 @@
       "passes": false
     },
     {
-      "id": "F009",
+      "id": "F012",
       "category": "functional",
-      "description": "Moving between the popup and the side panel keeps your work: the Share form, a list being typed, a preview, a run and the open tab",
+      "description": "Moving between the popup and the side panel keeps your work: the artifacts, the ticked lists, a list being typed, a preview, a run and the open tab",
       "steps": [
-        "In the popup, type two artifact links into Share, untick Alpha and tick Beta; switch to Lists, click New list and type a name and one address without saving",
-        "Click Open in side panel: see the side panel on the Lists tab with that new-list form, name and address; switch to Share and see the two links with Beta ticked and Alpha unticked",
+        "In the popup, add two artifacts in Share, untick Alpha and tick Beta; switch to Lists, click New list and type a name and one address without saving",
+        "Click Open in side panel: see the side panel on the Lists tab with that new-list form, name and address; switch to Share and see the two artifact rows with Beta ticked and Alpha unticked",
         "Click Preview in the side panel, then Use popup instead and open the popup: see the same preview with Back and Send",
         "Click Send and confirm; while it runs, switch to the side panel: see live progress, and Stop then Resume work there; the run is not interrupted by the switch and finishes ('Share finished: …')"
       ],
       "passes": false
     },
     {
-      "id": "F010",
+      "id": "F013",
       "category": "functional",
-      "description": "The side panel follows the tab you're on: the Artifacts box and its hint update as you switch tabs, without adding anything to a box that has links",
+      "description": "The side panel follows the tab you're on: switching to an artifact tab adds it to Artifacts (unless you removed it), and the 'This tab' badge moves with you",
       "steps": [
-        "Open the side panel with an empty Artifacts box over a non-claude.ai tab: the box stays empty, no hint",
-        "Switch to https://claude.ai/artifact/ExampleArtifactOne01: the box fills with that link",
-        "Switch to https://claude.ai/artifact/ExampleArtifactTwo02: the box still holds only the first link, and the hint 'This tab's artifact isn't in the list.' shows with Add; click Add and see both links",
-        "Switch to a non-claude.ai tab: the hint is gone and the links are unchanged",
-        "In one claude.ai tab, open a different artifact in place (the URL's ?artifact= changes without a new tab): within a second the hint offers that artifact",
-        "Click + Current tab: it adds the artifact of the tab that is active now, not the one the panel opened over"
+        "Open the side panel with no artifacts over a non-claude.ai tab: no rows",
+        "Switch to https://claude.ai/artifact/ExampleArtifactOne01: within a second a row for it appears with the 'This tab' badge",
+        "Switch to https://claude.ai/artifact/ExampleArtifactTwo02: a second row appears, and the badge moves to it",
+        "Switch back to One: no new row; the badge moves back to One",
+        "Remove Two with ×, switch to a non-claude.ai tab and back to Two: Two is not added again (as in the popup); + Current tab adds it on purpose",
+        "Switch to a non-claude.ai tab: no row has the badge and the rows are unchanged",
+        "In one claude.ai tab, open a different artifact in place (the URL's ?artifact= changes without a new tab): within a second it is added with the badge",
+        "Click + Current tab while on One: it adds nothing new and shows no error, since the tab that is active now (not the one the panel opened over) is already in the list"
       ],
       "passes": false
     },
     {
-      "id": "F011",
+      "id": "F014",
       "category": "functional",
       "description": "In the side panel, the Manage access icon follows the tab you're on, and an open Manage access stays on the artifact it was opened for",
       "steps": [
@@ -152,7 +194,7 @@
       "passes": false
     },
     {
-      "id": "F012",
+      "id": "F015",
       "category": "error-handling",
       "description": "If Chrome can't open the side panel, the popup stays open, says why, and the toolbar icon keeps opening the popup",
       "steps": [
@@ -163,23 +205,24 @@
       "passes": false
     },
     {
-      "id": "F013",
+      "id": "F016",
       "category": "ux",
       "description": "The side panel is comfortable for long lists: it uses the panel's width and height, and nothing scrolls sideways at any width",
       "steps": [
         "Open the side panel page at 320, 400 and 600 px wide (900 tall): the content uses the full width (no fixed 380 px column), there is no horizontal scrollbar, and the header's logo, account pill and icons stay on one line",
         "Save a list with 200 addresses and open it in the Lists tab of the side panel at 900 px tall: the address box shows more lines than it does in the popup, and Save is reachable by scrolling",
-        "Paste a 120-character address and a long artifact link: they wrap or truncate without widening the panel",
+        "Add 30 artifacts: the rows scroll with the page, each × stays visible and clickable, and links are cut off with … rather than widening the panel",
+        "Paste a 120-character address: it wraps or truncates without widening the panel",
         "Open the popup: it is unchanged, 380 px wide and no taller than 600 px"
       ],
       "passes": false
     },
     {
-      "id": "F014",
+      "id": "F017",
       "category": "docs",
-      "description": "README, store listing, website and contributor docs describe the side panel choice, the Manage access icon and how the Artifacts box treats the current tab",
+      "description": "README, store listing, website and contributor docs describe the side panel choice, the Manage access icon and the Artifacts rows",
       "steps": [
-        "README: Use it explains Open in side panel and Use popup instead, that the toolbar icon remembers the choice, and that work carries over; Pick artifacts describes the empty-box fill and the 'isn't in the list' hint with Add; Optional: Manage access describes the header icon (no 'bottom of the Share tab' wording left)",
+        "README: Use it explains Open in side panel and Use popup instead, that the toolbar icon remembers the choice, and that work carries over; Pick artifacts describes the rows, pasting links, the current tab being added with the 'This tab' badge (also on switching tabs in the side panel), × with Undo, and that a removed artifact isn't added back by itself; Optional: Manage access describes the header icon (no 'bottom of the Share tab' wording left)",
         "store/listing.md: the permissions table justifies `sidePanel` again, and the description mentions the side panel option",
         "docs/index.html mentions the side panel option and the Manage access icon",
         "CLAUDE.md's layout names the side panel entrypoint next to popup/",
@@ -188,11 +231,11 @@
       "passes": false
     },
     {
-      "id": "F015",
+      "id": "F018",
       "category": "docs",
-      "description": "The README and store screenshots show the new header icons, and a new screenshot shows the side panel with a long list",
+      "description": "The README and store screenshots show the new header icons and Artifacts rows, and a new screenshot shows the side panel with a long list",
       "steps": [
-        "Run `npm run screenshots`: docs/images/share.png, preview.png, done.png and manage.png show the header with the Manage access and Open in side panel icons",
+        "Run `npm run screenshots`: docs/images/share.png, preview.png, done.png and manage.png show the header with the Manage access and Open in side panel icons, and share.png shows Artifacts as rows with ×",
         "See a new docs/images/sidepanel.png of the side panel with a long list open in the Lists tab, and the README showing it with alt text naming the side panel",
         "store/images screenshots are regenerated the same way, at 1280×800",
         "Every screenshot uses only made-up addresses and artifact ids, and the screenshot e2e checks (sizes, README tags and alt text, made-up ids) pass with the new image"
