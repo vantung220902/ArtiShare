@@ -15,7 +15,7 @@ function store(initial: Config = structuredClone(EMPTY_CONFIG)) {
 }
 
 describe('config controller', () => {
-  it('preserves concurrent edits from separate side panels', async () => {
+  it('preserves concurrent edits from separate popups', async () => {
     const { controller, read } = store();
     const a = createList('A', ['a@x.io'], 'view');
     const b = createList('B', ['b@x.io'], 'edit');

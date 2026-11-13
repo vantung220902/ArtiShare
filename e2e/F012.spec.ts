@@ -1,62 +1,99 @@
-import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
-// Pastes into a scratch textarea, since reading the clipboard directly needs a permission.
-async function expectClipboard(panel: Page, expected: string) {
-  await panel.evaluate(() => {
-    const field = document.createElement('textarea');
-    field.id = 'paste-probe';
-    document.body.append(field);
-    field.focus();
-  });
-  await panel.keyboard.press('ControlOrMeta+V');
-  await expect(panel.locator('#paste-probe')).toHaveValue(expected);
-  await panel.locator('#paste-probe').evaluate((el) => el.remove());
-}
+// F012: on an artifact tab, a quiet 'Manage access' link opens the people already invited to it.
 
-// F012: each artifact link in the Preview has a copy button.
-test('the Preview has a copy button beside each artifact link', async ({ panel }) => {
-  const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await share.getByLabel('List name').fill('Copy team');
-  await share.getByLabel('Email addresses').fill('ana@example.com');
-  const first = 'https://claude.ai/artifact/CopyLinkArtifact001';
-  const second = 'https://claude.ai/artifact/CopyLinkArtifact002';
-  await share.getByLabel(/Artifacts/).fill(`${first}\n${second}`);
-  await share.getByRole('button', { name: /^Preview/ }).click();
-  await expect(share.getByText('Will be invited').first()).toBeVisible();
+const SHARED = 'https://claude.ai/artifact/SharedExampleArtifact01';
 
-  const rows = share.locator('.artifact-row');
-  await expect(rows).toHaveCount(2);
-  await expect(share.getByRole('button', { name: 'Copy link' })).toHaveCount(2);
-
-  // Each button copies its own artifact's full link.
-  await rows.nth(1).getByRole('button', { name: 'Copy link' }).click();
-  await expect(rows.nth(1).getByRole('button', { name: 'Copied' })).toBeVisible();
-  await expectClipboard(panel, second);
-  // The other row is untouched.
-  await expect(rows.nth(0).getByRole('button', { name: 'Copy link' })).toBeVisible();
-
-  // The copied state shows a check, stays for about 2 seconds, then reverts.
-  const copied = rows.nth(1).getByRole('button', { name: 'Copied' });
-  await expect(copied).toHaveClass(/copied/);
-  await expect(copied.locator('svg path[d="M20 6 9 17l-5-5"]')).toHaveCount(1);
-  await panel.waitForTimeout(1000);
-  await expect(copied).toBeVisible();
-  await expect(rows.nth(1).getByRole('button', { name: 'Copy link' })).toBeVisible({ timeout: 2500 });
-  await expect(rows.nth(1).locator('svg path[d="M20 6 9 17l-5-5"]')).toHaveCount(0);
-
-  await rows.nth(0).getByRole('button', { name: 'Copy link' }).click();
-  await expect(rows.nth(0).getByRole('button', { name: 'Copied' })).toBeVisible();
-  await expectClipboard(panel, first);
-
-  // The link text itself still opens the artifact in a new tab.
-  const link = rows.nth(0).getByRole('link');
-  await expect(link).toHaveAttribute('href', first);
-  await expect(link).toHaveAttribute('target', '_blank');
+test.beforeEach(async ({ context }) => {
+  // Serve the pages ourselves: nothing may reach claude.ai or anywhere else.
+  await context.route(/^https:\/\/(claude\.ai|example\.com)\//, (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<title>page</title>' }),
+  );
 });
 
-test('copying needs no clipboard permission in the manifest', async ({ panel }) => {
-  const permissions = await panel.evaluate(() => chrome.runtime.getManifest().permissions ?? []);
-  expect(permissions).not.toContain('clipboardWrite');
-  expect(permissions).not.toContain('clipboardRead');
+test('Manage access lists the owner and each invitee, and Back returns to the form as it was', async ({
+  context,
+  panel,
+}) => {
+  const tab = await context.newPage();
+  await tab.goto(SHARED);
+  await tab.bringToFront();
+  await panel.reload();
+
+  const share = panel.getByRole('tabpanel', { name: 'Share' });
+  const link = share.getByRole('button', { name: 'Manage access' });
+  // A secondary link at the bottom: not a tab and not a primary button.
+  await expect(link).toBeVisible();
+  await expect(link).toHaveClass(/link/);
+  await expect(link).not.toHaveClass(/primary/);
+  await expect(panel.getByRole('tab', { name: /Manage access/ })).toHaveCount(0);
+  const previewButton = share.getByRole('button', { name: /^Preview/ });
+  const below = async () => (await link.boundingBox())!.y > (await previewButton.boundingBox())!.y;
+  expect(await below()).toBe(true);
+
+  // Something typed before opening it.
+  const artifacts = share.getByLabel(/Artifacts/);
+  await expect(artifacts).toHaveValue(SHARED);
+  await artifacts.fill(`${SHARED}\nhttps://claude.ai/artifact/SecondTypedArtifact01`);
+
+  await link.click();
+  await expect(share.getByRole('heading', { name: 'People with access' })).toBeVisible();
+  await expect(share.getByRole('link', { name: /SharedExampleArtifact01/ })).toBeVisible();
+  await expect(share.getByRole('button', { name: 'Back' })).toBeVisible();
+  await expect(share.getByRole('button', { name: /^Preview/ })).toBeHidden();
+
+  const rows = share.locator('ul.people > li');
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(0)).toContainText('You (owner)');
+  // The owner is not editable.
+  await expect(rows.nth(0).locator('select, button')).toHaveCount(0);
+  await expect(rows.nth(1)).toContainText('viewer@example.com');
+  await expect(rows.nth(1)).toContainText('Accepted');
+  await expect(rows.nth(1)).toContainText('Can view');
+  await expect(rows.nth(2)).toContainText('commenter@example.com');
+  await expect(rows.nth(2)).toContainText('Pending');
+  await expect(rows.nth(2)).toContainText('Commenter');
+  await expect(rows.nth(3)).toContainText('locked@example.com');
+  await expect(rows.nth(3)).toContainText('Accepted');
+
+  await share.getByRole('button', { name: 'Back' }).click();
+  await expect(share.getByRole('heading', { name: 'People with access' })).toHaveCount(0);
+  await expect(artifacts).toHaveValue(`${SHARED}\nhttps://claude.ai/artifact/SecondTypedArtifact01`);
+  await expect(link).toBeVisible();
+});
+
+test('Manage access is also under the run view', async ({ context, panel }) => {
+  const tab = await context.newPage();
+  await tab.goto('https://claude.ai/artifact/RunThenManageArtifact1');
+  await tab.bringToFront();
+  await panel.reload();
+
+  const share = panel.getByRole('tabpanel', { name: 'Share' });
+  await share.getByLabel('Email addresses').fill('a@example.com');
+  await share.getByRole('button', { name: /^Preview/ }).click();
+  await share.getByRole('button', { name: /^Send/ }).click();
+  await panel.getByRole('alertdialog').getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(share.getByText('Share finished: 1 invited')).toBeVisible();
+
+  await expect(share.getByRole('button', { name: 'Start a new share' })).toBeVisible();
+  await share.getByRole('button', { name: 'Manage access' }).click();
+  const rows = share.locator('ul.people > li');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(1)).toContainText('a@example.com');
+  await expect(rows.nth(1)).toContainText('Pending');
+  await share.getByRole('button', { name: 'Back' }).click();
+  await expect(share.getByText('Share finished: 1 invited')).toBeVisible();
+});
+
+test('there is no Manage access link when the active tab is not an artifact', async ({ context, panel }) => {
+  const other = await context.newPage();
+  await other.goto('https://example.com/some/page');
+  await other.bringToFront();
+  await panel.reload();
+
+  const share = panel.getByRole('tabpanel', { name: 'Share' });
+  await expect(share.getByRole('button', { name: /^Preview/ })).toBeVisible();
+  // Give the active-tab lookup time to answer before asserting nothing appeared.
+  await panel.evaluate(() => chrome.tabs.query({ active: true, lastFocusedWindow: true }));
+  await expect(share.getByRole('button', { name: 'Manage access' })).toHaveCount(0);
 });

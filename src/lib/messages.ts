@@ -1,7 +1,7 @@
 import type { Account } from '../claude/shareClient';
 import type { Config, ConfigChange, Invitee } from '../core/config';
 import type { ArtifactPlan } from '../core/planner';
-import type { ArtifactRef } from '../core/types';
+import type { AccessLevel, ArtifactRef, Sharee } from '../core/types';
 
 export interface PreviewResult {
   artifact: ArtifactRef;
@@ -19,7 +19,13 @@ export interface Messages {
   'config-change': { req: { change: ConfigChange }; res: Config };
   whoami: { req: Record<string, never>; res: Account };
   preview: { req: { artifacts: ArtifactRef[]; invites: Invitee[] }; res: PreviewResponse };
-  /** `label` names the run in the side panel, e.g. the lists it came from. */
+  /** The people already invited to one artifact, for Manage access. */
+  sharees: { req: { artifact: ArtifactRef }; res: Sharee[] };
+  /** Changes one invitation's permission on claude.ai; `inviteId` is `Sharee.id`. */
+  'change-access': { req: { artifact: ArtifactRef; inviteId: string; access: AccessLevel }; res: null };
+  /** Removes one invitation on claude.ai; `inviteId` is `Sharee.id`. */
+  'remove-invite': { req: { artifact: ArtifactRef; inviteId: string }; res: null };
+  /** `label` names the run in the popup, e.g. the lists it came from. */
   start: { req: { label: string; plans: ArtifactPlan[]; accountEmail: string }; res: null };
   stop: { req: Record<string, never>; res: null };
   resume: { req: Record<string, never>; res: null };

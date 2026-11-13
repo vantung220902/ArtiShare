@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 const EMPTY = 'Add at least one email address.';
 // The parser ignores words without an @ (CSV headers, names), so an invalid address needs one.

@@ -70,6 +70,16 @@ async function handle(msg: Envelope): Promise<unknown> {
       return client.whoami();
     case 'preview':
       return preview(msg);
+    case 'sharees':
+      return client.listSharees(msg.artifact);
+    case 'change-access':
+      await client.changeAccess(msg.artifact, msg.inviteId, msg.access);
+
+      return null;
+    case 'remove-invite':
+      await client.removeInvite(msg.artifact, msg.inviteId);
+
+      return null;
     case 'start':
       await runManager.start(msg.label, msg.plans, msg.accountEmail);
 
@@ -90,8 +100,6 @@ async function handle(msg: Envelope): Promise<unknown> {
 }
 
 export default defineBackground(() => {
-  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
-
   chrome.runtime.onMessage.addListener((msg: Envelope, sender, sendResponse: (r: Reply<unknown>) => void) => {
     if (sender.id !== chrome.runtime.id) return false;
     handle(msg).then(

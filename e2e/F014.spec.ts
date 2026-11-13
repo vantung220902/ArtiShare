@@ -1,77 +1,67 @@
 import { expect, test } from './fixtures';
 
-// F014: when the clipboard refuses, the copy button says so instead of failing silently.
-test('the copy button says "Couldn\'t copy" when the clipboard refuses', async ({ panel }) => {
-  const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await share.getByLabel('List name').fill('Refusal team');
-  await share.getByLabel('Email addresses').fill('ana@example.com\nbo@example.com');
-  const url = 'https://claude.ai/artifact/CopyRefusedArtifact1';
-  await share.getByLabel(/Artifacts/).fill(url);
-  await share.getByRole('button', { name: /^Preview/ }).click();
-  await expect(share.getByText('Will be invited').first()).toBeVisible();
+// F014: in Manage access, removing a person's invitation asks first, then removes it on claude.ai.
 
-  // Both the async clipboard API and the execCommand fallback have to fail.
-  await panel.evaluate(() => {
-    Object.defineProperty(navigator.clipboard, 'writeText', {
-      configurable: true,
-      value: () => Promise.reject(new DOMException('Document is not focused', 'NotAllowedError')),
-    });
-    document.execCommand = () => false;
-  });
+const SHARED = 'https://claude.ai/artifact/SharedExampleArtifact01';
 
-  const row = share.locator('.artifact-row');
-  await row.getByRole('button', { name: 'Copy link' }).click();
-  const failed = row.getByRole('button', { name: "Couldn't copy" });
-  await expect(failed).toBeVisible();
-  await expect(failed).toHaveAttribute('title', "Couldn't copy");
-  await expect(failed).toHaveClass(/failed/);
-  await expect(failed).not.toHaveClass(/copied/);
-  // It's not mistaken for a success.
-  await expect(row.getByRole('button', { name: 'Copied' })).toHaveCount(0);
-
-  // It stays for a moment, then goes back so the user can try again.
-  await panel.waitForTimeout(1000);
-  await expect(failed).toBeVisible();
-  await expect(row.getByRole('button', { name: 'Copy link' })).toBeVisible({ timeout: 2500 });
-  await expect(row.getByRole('button', { name: "Couldn't copy" })).toHaveCount(0);
-
-  // The panel keeps working: the link is still a normal link, and Send still runs.
-  const link = row.getByRole('link');
-  await expect(link).toHaveAttribute('href', url);
-  await expect(link).toHaveAttribute('target', '_blank');
-  await expect(share.locator('.alert')).toHaveCount(0);
-
-  await share.getByRole('button', { name: 'Send 2 invitations' }).click();
-  await expect(share.getByText('Done', { exact: true })).toBeVisible({ timeout: 20_000 });
-  await expect(share.getByText('2 invited')).toBeVisible();
-
-  // Also in the run view, a refused copy is reported.
-  await row.getByRole('button', { name: 'Copy link' }).click();
-  await expect(row.getByRole('button', { name: "Couldn't copy" })).toBeVisible();
+test.beforeEach(async ({ context }) => {
+  // Serve the pages ourselves: nothing may reach claude.ai or anywhere else.
+  await context.route(/^https:\/\/(claude\.ai|example\.com)\//, (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<title>page</title>' }),
+  );
 });
 
-// The fallback copies through a hidden field it has to focus; the button must get focus back.
-test('a copy through the fallback leaves keyboard focus on the copy button', async ({ panel }) => {
+test('Remove asks first; Cancel keeps the person, confirming removes them for good', async ({
+  context,
+  panel,
+}) => {
+  const tab = await context.newPage();
+  await tab.goto(SHARED);
+  await tab.bringToFront();
+  await panel.reload();
+
   const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await share.getByLabel('List name').fill('Fallback team');
-  await share.getByLabel('Email addresses').fill('ana@example.com');
-  await share.getByLabel(/Artifacts/).fill('https://claude.ai/artifact/CopyFallbackArtifact1');
+  await share.getByRole('button', { name: 'Manage access' }).click();
+  const rows = share.locator('ul.people > li');
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(2)).toContainText('commenter@example.com');
+
+  // Cancel: the dialog closes and nothing changes.
+  await rows.nth(2).getByRole('button', { name: 'Remove commenter@example.com' }).click();
+  const dialog = panel.getByRole('alertdialog');
+  await expect(dialog).toContainText('Remove commenter@example.com from this artifact?');
+  await expect(dialog).toContainText('Their invitation will stop working.');
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(2)).toContainText('commenter@example.com');
+
+  // Confirm: the row's controls are disabled while it is in flight, then the row goes.
+  const row = rows.nth(2);
+  await row.getByRole('button', { name: 'Remove commenter@example.com' }).click();
+  await dialog.getByRole('button', { name: 'Remove', exact: true }).click();
+  await expect(row.getByRole('button', { name: /Remove commenter/ })).toBeDisabled();
+  await expect(row.getByRole('combobox')).toBeDisabled();
+  await expect(rows).toHaveCount(3);
+  await expect(share.getByText('commenter@example.com')).toHaveCount(0);
+  await expect(share.locator('.alert')).toHaveCount(0);
+  await expect(share.getByText('viewer@example.com')).toBeVisible();
+
+  // Close and reopen the popup: they are still gone.
+  await panel.reload();
+  await share.getByRole('button', { name: 'Manage access' }).click();
+  await expect(rows).toHaveCount(3);
+  await expect(share.getByText('commenter@example.com')).toHaveCount(0);
+
+  // The Share preview now lists them as someone to invite.
+  await share.getByRole('button', { name: 'Back' }).click();
+  await share.getByLabel('Email addresses').fill('commenter@example.com');
   await share.getByRole('button', { name: /^Preview/ }).click();
-  await expect(share.getByText('Will be invited').first()).toBeVisible();
-
-  // Only the async API refuses; execCommand('copy') still works.
-  await panel.evaluate(() => {
-    Object.defineProperty(navigator.clipboard, 'writeText', {
-      configurable: true,
-      value: () => Promise.reject(new DOMException('Document is not focused', 'NotAllowedError')),
-    });
-  });
-
-  const row = share.locator('.artifact-row');
-  await row.getByRole('button', { name: 'Copy link' }).focus();
-  await panel.keyboard.press('Enter');
-  const copied = row.getByRole('button', { name: 'Copied' });
-  await expect(copied).toBeVisible();
-  await expect(copied).toBeFocused();
-  await expect(share.locator('textarea[style*="opacity"]')).toHaveCount(0);
+  const card = share.locator('section.card');
+  await expect(card.locator('.stat.accent')).toHaveText('1to invite');
+  await card.locator('summary', { hasText: 'Will be invited' }).click();
+  await expect(card.locator('details', { hasText: 'Will be invited' }).locator('li')).toHaveText([
+    'commenter@example.com · Can view',
+  ]);
+  await expect(card.locator('details', { hasText: 'Existing email access' })).toHaveCount(0);
 });

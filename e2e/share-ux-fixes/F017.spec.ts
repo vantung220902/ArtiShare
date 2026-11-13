@@ -1,18 +1,9 @@
-import { expect, test } from './fixtures';
+import { answer, confirmation, expect, test } from '../fixtures';
 
 // F017: a stopped run with invites left asks before it is discarded; with nothing left it doesn't.
 test('a stopped run with invites left asks before Start a new share, and Cancel keeps it', async ({
   panel,
 }) => {
-  // The fixture accepts every dialog; this spec decides for itself and records what was asked.
-  panel.removeAllListeners('dialog');
-  const dialogs: string[] = [];
-  let answer: 'accept' | 'dismiss' = 'accept';
-  panel.on('dialog', (d) => {
-    dialogs.push(d.message());
-    void (answer === 'accept' ? d.accept() : d.dismiss());
-  });
-
   const share = panel.getByRole('tabpanel', { name: 'Share' });
   await share.getByLabel('List name').fill('Stoppable team');
   // The run pauses about a second between invites, which leaves time to press Stop with some pending.
@@ -22,16 +13,13 @@ test('a stopped run with invites left asks before Start a new share, and Cancel 
   await share.getByLabel(/Artifacts/).fill('https://claude.ai/artifact/StoppedRunArtifact01');
   await share.getByRole('button', { name: /^Preview/ }).click();
   await share.getByRole('button', { name: 'Send 5 invitations' }).click();
-  // Sending asks once; only the questions after this point are under test.
+  await answer(share, 'Send');
   await expect(share.getByText('Running', { exact: true })).toBeVisible();
-  dialogs.length = 0;
 
   await expect(share.getByText(/[1-9]\d* invited/).first()).toBeVisible();
   await share.getByRole('button', { name: 'Stop' }).click();
   await expect(share.getByText('Stopped', { exact: true })).toBeVisible();
   await expect(share.getByText(/\d+ left/)).toBeVisible();
-  // Sending was accepted above; from here Cancel is the answer until the spec says otherwise.
-  answer = 'dismiss';
 
   // Resume is the primary action; Start a new share is there but plain.
   const resume = share.getByRole('button', { name: 'Resume' });
@@ -41,8 +29,10 @@ test('a stopped run with invites left asks before Start a new share, and Cancel 
 
   // Cancel: the question is asked, and the stopped run is still here, still resumable.
   await startNew.click();
-  await expect.poll(() => dialogs.length).toBe(1);
-  expect(dialogs[0]).toContain('Discard this run?');
+  await expect(confirmation(panel)).toContainText('Discard this run?');
+  await expect(confirmation(panel)).toContainText('The remaining invites will not be sent.');
+  await answer(panel, 'Cancel');
+  await expect(confirmation(panel)).toHaveCount(0);
   await expect(share.getByText('Stopped', { exact: true })).toBeVisible();
   await expect(resume).toBeVisible();
   await expect(share.getByText(/\d+ left/)).toBeVisible();
@@ -53,9 +43,8 @@ test('a stopped run with invites left asks before Start a new share, and Cancel 
   await expect(resume).toBeVisible();
 
   // Accept: the fresh Share form, as in F016.
-  answer = 'accept';
   await startNew.click();
-  await expect.poll(() => dialogs.length).toBe(2);
+  await answer(panel, 'Discard');
   const artifacts = share.getByLabel(/Artifacts/);
   await expect(artifacts).toBeVisible();
   await expect(artifacts).toHaveValue('');
@@ -65,7 +54,6 @@ test('a stopped run with invites left asks before Start a new share, and Cancel 
   await expect(share.locator('.alert')).toHaveCount(0);
 
   // A stopped run with nothing left: five failures in a row stop the run after the last address.
-  dialogs.length = 0;
   await share.getByRole('button', { name: 'New list' }).click();
   await share.getByLabel('List name').filter({ visible: true }).fill('Rejected team');
   await share
@@ -76,15 +64,15 @@ test('a stopped run with invites left asks before Start a new share, and Cancel 
   await artifacts.fill('https://claude.ai/artifact/StoppedRunArtifact02');
   await share.getByRole('button', { name: /^Preview/ }).click();
   await share.getByRole('button', { name: 'Send 5 invitations' }).click();
+  await answer(share, 'Send');
   await expect(share.getByText('Stopped', { exact: true })).toBeVisible({ timeout: 30_000 });
   await expect(share.getByText('5 failed', { exact: true })).toBeVisible();
   await expect(share.getByText(/\d+ left/)).toHaveCount(0);
   await expect(share.getByRole('button', { name: 'Resume' })).toHaveCount(0);
-  dialogs.length = 0;
 
   await startNew.click();
   await expect(artifacts).toBeVisible();
   await expect(artifacts).toHaveValue('');
   await expect(share.getByText('Stopped', { exact: true })).toHaveCount(0);
-  expect(dialogs).toEqual([]);
+  await expect(confirmation(panel)).toHaveCount(0);
 });
