@@ -39,7 +39,7 @@
         "Start a run in the side panel that sends to 6 addresses on one artifact, and click Use popup instead while it is sending: the popup opens showing the same run with live progress, and the run finishes with every address invited once",
         "Click Open in side panel in the popup, then Use popup instead in the side panel, then Open in side panel again: each click moves ArtiShare to the other place, and the last choice is the one the toolbar icon opens"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F004",

@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F003 · Switching to the popup closes every window's side panel and doesn't interrupt a run
+
+- **Did:** No source change: the `chrome.storage.onChanged` listener and the `switchingHere` guard were already in `src/entrypoints/popup/App.tsx` from F001. Added `e2e/F003.spec.ts` (4 tests): three side panel pages all close within 1 s of Use popup instead in one (and the toolbar then reads popup / panel behaviour off / stored popup); the same when `openPopup` rejects (the other panel closes, the switching one stays with its notice); a run of 6 addresses (one `slow-`) switched mid-send finishes in the popup with "Share finished: 6 invited" and Manage access shows the owner plus the six, each once; popup → panel → popup → panel round trips with the toolbar state read back after each.
+- **Verified:** `harness/init.sh` OK at the start (150 e2e). `npm run check` (208 unit) passes; F003 12 of 12 over 3 repeats. feature-verifier: first run **FAIL** (the close waits had no time limit, step 2 says within a second); after capping them at 1000 ms, **PASS** with `npm run e2e` at 154 passed (run twice).
+- **State:** F003 passes true. 3 of 13 features pass. Still not checked by hand in real Chrome (see F001's entry).
+- **Next:** F004: the fake claude.ai's "Crowded" artifact (45 people already invited, rule at the top of `src/claude/fakeShareClient.ts`, unit and e2e tests). F005–F011 build on it.
+- **Notes:** `openPopup` is stubbed in the spec to resolve (a real popup can't be had from Playwright); register `waitForEvent('close')` before the click, because the other panels close quickly. In Manage access an address appears twice per row (text and the select's label), so count rows with `ul.people > li` filtered by text, not `getByText`. Verifier's unlikely corner: `chooseSurface` saves before it applies, so if applying failed after the save, other windows' panels would close while the switching one shows an error.
+
 ### 2026-11-14 · F002 · If Chrome can't open the popup, the side panel stays and says so
 
 - **Did:** The behaviour was already in the code from F001 (`openPopupHere` in `src/lib/surface.ts`, the notice and the Open popup label in `App.tsx`), so no source change. Added `e2e/F002.spec.ts` (4 tests): `openPopup` rejecting, `openPopup` missing, the retry via the Open popup icon (fails again, then succeeds and the panel closes), and the stored choice failing to save (nothing changed, `openPopup` never called).
