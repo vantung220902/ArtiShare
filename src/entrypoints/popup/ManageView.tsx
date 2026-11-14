@@ -245,8 +245,11 @@ export function ManageView({
             returnFocus.current = true;
             setSaving(false);
           }}
-          onSaved={(list, count) => {
-            setSaved({ message: `Saved ${peopleCount(count)} to ${list.name}.`, listId: list.id });
+          onSaved={(list, count, added) => {
+            setSaved({
+              message: `${added ? 'Added' : 'Saved'} ${peopleCount(count)} to ${list.name}.`,
+              listId: list.id,
+            });
             setSaving(false);
           }}
         />

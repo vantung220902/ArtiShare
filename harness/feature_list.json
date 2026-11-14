@@ -106,7 +106,7 @@
         "In the Lists tab, Team holds a@example.com first, then the three new addresses, still with Can edit; Design is unchanged and no list was created",
         "With no saved lists, Add to an existing list isn't offered at all"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F009",
