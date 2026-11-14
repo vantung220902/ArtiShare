@@ -1,4 +1,4 @@
-import { answer, expect, test } from './fixtures';
+import { answer, expect, test } from '../fixtures';
 
 // F008: the side panel page shows the same ArtiShare as the popup, filling the panel's height.
 

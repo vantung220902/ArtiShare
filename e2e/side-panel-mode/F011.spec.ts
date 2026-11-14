@@ -7,7 +7,7 @@ import { chromium, expect, test, type BrowserContext, type Page } from '@playwri
 // forgotten. (`chrome.runtime.reload()` can't be used: an extension loaded from the command line
 // doesn't come back after it.)
 
-const EXTENSION_DIR = new URL('../.output/chrome-mv3-fake', import.meta.url).pathname;
+const EXTENSION_DIR = new URL('../../.output/chrome-mv3-fake', import.meta.url).pathname;
 
 type Session = { context: BrowserContext; extensionId: string };
 

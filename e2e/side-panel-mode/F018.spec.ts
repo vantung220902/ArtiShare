@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test';
 // README shows them with alt text, and that the generator only knows made-up addresses and ids. (The
 // older popup-and-manage-access/F018 spec covers the four popup images.)
 
-const root = new URL('..', import.meta.url);
+const root = new URL('../..', import.meta.url);
 const read = (path: string) => readFileSync(new URL(path, root));
 const source = read('scripts/screenshots.spec.ts').toString();
 const readme = read('README.md').toString();

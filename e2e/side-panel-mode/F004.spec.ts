@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { answer, expect, test } from './fixtures';
+import { answer, expect, test } from '../fixtures';
 
 // F004: an artifact removed with × isn't added back by the tab's prefill, until it is added on
 // purpose (+ Current tab, a paste, Undo) or a new share starts.

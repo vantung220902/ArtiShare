@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F002: removing an artifact is one click, can be undone for a few seconds, and works from the keyboard.
 

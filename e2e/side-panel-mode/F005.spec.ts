@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F005: a 0.3.0 Share draft (only the box, no rows) and links typed but not yet added carry over
 // into the Artifacts rows.

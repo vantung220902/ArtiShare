@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { answer, expect, test } from './fixtures';
+import { answer, expect, test } from '../fixtures';
 
 // F012: moving between the popup and the side panel keeps the work. Both pages read the same
 // storage, so the work is what was last written there. A real toolbar click can't be made from
