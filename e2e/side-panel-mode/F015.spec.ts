@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F015: when Chrome can't open the side panel the popup stays open and says why, and the toolbar
 // icon keeps opening the popup. A real toolbar click can't be made from Playwright, so what the icon

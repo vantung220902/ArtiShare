@@ -1,5 +1,5 @@
 import type { BrowserContext } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F009: the popup's "Open in side panel" icon moves ArtiShare into the side panel, and from then
 // on the toolbar icon opens the side panel. A real toolbar click can't be made from Playwright, so

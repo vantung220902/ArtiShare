@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F010: the side panel's "Use popup instead" icon switches back to the popup. A real toolbar click
 // can't be made from Playwright, so what it does is read back from the browser: the action's popup,

@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F006: on an artifact tab, a Manage access icon in the header opens People with access from the
 // Share or the Lists tab, and the link at the bottom of Share is gone.

@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { answer, expect, test } from './fixtures';
+import { answer, expect, test } from '../fixtures';
 
 // F003: opening ArtiShare over an artifact adds it to Artifacts when it isn't there yet, marked
 // 'This tab': the same for the second and third artifact as for the first.

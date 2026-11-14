@@ -1,4 +1,4 @@
-import { answer, expect, test } from './fixtures';
+import { answer, expect, test } from '../fixtures';
 
 // F007: the Manage access icon only appears on an artifact tab, works from the keyboard, and fits
 // the header at the popup's 380 px width.

@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F013: the side panel stays open as you switch tabs, so it follows them: the artifact in the tab in
 // front is added to Artifacts (unless it was removed) and the 'This tab' badge moves with it. A tab

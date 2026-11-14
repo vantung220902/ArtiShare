@@ -1,5 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F001: Artifacts shows each artifact as its own row with a Remove (×) button, and links can still
 // be pasted in any number.
