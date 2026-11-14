@@ -27,8 +27,8 @@ How it works
 • Share: artifacts are a list of rows, each with a × to remove it (and Undo). Paste links, or click "Current tab"; the artifact you're on is added for you and marked "This tab". Tick the lists to share with, or make a new list right there.
 • Preview: for each artifact, see who will be invited and who already has access. Nothing is sent yet.
 • Send: confirm, and the invitations go out one at a time while you follow each one. You can stop and resume. Closing the popup doesn't stop the run, and your draft is kept.
-• Side panel: an icon in the header moves ArtiShare from the popup into the browser's side panel, which stays open while you work in the page and follows the tab you're on. Another icon moves it back. The toolbar icon remembers your choice, and your work comes with you.
-• Manage access: on an artifact's tab, click the people icon in the header to see everyone who's invited and whether they've accepted, change their permission or remove their invitation.
+• Side panel: an icon in the header moves ArtiShare from the popup into the browser's side panel, which stays open while you work in the page and follows the tab you're on. The "Use popup instead" icon opens the popup straight away and closes the side panel (in other windows too); if Chrome can't open the popup, the side panel stays open and says to click the toolbar icon. The toolbar icon remembers your choice, and your work comes with you.
+• Manage access: on an artifact's tab, click the people icon in the header to see everyone who's invited and whether they've accepted, change their permission or remove their invitation. Each person shows which of your saved lists they're in, and "Save to a list" saves the people who aren't in any list to a new or an existing list, with checkboxes to choose who. Their access to the artifact doesn't change.
 
 Good to know
 • Your own address is skipped, and so is anyone who already has an invitation.
@@ -115,5 +115,5 @@ ArtiShare needs a claude.ai account with at least one published artifact.
 5. Click "Send 1 invitation" and confirm. The address receives a claude.ai invitation email.
 6. Click "Start a new share", then the people icon ("Manage access") in the header. The invited address is listed as Pending.
 7. Change its permission to "Can edit", then click Remove and confirm. The invitation is removed from the artifact.
-8. Optional: click the "Open in side panel" icon in the header. ArtiShare opens in the side panel; "Use popup instead" moves it back.
+8. Optional: click the "Open in side panel" icon in the header. ArtiShare opens in the side panel; "Use popup instead" opens the popup and closes the side panel.
 ```

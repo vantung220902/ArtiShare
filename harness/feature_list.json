@@ -160,7 +160,7 @@
         "store/listing.md and docs/index.html, wherever they describe the side panel or Manage access, say the same; nothing anywhere says Use popup instead only switches the toolbar icon",
         "The README's Limits table and the rest are unchanged; an e2e spec reads the files and checks the wording, as the side-panel-mode F017 spec does"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F013",
