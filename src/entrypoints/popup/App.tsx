@@ -4,7 +4,7 @@ import type { Surface } from '../../core/surface';
 import type { ArtifactRef } from '../../core/types';
 import { emptyPopupState, type PopupState, reconcileListsDraft, type Tab } from '../../core/popupState';
 import { send } from '../../lib/messages';
-import { moveToPopup, moveToSidePanel } from '../../lib/surface';
+import { moveToPopup, moveToSidePanel, sidePanelSupported } from '../../lib/surface';
 import { loadPopupState, patchPopupState } from '../../lib/storage';
 import { useConfig, useRun } from '../../ui/hooks';
 import { PopupIcon, SendIcon, SidePanelIcon, UsersIcon } from '../../ui/icons';
@@ -131,23 +131,32 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
               <UsersIcon size={16} />
             </button>
           )}
-          <button
-            className="ghost icon-btn"
-            aria-label={switchLabel}
-            title={switchLabel}
-            onClick={() => {
-              // Nothing is left for this page to do once the other surface is chosen, so it closes.
-              (inPopup ? moveToSidePanel : moveToPopup)().then(
-                () => window.close(),
-                (e: Error) => setSurfaceError(e.message),
-              );
-            }}
-          >
-            {inPopup ? <SidePanelIcon size={16} /> : <PopupIcon size={16} />}
-          </button>
+          {/* A Chrome without side panels has nothing to switch to. */}
+          {(!inPopup || sidePanelSupported()) && (
+            <button
+              className="ghost icon-btn"
+              aria-label={switchLabel}
+              title={switchLabel}
+              onClick={() => {
+                // Nothing is left for this page to do once the other surface is chosen, so it closes.
+                // On failure it stays open: the choice is only saved once the side panel has opened.
+                setSurfaceError('');
+                (inPopup ? moveToSidePanel : moveToPopup)().then(
+                  () => window.close(),
+                  (e: unknown) => setSurfaceError(e instanceof Error ? e.message : String(e)),
+                );
+              }}
+            >
+              {inPopup ? <SidePanelIcon size={16} /> : <PopupIcon size={16} />}
+            </button>
+          )}
         </header>
 
-        {surfaceError && <p className="alert">Could not switch: {surfaceError}</p>}
+        {surfaceError && (
+          <p className="alert">
+            {inPopup ? "Couldn't open the side panel" : "Couldn't switch to the popup"}: {surfaceError}
+          </p>
+        )}
 
         {accountError && (
           <p className="alert">

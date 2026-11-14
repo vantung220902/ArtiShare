@@ -1,17 +1,25 @@
 import type { Surface } from '../core/surface';
 import { loadSurface, saveSurface } from './storage';
 
+/** False on a Chrome without side panels, where `chrome.sidePanel` doesn't exist. */
+export function sidePanelSupported(): boolean {
+  return typeof chrome.sidePanel?.open === 'function';
+}
+
 /**
  * Points the toolbar icon at `surface`. The popup is switched off by giving the action an empty
  * popup, and the side panel on by letting the icon open it. `setPopup` doesn't survive a browser
  * restart, so the background applies the stored choice again each time it starts.
  */
 export async function applySurface(surface: Surface): Promise<void> {
-  const sidePanel = surface === 'sidepanel';
+  // Without side panels the popup is all there is, whatever was stored, so the icon can't go dead.
+  const sidePanel = surface === 'sidepanel' && sidePanelSupported();
   // The popup page named in the manifest, so its path is only written in the popup entrypoint.
   const popup = chrome.runtime.getManifest().action?.default_popup ?? 'popup.html';
   await Promise.all([
-    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: sidePanel }),
+    sidePanelSupported()
+      ? chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: sidePanel })
+      : undefined,
     chrome.action.setPopup({ popup: sidePanel ? '' : popup }),
   ]);
 }
