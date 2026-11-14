@@ -50,12 +50,12 @@ ArtiShare is an independent tool. It isn't made, endorsed or supported by Anthro
 
 **Graphic assets:**
 
-| Field              | File                                                                                                                                                                                                   |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Store icon         | [`public/icon/128.png`](../public/icon/128.png)                                                                                                                                                        |
-| Screenshots        | [`images/screenshot-1-share.png`](images/screenshot-1-share.png), [`images/screenshot-2-preview.png`](images/screenshot-2-preview.png), [`images/screenshot-3-done.png`](images/screenshot-3-done.png) |
-| Small promo tile   | [`images/promo-tile-440x280.png`](images/promo-tile-440x280.png)                                                                                                                                       |
-| Marquee promo tile | Leave empty. It's optional.                                                                                                                                                                            |
+| Field              | File                                                                                                                                                                                                                                                                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Store icon         | [`public/icon/128.png`](../public/icon/128.png)                                                                                                                                                                                                                                                                                            |
+| Screenshots        | [`images/screenshot-1-share.png`](images/screenshot-1-share.png), [`images/screenshot-2-preview.png`](images/screenshot-2-preview.png), [`images/screenshot-3-done.png`](images/screenshot-3-done.png), [`images/screenshot-4-manage.png`](images/screenshot-4-manage.png), [`images/screenshot-5-save.png`](images/screenshot-5-save.png) |
+| Small promo tile   | [`images/promo-tile-440x280.png`](images/promo-tile-440x280.png)                                                                                                                                                                                                                                                                           |
+| Marquee promo tile | Leave empty. It's optional.                                                                                                                                                                                                                                                                                                                |
 
 **Homepage URL:** https://vantung220902.github.io/ArtiShare/
 
