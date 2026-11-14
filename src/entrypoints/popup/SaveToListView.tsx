@@ -188,6 +188,14 @@ export function SaveToListView({
             placeholder={placeholder}
             value={name}
             onChange={(e) => setName(e.target.value)}
+            // The view isn't a <form>, so Enter is handled here; `submit` already ignores nobody
+            // being ticked and a second press while saving.
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                void submit();
+              }
+            }}
           />
           <div className="row nowrap">
             <label htmlFor={accessId} className="field-label">

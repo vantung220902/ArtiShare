@@ -120,7 +120,7 @@
         "Do the whole flow with the keyboard only: Tab reaches each checkbox, Space ticks it, the choices, fields and the save button are reachable in order with a visible focus ring, and Enter in the Name field saves",
         "Close the popup in the middle of choosing and reopen it: no list was created or changed"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F010",
