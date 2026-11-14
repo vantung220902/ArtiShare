@@ -64,7 +64,7 @@
         "Addresses are matched the way lists match them: a list holding Viewer@Example.com counts for viewer@example.com, and for Gmail a list holding janedoe@gmail.com counts for an invitee jane.doe+work@gmail.com (same inbox)",
         "With People with access open in the side panel, save commenter@example.com into a list from the Lists tab of a popup in another window: within a second the side panel's row changes to 'Pending · In <that list>' without pressing Refresh"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F006",

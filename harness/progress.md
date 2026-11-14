@@ -4,6 +4,17 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F005 · People with access shows which lists each person is in
+
+- **Did:** New `src/core/membership.ts` (`listNamesByInbox` keyed by `inboxKey`, `membershipNote`: 'Not in a list' / 'In A, B' / 'In A, B +N'). `ManageView.tsx` reads `useConfig()` (live, so a list saved in another window updates rows at once) and `PersonRow` appends ' · <note>' to the status hint, with every list name in a `title` tooltip; nothing is shown while the config is still loading; the owner row is untouched. Unit tests in `tests/membership.test.ts`; `e2e/F005.spec.ts` (4 tests). `e2e/F004.spec.ts` now strips the ' · …' suffix when checking the Pending/Accepted statuses.
+- **Verified:** `harness/init.sh` at the start: one unit test (`fakeShareClient`) and four e2e specs timed out on the loaded machine (load average 8–13) but all passed alone with `--workers=1`. `npm run check` (215 unit) passes; F004 and F005 6 of 6. feature-verifier: first run **FAIL** (list order), after the fix **PASS**, with `npm run e2e` at 159 passed and 1 load timeout (`side-panel-mode/F011`) that passes alone.
+- **State:** F005 passes true. 5 of 13 features pass.
+- **Next:** F006: when some people with access aren't in any list, offer to save them (the "N people aren't in any of your lists." note and the Save to a list button in `ManageView.tsx`). `listsByInbox` in `ManageView` already tells who isn't in a list.
+- **Notes — two of F005's step examples contradict their own rules; for a human to amend the step text.** I followed the rules:
+  - Step 3 says list names appear "in the Lists tab's order" but its example, 'In Team, Reviewers', is creation order. The Lists tab sorts by name (`byName` in `viewUtils.ts`), so Team + Reviewers reads **'In Reviewers, Team'**, and with Ops added **'In Ops, Reviewers +1'**.
+  - Step 4 says to match "the way lists match them" (`inboxKey`), but its example has janedoe@gmail.com counting for jane.doe+work@gmail.com. `inboxKey` ignores `+tag`s on Gmail and keeps dots as written (claude.ai keeps separate invitations; checked November 2026), so the dotted address is **not** matched; janedoe+work@gmail.com is. Matching dots would call someone "In a list" while sending to that list invites them again.
+  - To run a single e2e spec by hand, run `npm run build:fake` first; `npx playwright test` uses the stale `.output/chrome-mv3-fake`.
+
 ### 2026-11-14 · F004 · The fake claude.ai has a Crowded artifact with 45 people invited
 
 - **Did:** `src/claude/fakeShareClient.ts`: new rule at the top (an id containing "Crowded" starts with `crowd01@example.com` … `crowd45@example.com`; odd numbers pending Can view, even numbers accepted comment), `FAKE_CROWDED_PEOPLE` and a `seedPeople(id)` helper replacing the inline Shared seed. Crowded wins if an id has both "Crowded" and "Shared". Unit tests added in `tests/fakeShareClient.test.ts` (the 45 people, change/remove still work, Shared and plain unchanged). `e2e/F004.spec.ts` (2 tests): Manage access over `ExampleCrowdedArtifact1` lists You (owner) then the 45 in order with their statuses and permissions; Shared and plain artifacts as before.

@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { inboxKey } from '../../core/emails';
+import { listNamesByInbox, membershipNote } from '../../core/membership';
+import { useConfig } from '../../ui/hooks';
 import {
   ACCESS_LABELS,
   ACCESS_LEVELS,
@@ -12,6 +15,7 @@ import { AccessSelect } from '../../ui/AccessSelect';
 import { BackIcon } from '../../ui/icons';
 import { useConfirm } from '../../ui/useConfirm';
 import { ArtifactLink } from './viewComponents';
+import { byName } from './viewUtils';
 
 /** The label for what someone can do; claude.ai may send a role this extension doesn't know. */
 const accessLabel = (access: Sharee['access']) =>
@@ -24,11 +28,15 @@ const SAVED_MS = 2_500;
 function PersonRow({
   artifact,
   person,
+  listNames,
   onChanged,
   onRemoved,
 }: {
   artifact: ArtifactRef;
   person: Sharee;
+  /** The saved lists holding this person, or null while the lists haven't loaded. */
+  listNames: readonly string[] | null;
+
   onChanged: (id: string, access: AccessLevel) => void;
   onRemoved: (id: string) => void;
 }) {
@@ -102,7 +110,16 @@ function PersonRow({
     <li>
       <div className="grow">
         <div className="email">{person.email}</div>
-        <div className="hint">{person.status === 'pending' ? 'Pending' : 'Accepted'}</div>
+        <div className="hint">
+          {person.status === 'pending' ? 'Pending' : 'Accepted'}
+          {listNames && (
+            <>
+              {' · '}
+              {/* Every name, for when the note had to cut them short. */}
+              <span title={listNames.join(', ') || undefined}>{membershipNote(listNames)}</span>
+            </>
+          )}
+        </div>
         {error && (
           <div className="alert" role="alert">
             {error}
@@ -147,6 +164,10 @@ export function ManageView({
   const [reading, setReading] = useState(true);
   const [attempt, setAttempt] = useState(0);
   const backRef = useRef<HTMLButtonElement>(null);
+  // Read from the live config, not a copy, so a list saved in another window shows up at once.
+  const [config] = useConfig();
+  // Names follow the order the Lists tab shows (by name), so the two screens agree.
+  const listsByInbox = useMemo(() => config && listNamesByInbox(byName(config.lists)), [config]);
 
   // Opening replaces what was on screen, so focus goes to the way back instead of being left on nothing.
   useEffect(() => backRef.current?.focus(), []);
@@ -226,6 +247,7 @@ export function ManageView({
                   key={p.id ?? p.email}
                   artifact={artifact}
                   person={p}
+                  listNames={listsByInbox && (listsByInbox.get(inboxKey(p.email)) ?? [])}
                   onChanged={(id, access) =>
                     setPeople((all) => all && all.map((x) => (x.id === id ? { ...x, access } : x)))
                   }
