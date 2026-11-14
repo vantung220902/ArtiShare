@@ -18,6 +18,7 @@ export function EmailInput({ id, value, onChange, rows = 5, placeholder, require
     <div className="stack">
       <textarea
         id={id}
+        className="email-box"
         rows={rows}
         aria-required={required || undefined}
         value={value}

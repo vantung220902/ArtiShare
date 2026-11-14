@@ -118,6 +118,11 @@ html.sidepanel .popup {
   height: 100%;
   max-height: none;
 }
+/* A long list is easier to read and edit with the height a panel has, so the address box takes 40%
+   of it (the popup keeps its 5 rows). It can still be dragged taller. */
+html.sidepanel .email-box {
+  min-height: 40vh;
+}
 /* Chrome can give a popup less than 600 px on a short screen. The page then scrolls as a whole,
    and the sticky header and footer below keep the tabs and version in view. */
 .popup {
