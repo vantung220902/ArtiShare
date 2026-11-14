@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F015 · If Chrome can't open the side panel, the popup stays open and says why
+
+- **Did:** `surface.ts`: new `sidePanelSupported()`; `applySurface` falls back to the popup (and skips `setPanelBehavior`) where `chrome.sidePanel` is missing, so a stored side-panel choice can't leave the toolbar icon dead. `App.tsx`: the switch icon is hidden in the popup when side panels aren't supported; a failure shows "Couldn't open the side panel: …" (popup) or "Couldn't switch to the popup: …" (side panel), and is cleared on the next click. The choice is saved only after `sidePanel.open` succeeds, so on failure nothing changes. README: one sentence on both cases. New `e2e/F015.spec.ts` (5 tests) covers the three steps, a retry that then succeeds, and a control with the API present.
+- **Verified:** `harness/init.sh` OK at the start (204 unit, 121 e2e). After the change `npm run check` (204) passes; feature-verifier: **PASS** on all steps from its own `npm run e2e` (126 passed) and the F015 spec alone (5 of 5).
+- **State:** F015 passes. 15 of 18 features pass. `stash@{0}` (stray debug spec) still there.
+- **Next:** F016 (the side panel is comfortable for long lists: full width and height, nothing scrolls sideways). Look at `html.sidepanel` in `src/ui/styles.css` and the popup's fixed 380 px.
+- **Notes:** In e2e, `chrome.sidePanel.open` can be replaced on the page object; `chrome.sidePanel` itself can be made undefined with `addInitScript` + `Object.defineProperty` before load.
+
 ### 2026-11-14 · F014 · The Manage access icon follows the tab in the side panel
 
 - **Did:** `App.tsx`: the one-time `currentTabArtifact()` read is replaced by `useTabArtifact(!inPopup)`, so in the side panel the Manage access icon is there over an artifact tab and gone over any other page. People with access shows `managing`, the artifact it was opened for, so a tab switch never moves an open view; after Back the icon opens for the tab in front. The Back comment now says the icon may be gone in the side panel. README: two sentences on the icon following the tab. New `e2e/F014.spec.ts` (3 tests) covers all five steps, the icon with no view open, an in-place navigation, and the popup still reading once.

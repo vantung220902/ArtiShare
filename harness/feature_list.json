@@ -202,7 +202,7 @@
         "See the toolbar icon still opening the popup (getPopup returns popup.html, the stored choice says popup) and the Share form unchanged",
         "Make `chrome.sidePanel` undefined (a Chrome without side panels) and reopen the popup: no Open in side panel icon is shown"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F016",
