@@ -171,7 +171,7 @@
         "A new docs/images/manage-save.png shows Save to a list with the checkboxes, New list picked and a name typed, and the README shows it beside manage.png with alt text describing it",
         "The store images stay 1280×800, all addresses and ids in the pictures are made up (example.com, Example… artifact ids), and the screenshot e2e checks cover the new image"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }
