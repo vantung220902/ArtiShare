@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { inboxKey } from '../../core/emails';
-import { listNamesByInbox, membershipNote } from '../../core/membership';
+import { listNamesByInbox, membershipNote, unlistedNote } from '../../core/membership';
 import { useConfig } from '../../ui/hooks';
 import {
   ACCESS_LABELS,
@@ -197,6 +197,12 @@ export function ManageView({
     };
   }, [artifact, attempt]);
 
+  // Who is invited but in none of the lists; nobody is counted until the lists have loaded.
+  const unlisted = useMemo(
+    () => (listsByInbox && people ? people.filter((p) => !listsByInbox.has(inboxKey(p.email))) : []),
+    [listsByInbox, people],
+  );
+
   const sending =
     run?.status === 'running' &&
     run.items.some((item) => item.status === 'pending' && item.artifact.id === artifact.id);
@@ -255,6 +261,13 @@ export function ManageView({
                 />
               ))}
             </ul>
+            {unlisted.length > 0 && (
+              // A quiet line, not a warning: being in no list is normal, so no alert role or red.
+              <div className="row spread">
+                <p className="hint grow">{unlistedNote(unlisted.length)}</p>
+                <button>Save to a list</button>
+              </div>
+            )}
             {people.length === 0 && (
               <div className="stack">
                 <p>Only you have access.</p>

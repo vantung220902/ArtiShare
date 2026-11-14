@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EmailList } from '../src/core/config';
 import { inboxKey } from '../src/core/emails';
-import { listNamesByInbox, membershipNote } from '../src/core/membership';
+import { listNamesByInbox, membershipNote, unlistedNote } from '../src/core/membership';
 
 const list = (name: string, emails: string[]): EmailList => ({
   id: name,
@@ -48,5 +48,12 @@ describe('membershipNote', () => {
     expect(membershipNote(['Team', 'Reviewers'])).toBe('In Team, Reviewers');
     expect(membershipNote(['Team', 'Reviewers', 'Ops'])).toBe('In Team, Reviewers +1');
     expect(membershipNote(['A', 'B', 'C', 'D'])).toBe('In A, B +2');
+  });
+});
+
+describe('unlistedNote', () => {
+  it('counts people, and is singular for one', () => {
+    expect(unlistedNote(3)).toBe("3 people aren't in any of your lists.");
+    expect(unlistedNote(1)).toBe("1 person isn't in any of your lists.");
   });
 });
