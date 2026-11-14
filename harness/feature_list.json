@@ -92,7 +92,7 @@
         "Click Open list: the Lists tab opens with Shared reviewers open, holding the three addresses and the chosen permission; the Lists count went up by 1",
         "Do it again on another artifact leaving the name empty: the list gets the placeholder name, made unique with ' (2)' if a list already has it, as the Lists tab does"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F008",

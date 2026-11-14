@@ -14,8 +14,9 @@ import type { RunState } from '../../lib/storage';
 import { AccessSelect } from '../../ui/AccessSelect';
 import { BackIcon } from '../../ui/icons';
 import { useConfirm } from '../../ui/useConfirm';
+import { SaveToListView } from './SaveToListView';
 import { ArtifactLink } from './viewComponents';
-import { byName } from './viewUtils';
+import { byName, people as peopleCount } from './viewUtils';
 
 /** The label for what someone can do; claude.ai may send a role this extension doesn't know. */
 const accessLabel = (access: Sharee['access']) =>
@@ -152,11 +153,14 @@ export function ManageView({
   artifact,
   run,
   onBack,
+  onOpenList,
 }: {
   artifact: ArtifactRef;
   /** The current run, if any: while it sends to this artifact the list on screen is already out of date. */
   run: RunState | null;
   onBack: () => void;
+  /** Opens the Lists tab with this list expanded. */
+  onOpenList: (listId: string) => void;
 }) {
   // null until the first read succeeds.
   const [people, setPeople] = useState<Sharee[] | null>(null);
@@ -165,7 +169,12 @@ export function ManageView({
   const [attempt, setAttempt] = useState(0);
   const backRef = useRef<HTMLButtonElement>(null);
   // Read from the live config, not a copy, so a list saved in another window shows up at once.
-  const [config] = useConfig();
+  const [config, save] = useConfig();
+  // Save to a list replaces People with access in place; `saved` is what it reports on coming back.
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState<{ message: string; listId: string } | null>(null);
+  const saveButtonRef = useRef<HTMLButtonElement>(null);
+  const returnFocus = useRef(false);
   // Names follow the order the Lists tab shows (by name), so the two screens agree.
   const listsByInbox = useMemo(() => config && listNamesByInbox(byName(config.lists)), [config]);
 
@@ -203,6 +212,14 @@ export function ManageView({
     [listsByInbox, people],
   );
 
+  // Back on People with access after Cancel, focus returns to the button that opened the view.
+  useEffect(() => {
+    if (!saving && returnFocus.current) {
+      returnFocus.current = false;
+      saveButtonRef.current?.focus();
+    }
+  }, [saving]);
+
   const sending =
     run?.status === 'running' &&
     run.items.some((item) => item.status === 'pending' && item.artifact.id === artifact.id);
@@ -219,64 +236,96 @@ export function ManageView({
           </button>
         )}
       </div>
-      <section className="card stack">
-        <h2 className="title">People with access</h2>
-        <ArtifactLink url={artifact.url} />
-        {sending && (
-          <output className="hint">
-            A share is in progress for this artifact. Refresh shows the latest.
-          </output>
-        )}
-        {people === null ? (
-          error ? (
-            <p className="alert">
-              {error}{' '}
-              <button className="link" onClick={() => setAttempt((n) => n + 1)}>
-                Retry
+      {saving && config && unlisted.length > 0 ? (
+        <SaveToListView
+          unlisted={unlisted}
+          config={config}
+          save={save}
+          onCancel={() => {
+            returnFocus.current = true;
+            setSaving(false);
+          }}
+          onSaved={(list, count) => {
+            setSaved({ message: `Saved ${peopleCount(count)} to ${list.name}.`, listId: list.id });
+            setSaving(false);
+          }}
+        />
+      ) : (
+        <section className="card stack">
+          <h2 className="title">People with access</h2>
+          <ArtifactLink url={artifact.url} />
+          {saved && (
+            <output className="alert ok">
+              {saved.message}{' '}
+              <button className="link" onClick={() => onOpenList(saved.listId)}>
+                Open list
               </button>
-            </p>
+            </output>
+          )}
+          {sending && (
+            <output className="hint">
+              A share is in progress for this artifact. Refresh shows the latest.
+            </output>
+          )}
+          {people === null ? (
+            error ? (
+              <p className="alert">
+                {error}{' '}
+                <button className="link" onClick={() => setAttempt((n) => n + 1)}>
+                  Retry
+                </button>
+              </p>
+            ) : (
+              <output className="hint">Loading people…</output>
+            )
           ) : (
-            <output className="hint">Loading people…</output>
-          )
-        ) : (
-          <>
-            {/* The list stays when a refresh fails, so the last good copy isn't lost. */}
-            {error && <p className="alert">Could not refresh: {error}</p>}
-            <ul className="people">
-              <li>
-                <div className="grow">
-                  <div className="email">You (owner)</div>
+            <>
+              {/* The list stays when a refresh fails, so the last good copy isn't lost. */}
+              {error && <p className="alert">Could not refresh: {error}</p>}
+              <ul className="people">
+                <li>
+                  <div className="grow">
+                    <div className="email">You (owner)</div>
+                  </div>
+                </li>
+                {people.map((p) => (
+                  <PersonRow
+                    key={p.id ?? p.email}
+                    artifact={artifact}
+                    person={p}
+                    listNames={listsByInbox && (listsByInbox.get(inboxKey(p.email)) ?? [])}
+                    onChanged={(id, access) =>
+                      setPeople((all) => all && all.map((x) => (x.id === id ? { ...x, access } : x)))
+                    }
+                    onRemoved={(id) => setPeople((all) => all && all.filter((x) => x.id !== id))}
+                  />
+                ))}
+              </ul>
+              {unlisted.length > 0 && (
+                // A quiet line, not a warning: being in no list is normal, so no alert role or red.
+                <div className="row spread">
+                  <p className="hint grow">{unlistedNote(unlisted.length)}</p>
+                  <button
+                    ref={saveButtonRef}
+                    onClick={() => {
+                      setSaved(null);
+                      setSaving(true);
+                    }}
+                  >
+                    Save to a list
+                  </button>
                 </div>
-              </li>
-              {people.map((p) => (
-                <PersonRow
-                  key={p.id ?? p.email}
-                  artifact={artifact}
-                  person={p}
-                  listNames={listsByInbox && (listsByInbox.get(inboxKey(p.email)) ?? [])}
-                  onChanged={(id, access) =>
-                    setPeople((all) => all && all.map((x) => (x.id === id ? { ...x, access } : x)))
-                  }
-                  onRemoved={(id) => setPeople((all) => all && all.filter((x) => x.id !== id))}
-                />
-              ))}
-            </ul>
-            {unlisted.length > 0 && (
-              // A quiet line, not a warning: being in no list is normal, so no alert role or red.
-              <div className="row spread">
-                <p className="hint grow">{unlistedNote(unlisted.length)}</p>
-                <button>Save to a list</button>
-              </div>
-            )}
-            {people.length === 0 && (
-              <div className="stack">
-                <p>Only you have access.</p>
-                <p className="hint">Nobody is invited yet. Use Share to invite people.</p>
-              </div>
-            )}
-          </>
-        )}
-      </section>
+              )}
+              {people.length === 0 && (
+                <div className="stack">
+                  <p>Only you have access.</p>
+                  <p className="hint">Nobody is invited yet. Use Share to invite people.</p>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      )}
     </div>
   );
 }

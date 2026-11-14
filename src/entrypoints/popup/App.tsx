@@ -30,6 +30,8 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
   // The artifact People with access is open for, kept when the tab changes underneath it so a view
   // never silently becomes about something else.
   const [managing, setManaging] = useState<ArtifactRef | null>(null);
+  // A list the Lists tab should expand; a new object each time, so asking again for the same list works.
+  const [reveal, setReveal] = useState<{ id: string } | null>(null);
   const manageIconRef = useRef<HTMLButtonElement>(null);
   const setTab = (next: Tab) => {
     // Choosing a tab shows that tab, so People with access closes.
@@ -112,6 +114,10 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
     <ManageView
       artifact={artifact}
       run={run}
+      onOpenList={(id) => {
+        setTab('lists');
+        setReveal({ id });
+      }}
       onBack={() => {
         setManaging(null);
         // Focus returns to the icon that opened this. In the side panel it is gone if you've since
@@ -259,6 +265,7 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
           {/* Hidden, not unmounted, under Manage access: an open list and its unsaved changes survive. */}
           <div hidden={managing !== null}>
             <ListsView
+              reveal={reveal}
               config={config}
               save={save}
               initial={reconcileListsDraft(

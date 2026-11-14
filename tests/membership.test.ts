@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EmailList } from '../src/core/config';
 import { inboxKey } from '../src/core/emails';
-import { listNamesByInbox, membershipNote, unlistedNote } from '../src/core/membership';
+import { listNamesByInbox, membershipNote, sharedAccess, unlistedNote } from '../src/core/membership';
 
 const list = (name: string, emails: string[]): EmailList => ({
   id: name,
@@ -48,6 +48,16 @@ describe('membershipNote', () => {
     expect(membershipNote(['Team', 'Reviewers'])).toBe('In Team, Reviewers');
     expect(membershipNote(['Team', 'Reviewers', 'Ops'])).toBe('In Team, Reviewers +1');
     expect(membershipNote(['A', 'B', 'C', 'D'])).toBe('In A, B +2');
+  });
+});
+
+describe('sharedAccess', () => {
+  it('is the permission everyone has, else Can view', () => {
+    expect(sharedAccess([{ access: 'edit' }, { access: 'edit' }])).toBe('edit');
+    expect(sharedAccess([{ access: 'comment' }])).toBe('comment');
+    expect(sharedAccess([{ access: 'comment' }, { access: 'view' }])).toBe('view');
+    expect(sharedAccess([{ access: 'unknown' }, { access: 'unknown' }])).toBe('view');
+    expect(sharedAccess([])).toBe('view');
   });
 });
 
