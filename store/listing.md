@@ -24,10 +24,11 @@ Save the email addresses you share with often as lists, each with its own permis
 How it works
 • Open claude.ai, sign in, and click the ArtiShare toolbar icon. The popup shows which account you're signed in as, and has two tabs: Share and Lists.
 • Lists: give a list a name, add email addresses and pick a permission. You can also choose which lists are ticked by default when you share.
-• Share: add artifact links, or click "Current tab" to add the artifact you're on. Tick the lists to share with, or make a new list right there.
+• Share: artifacts are a list of rows, each with a × to remove it (and Undo). Paste links, or click "Current tab"; the artifact you're on is added for you and marked "This tab". Tick the lists to share with, or make a new list right there.
 • Preview: for each artifact, see who will be invited and who already has access. Nothing is sent yet.
 • Send: confirm, and the invitations go out one at a time while you follow each one. You can stop and resume. Closing the popup doesn't stop the run, and your draft is kept.
-• Manage access: on an artifact's tab, open "Manage access" from the Share tab to see everyone who's invited and whether they've accepted, change their permission or remove their invitation.
+• Side panel: an icon in the header moves ArtiShare from the popup into the browser's side panel, which stays open while you work in the page and follows the tab you're on. Another icon moves it back. The toolbar icon remembers your choice, and your work comes with you.
+• Manage access: on an artifact's tab, click the people icon in the header to see everyone who's invited and whether they've accepted, change their permission or remove their invitation.
 
 Good to know
 • Your own address is skipped, and so is anyone who already has an invitation.
@@ -65,16 +66,17 @@ ArtiShare is an independent tool. It isn't made, endorsed or supported by Anthro
 **Single purpose:**
 
 ```text
-ArtiShare does one thing: it invites saved lists of email addresses to the user's claude.ai artifacts in bulk, and lets the user manage the invitations already sent to an artifact (change a person's permission or remove their invitation), from a toolbar popup.
+ArtiShare does one thing: it invites saved lists of email addresses to the user's claude.ai artifacts in bulk, and lets the user manage the invitations already sent to an artifact (change a person's permission or remove their invitation), from a toolbar popup or, if the user chooses, a side panel.
 ```
 
 **Permission justifications:**
 
-| Permission                 | Justification                                                                                                                                                                                                |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `storage`                  | Saves the user's lists (name, email addresses and permission), the current run's progress, and the signed-in account email used to verify a resumed run.                                                     |
-| `scripting`                | Runs ArtiShare's requests inside the user's open claude.ai tab, so they use the user's own claude.ai session, just as the Share menu does. It's used only on claude.ai tabs.                                 |
-| Host `https://claude.ai/*` | Needed to run those requests in claude.ai tabs, and to read the address of the current claude.ai tab for the "Current tab" button and the "Manage access" view. The extension doesn't access any other site. |
+| Permission                 | Justification                                                                                                                                                                                                          |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `storage`                  | Saves the user's lists (name, email addresses and permission), the current run's progress, and the signed-in account email used to verify a resumed run.                                                               |
+| `scripting`                | Runs ArtiShare's requests inside the user's open claude.ai tab, so they use the user's own claude.ai session, just as the Share menu does. It's used only on claude.ai tabs.                                           |
+| `sidePanel`                | Lets the user move ArtiShare from the toolbar popup into the browser's side panel, which stays open next to claude.ai, and back. It opens only when the user clicks the toolbar icon or the "Open in side panel" icon. |
+| Host `https://claude.ai/*` | Needed to run those requests in claude.ai tabs, and to read the address of the current claude.ai tab for the "Current tab" button and the "Manage access" view. The extension doesn't access any other site.           |
 
 **Remote code:** No, I am not using remote code. All JavaScript is bundled in the package.
 
@@ -111,6 +113,7 @@ ArtiShare needs a claude.ai account with at least one published artifact.
 3. In Lists, click "New list" and create a list containing an email address you control, with "Can view".
 4. In Share, click "Current tab" to add the artifact, tick the list and click Preview.
 5. Click "Send 1 invitation" and confirm. The address receives a claude.ai invitation email.
-6. Click "Start a new share", then "Manage access" at the bottom of the Share tab. The invited address is listed as Pending.
+6. Click "Start a new share", then the people icon ("Manage access") in the header. The invited address is listed as Pending.
 7. Change its permission to "Can edit", then click Remove and confirm. The invitation is removed from the artifact.
+8. Optional: click the "Open in side panel" icon in the header. ArtiShare opens in the side panel; "Use popup instead" moves it back.
 ```

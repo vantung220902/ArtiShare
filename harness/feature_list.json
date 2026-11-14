@@ -228,7 +228,7 @@
         "CLAUDE.md's layout names the side panel entrypoint next to popup/",
         "`grep -rn 'bottom of the Share tab' README.md store docs` finds nothing"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F018",

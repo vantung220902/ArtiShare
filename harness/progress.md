@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F017 · The docs describe the side panel, the Manage access icon and the Artifacts rows
+
+- **Did:** The README already described the side panel choice, the rows and the header icon from earlier features; added the side panel following the tab to Pick artifacts, and the side panel to the layout. `store/listing.md`: `sidePanel` is back in the permissions table, the description and single purpose name the side panel, the Share bullet describes rows, and Manage access is the header icon (test step 6 too, plus an optional step 8). `docs/index.html`: side panel icon and the Manage access icon. `CLAUDE.md`: layout names `sidepanel/`. New `e2e/F017.spec.ts` (7 tests) reads the files and checks the wording per step, including that `bottom of the Share tab` appears nowhere.
+- **Verified:** `harness/init.sh` OK at the start (204 unit, 133 e2e). `npm run check` passes. feature-verifier: **PASS** on all steps, with `npm run e2e` at 140 passed.
+- **State:** F017 passes. 17 of 18 features pass. `stash@{0}` (stray debug spec) still there.
+- **Next:** F018 (screenshots: `npm run screenshots`, a new `docs/images/sidepanel.png` of a long list in the Lists tab, README image with alt text, store images at 1280×800, and the screenshot e2e checks).
+- **Notes:** `python3` heredocs and `rm` need approval in these sessions; use the Edit tool.
+
 ### 2026-11-14 · F016 · The side panel is comfortable for long lists
 
 - **Did:** Most of the layout was already right from earlier features (`html.sidepanel` drops the 380 px width and 600 px cap; rows already truncate; the body wraps long text). The one gap was the address box: `EmailInput.tsx` now gives its textarea the class `email-box`, and `styles.css` sets `html.sidepanel .email-box { min-height: 40vh }`, so a long list shows far more lines in the panel while the popup keeps its 5 rows. README: the Side panel paragraph says so. New `e2e/F016.spec.ts` (7 tests): 320/400/600 px widths, the 200-address list, 30 artifacts, a long address, the popup's 380 px / 600 px.
