@@ -220,6 +220,16 @@ export function ManageView({
     }
   }, [saving]);
 
+  // Everyone offered was saved in another window while this was open: nothing is left to save, so
+  // the view closes (focus goes to Back, since the button that opened it is gone too).
+  useEffect(() => {
+    if (saving && config && unlisted.length === 0) {
+      // oxlint-disable-next-line react/set-state-in-effect -- reacts to the lists changing elsewhere
+      setSaving(false);
+      backRef.current?.focus();
+    }
+  }, [saving, config, unlisted]);
+
   const sending =
     run?.status === 'running' &&
     run.items.some((item) => item.status === 'pending' && item.artifact.id === artifact.id);

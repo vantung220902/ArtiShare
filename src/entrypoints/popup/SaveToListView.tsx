@@ -258,7 +258,7 @@ export function SaveToListView({
         </p>
       )}
       {error && <p className="alert">{error}</p>}
-      <div className="row">
+      <div className="row action-bar">
         <button className="primary" disabled={busy || !emails.length || (adding && !target)} onClick={submit}>
           {busy
             ? 'Saving…'
