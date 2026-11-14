@@ -693,6 +693,19 @@ button.link:hover:not(:disabled) {
   padding-left: 28px;
   gap: 8px;
 }
+/* Buttons that end a long form stay at the bottom of the scrolling body, so a long list of checkboxes
+   never leaves Save out of reach. It spans the card (its padding is cancelled) so nothing shows
+   through beside it, and it sits at the card's foot when the form is short. */
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin: 0 -14px -14px;
+  padding: 10px 14px 14px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 14px 14px;
+}
 
 /* ---------- Confirmation ---------- */
 

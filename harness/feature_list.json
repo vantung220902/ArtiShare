@@ -148,7 +148,7 @@
         "With Save to a list open, a run that invites new people to this artifact finishes: the checkboxes don't change by themselves; after Cancel, Refresh on People with access shows the new people with 'Not in a list' and the count includes them",
         "People shown by claude.ai without an invitation id (who joined the organization) can be saved like everyone else; You (owner) is never offered"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F012",
