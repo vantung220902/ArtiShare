@@ -7,7 +7,7 @@ A Chrome extension (WXT, React 19, TypeScript, Manifest V3) that invites saved l
 - `src/core/`: pure logic (email parsing, planning who to invite, the run loop). No `chrome.*`; unit-tested in `tests/`.
 - `src/claude/`: talking to claude.ai. `apiShareClient.ts` is the real one; `fakeShareClient.ts` is an in-memory stand-in whose rules are at the top of the file.
 - `src/lib/`: storage, messages between the popup and the background, the config and run managers.
-- `src/entrypoints/`: `background.ts` (service worker: runs the invites) and `popup/` (the UI). Shared UI pieces are in `src/ui/`.
+- `src/entrypoints/`: `background.ts` (service worker: runs the invites), `popup/` (the UI) and `sidepanel/` (the same UI, in Chrome's side panel). Shared UI pieces are in `src/ui/`.
 - `tests/`: Vitest unit tests. `e2e/`: Playwright tests that drive the fake build in Chromium.
 
 ## Commands

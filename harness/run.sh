@@ -24,6 +24,11 @@ Bash(git status*),Bash(git diff*),Bash(git log*),Bash(git branch --show-current)
 Bash(git stash),Bash(git stash push*),Bash(git stash list*),\
 Bash(pwd),Bash(ls *)"
 
+# A headless session doesn't exit while a wake-up timer is pending. One set "as a fallback" while
+# waiting for the verifier kept a finished session idle for 17 minutes. The verifier's result
+# arrives without a timer, so a session never needs one.
+DISALLOWED_TOOLS="ScheduleWakeup,CronCreate,Monitor"
+
 max=${1:-10}
 mode=${PERMISSION_MODE:-auto}
 
@@ -58,7 +63,7 @@ for ((i = 1; i <= max; i++)); do
   log="harness/logs/$(date +%Y%m%d-%H%M%S)-session-$i.log"
   echo "== Session $i/$max · $left feature(s) left · log: $log"
 
-  args=(-p "/harness-work" --permission-mode "$mode" --allowedTools "$ALLOWED_TOOLS")
+  args=(-p "/harness-work" --permission-mode "$mode" --allowedTools "$ALLOWED_TOOLS" --disallowedTools "$DISALLOWED_TOOLS")
   [ -n "${MAX_BUDGET_USD:-}" ] && args+=(--max-budget-usd "$MAX_BUDGET_USD")
   [ -n "${MODEL:-}" ] && args+=(--model "$MODEL")
   claude "${args[@]}" 2>&1 | tee "$log" || true

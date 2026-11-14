@@ -1,3 +1,4 @@
+import { addArtifactText } from './artifactRows';
 import { type ListFormDraft, parseListFormDraft } from './popupState';
 
 /**
@@ -5,8 +6,15 @@ import { type ListFormDraft, parseListFormDraft } from './popupState';
  * focus, so anything typed but not yet sent has to live in storage.
  */
 export interface ShareDraft {
-  /** The Artifacts box, exactly as typed. */
+  /** The Artifacts rows, by link, in order. */
+  artifacts: string[];
+  /** What is typed in the Artifacts box and not yet added as rows, exactly as typed. */
   artifactText: string;
+  /**
+   * Artifacts taken out with × and not added since, by key. The tab's artifact isn't added back
+   * while it is here. Left out when empty, and gone with the draft.
+   */
+  removed?: string[];
   /** Ids of the lists ticked under "Share with". */
   selected: string[];
   /** The inline New list form is open. Left out when it isn't. */
@@ -18,10 +26,29 @@ export interface ShareDraft {
 /** Reads a stored draft, or null if there is none or it isn't one (another version may have written it). */
 export function parseShareDraft(raw: unknown): ShareDraft | null {
   if (!raw || typeof raw !== 'object') return null;
-  const { artifactText, selected, creating, newList } = raw as Record<string, unknown>;
+  const {
+    artifacts: storedRows,
+    artifactText,
+    selected,
+    creating,
+    newList,
+    removed = [],
+  } = raw as Record<string, unknown>;
   if (typeof artifactText !== 'string') return null;
-  if (!Array.isArray(selected) || !selected.every((id) => typeof id === 'string')) return null;
-  const draft: ShareDraft = { artifactText, selected };
+  const isStrings = (v: unknown): v is string[] => Array.isArray(v) && v.every((s) => typeof s === 'string');
+  const artifacts = storedRows ?? [];
+  if (!isStrings(artifacts) || !isStrings(selected)) return null;
+  const draft: ShareDraft = { artifacts, artifactText, selected };
+  // 0.3.0 had no rows, only the box, with every link of the list in it. Its links become rows now
+  // and what wasn't a link stays to be fixed. Later drafts always have `artifacts`, so what they
+  // have typed in the box is left as typed.
+  if (storedRows === undefined) {
+    const added = addArtifactText([], artifactText);
+    draft.artifacts = added.rows.map((ref) => ref.url);
+    draft.artifactText = added.leftover;
+  }
+  // Only a convenience: a bad list of removed artifacts costs nothing but the hold-back.
+  if (isStrings(removed) && removed.length) draft.removed = removed;
   if (creating === true) draft.creating = true;
   const form = parseListFormDraft(newList);
   // The inline form only ever creates, so a draft with a baseline isn't one of its drafts.

@@ -1,6 +1,6 @@
 {
   "name": "artishare",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Chrome extension that invites lists of email addresses to claude.ai artifacts in bulk.",
   "type": "module",

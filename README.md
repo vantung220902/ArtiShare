@@ -5,13 +5,17 @@
 ArtiShare is a Chrome extension. You save groups of email addresses as **lists** once. After that you can invite a list (or several) to one or more artifacts at once, without adding each person through the Share menu and without making the artifact public.
 
 <p align="center">
-  <img src="docs/images/share.png" width="190" alt="The popup's Share tab: pick artifacts and lists">
+  <img src="docs/images/share.png" width="190" alt="The popup's Share tab: the artifacts as rows with a × to remove each, the lists to tick, and the Manage access and Open in side panel icons in the header">
   &nbsp;
   <img src="docs/images/preview.png" width="190" alt="Preview in the popup: who will be invited and who already has access">
   &nbsp;
   <img src="docs/images/done.png" width="190" alt="Finished run in the popup: every invite sent">
   &nbsp;
   <img src="docs/images/manage.png" width="190" alt="Manage access in the popup: the people already invited to an artifact, each with a permission and a Remove button">
+</p>
+
+<p align="center">
+  <img src="docs/images/sidepanel.png" width="260" alt="ArtiShare in Chrome's side panel: the Lists tab with a saved list of forty addresses open, the address box tall enough to show a long list">
 </p>
 
 ## Contents
@@ -64,6 +68,8 @@ The extension's card should show the ID `eeihicglfclmofckclcpjleekpddjflg`. It's
 
 Open claude.ai and sign in, then click the ArtiShare icon. The popup has two tabs: **Lists** and **Share**.
 
+**Side panel:** the header's **Open in side panel** icon (a window with a panel on its right) moves ArtiShare into the browser's side panel, which stays open while you work in the page. The popup closes, and from then on the ArtiShare toolbar icon opens the side panel instead of the popup. The choice is remembered, including after you restart the browser or ArtiShare updates; until you choose the side panel, the toolbar icon opens the popup, as before. If Chrome can't open the side panel, the popup stays open and says why ("Couldn't open the side panel: …"), nothing is changed, and the toolbar icon keeps opening the popup. In a Chrome without side panels the icon isn't shown. The side panel is the same ArtiShare at the full height and whatever width you drag it to (nothing scrolls sideways, and a long address or link is cut off or wrapped), and a list's address box is taller there, so a long list shows more lines. Its header has a **Use popup instead** icon (a window with a bar across its top) that closes the side panel and makes the toolbar icon open the popup again. You can switch back and forth; the last choice is the one remembered. Your work comes with you when you switch: the artifacts, the ticked lists, a list you are typing, a preview, a run in progress and the tab you were on. A run is not interrupted by the switch. The side panel also follows the tab you are on: switch to an artifact tab (or open another artifact in the same tab) and it is added to Artifacts within a second, with the **This tab** badge moving to it. An artifact you removed with × is not added again by switching back to its tab; **+ Current tab** adds it on purpose. The **Manage access** icon follows the tab too: it is there over an artifact and gone over any other page. A People with access view that is already open stays on the artifact it was opened for when you switch tabs; after **Back**, the icon opens it for the tab you are on now.
+
 ### 1. Make a list
 
 In the **Lists** tab, click **New list**. A `*` after a label marks a field you must fill in; here that's only **Email addresses**.
@@ -89,7 +95,7 @@ You can still tick or untick any list each time you share.
 
 In the **Share** tab:
 
-- **Artifacts** (required, marked `*`): if the current tab is an artifact, its link is already filled in. Add more links (one per line), or open another artifact and click **+ Current tab**. Both work for a plain `claude.ai/artifact/…` link and for any claude.ai page with an artifact open, such as a chat (`claude.ai/chat/…?artifact=…`) or a cowork session (`claude.ai/cowork/…?artifact=…`).
+- **Artifacts** (required, marked `*`): each artifact is a row showing its link, with a **×** to take it out (a message under the rows offers **Undo** for 5 seconds; from the keyboard, Tab to a × and press Enter, and focus moves on to the next row). If you open ArtiShare over an artifact that isn't in the list yet, it is added for you (after any already there) and its row is marked **This tab**; if it is already there, nothing is added and the row just gets the mark. In the side panel this follows you: switch to another artifact tab and its row is added and marked within a second, and the mark moves to it. An artifact you took out with **×** isn't added back by itself when you open ArtiShare over it again (until you paste it, click **+ Current tab**, press **Undo**, or start a new share, or the browser restarts). Paste any number of links into the box under the rows (one per line), or type one and press Enter, and each becomes a row; anything that isn't a link stays in the box with a warning, and a link already in the list isn't added twice (its row lights up instead). Or open another artifact and click **+ Current tab**. Both work for a plain `claude.ai/artifact/…` link and for any claude.ai page with an artifact open, such as a chat (`claude.ai/chat/…?artifact=…`) or a cowork session (`claude.ai/cowork/…?artifact=…`).
 - **Share with:** tick the lists to invite. Need a new group? Click **+ New list** to make one without leaving the tab.
 
 If the popup closes while you're filling this in (it does when you click away), the links you typed, the lists you ticked and a list you were typing under **+ New list** are still there when you reopen it, until the browser quits or you send (a list deleted in the meantime is simply no longer ticked). After sending, the next form starts empty with your default lists ticked.
@@ -123,7 +129,7 @@ Invites go out one at a time from the background, with a short pause between the
 
 ### Optional: Manage access
 
-When the tab you opened the popup over is an artifact, a small **Manage access** link sits at the bottom of the Share tab, under the form or the run. It opens **People with access**: you (the owner) first, then everyone already invited, with _Pending_ or _Accepted_ and their permission, which you can change from the drop-down beside each person (it saves straight away and the row says _Saved_). **Remove** asks first ("Their invitation will stop working."), then takes the person off the artifact. If claude.ai refuses a change or removal (say the person joined your organization), the reason shows on that row and nothing changes; if the list itself can't be loaded you get the reason and **Retry**. It reads from claude.ai each time it opens, and **Refresh** reads it again (the list stays on screen while it does, and if that fails you keep the last copy and see why). With nobody invited it says "Only you have access." and points you to Share. While a run is sending to this artifact a note says the list may be behind, so press Refresh to see the latest. **Back** returns to the Share tab exactly as you left it. On any other page there is no link.
+When the tab you opened the popup over is an artifact, a people icon (**Manage access**) sits in the header beside your account, on the Share and the Lists tab alike. It shows as pressed while the view is open, and clicking it again closes it. It opens **People with access**: you (the owner) first, then everyone already invited, with _Pending_ or _Accepted_ and their permission, which you can change from the drop-down beside each person (it saves straight away and the row says _Saved_). **Remove** asks first ("Their invitation will stop working."), then takes the person off the artifact. If claude.ai refuses a change or removal (say the person joined your organization), the reason shows on that row and nothing changes; if the list itself can't be loaded you get the reason and **Retry**. It reads from claude.ai each time it opens, and **Refresh** reads it again (the list stays on screen while it does, and if that fails you keep the last copy and see why). With nobody invited it says "Only you have access." and points you to Share. While a run is sending to this artifact a note says the list may be behind, so press Refresh to see the latest. **Back** returns to the tab you opened it from exactly as you left it, with an open list's unsaved changes intact. On any other page there is no icon.
 
 ## Good to know
 
@@ -237,7 +243,7 @@ src/
                 (schema and upgrade from 0.1.0), planner (who to invite), runner (queue, retry, stop)
   claude/       ShareClient interface, the claude.ai client, the fake client, and in-page fetch
   lib/          chrome.storage access and the popup ↔ background message types
-  entrypoints/  background worker (runs invites) and the popup
+  entrypoints/  background worker (runs invites), the popup and the side panel
   ui/           shared React components and styles
 tests/          Vitest specs for src/core
 docs/           claude.ai sharing API notes and README screenshots

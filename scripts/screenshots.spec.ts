@@ -36,11 +36,14 @@ const LISTS = [
   },
 ];
 
-/** The popup page as a tab, 380 × 600 like the real popup, drawn at twice the pixels. */
-async function openPopup() {
+/**
+ * The popup (380 × 600, like the real one) or the side panel (a taller page) as a tab, drawn at
+ * twice the pixels.
+ */
+async function openPopup(file = 'popup.html', viewport = { width: 380, height: 600 }) {
   const context = await chromium.launchPersistentContext('', {
     channel: 'chromium',
-    viewport: { width: 380, height: 600 },
+    viewport,
     deviceScaleFactor: 2,
     args: [`--disable-extensions-except=${EXTENSION_DIR}`, `--load-extension=${EXTENSION_DIR}`],
   });
@@ -50,19 +53,17 @@ async function openPopup() {
   );
   const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
   const popup = await context.newPage();
-  await popup.goto(`chrome-extension://${new URL(worker.url()).host}/popup.html`);
+  await popup.goto(`chrome-extension://${new URL(worker.url()).host}/${file}`);
 
   return { context, popup };
 }
 
-async function snap(popup: Page, path: string, scrollToEnd = false) {
-  // No caret or focus ring in the picture, and the content at the top (or at the end, when the
-  // button that matters is below the fold: the Share form is taller than a 600 px popup).
-  await popup.evaluate((toEnd) => {
+async function snap(popup: Page, path: string) {
+  // No caret or focus ring in the picture, and the content from the top.
+  await popup.evaluate(() => {
     (document.activeElement as HTMLElement | null)?.blur();
-    const body = document.querySelector('.popup-body');
-    body?.scrollTo(0, toEnd ? body.scrollHeight : 0);
-  }, scrollToEnd);
+    document.querySelector('.popup-body')?.scrollTo(0, 0);
+  });
   await popup.locator('.popup').screenshot({ path });
 }
 
@@ -112,6 +113,15 @@ test('regenerate the README and store screenshots', async () => {
   const lists = popup.getByRole('tabpanel', { name: /Lists/ });
   const share = popup.getByRole('tabpanel', { name: 'Share' });
 
+  // The popup reads the tab in front of it: over an artifact it adds that artifact as a row marked
+  // "This tab" and shows the Manage access icon in the header, as the pictures should.
+  const tab = await context.newPage();
+  await tab.goto(QUARTERLY);
+  await tab.bringToFront();
+  await popup.reload();
+  const manage = popup.getByRole('button', { name: 'Manage access' });
+  await expect(manage).toBeVisible();
+
   await popup.getByRole('tab', { name: /Lists/ }).click();
   for (const list of LISTS) {
     await lists.getByRole('button', { name: 'New list' }).click();
@@ -126,8 +136,16 @@ test('regenerate the README and store screenshots', async () => {
   const pick = (name: string) => share.locator('label.pick', { hasText: name }).getByRole('checkbox');
   const finished = share.getByText(/^Share finished/);
 
-  // The Reviewers already have access to the first artifact, pending: send them there first.
-  await share.getByLabel(/Artifacts/).fill(QUARTERLY);
+  // One link per row: typed, then Enter.
+  const addRow = async (url: string) => {
+    await share.getByLabel(/Artifacts/).fill(url);
+    await share.getByLabel(/Artifacts/).press('Enter');
+  };
+  const rows = share.getByRole('button', { name: /^Remove https:\/\/claude\.ai\// });
+
+  // The Reviewers already have access to the first artifact, pending: send them there first. It is
+  // the tab's artifact, so it is already a row.
+  await expect(rows).toHaveCount(1);
   await pick('Reviewers').check();
   await share.getByRole('button', { name: /^Preview/ }).click();
   await share.getByRole('button', { name: 'Send 2 invitations' }).click();
@@ -136,11 +154,14 @@ test('regenerate the README and store screenshots', async () => {
   await share.getByRole('button', { name: 'Start a new share' }).click();
 
   // 1. The Share form.
-  await share.getByLabel(/Artifacts/).fill(`${QUARTERLY}\n${ROADMAP}`);
+  await expect(rows).toHaveCount(1);
+  await addRow(ROADMAP);
+  await expect(rows).toHaveCount(2);
   for (const { name } of LISTS) await pick(name).check();
   await expect(share.getByRole('button', { name: 'Preview 10 people × 2 artifacts' })).toBeVisible();
-  await snap(popup, `${DOCS}/share.png`, true);
-  await snap(popup, test.info().outputPath('store-share.png'), true);
+  // From the top, so the picture shows the Artifacts rows; the Preview button is below the fold.
+  await snap(popup, `${DOCS}/share.png`);
+  await snap(popup, test.info().outputPath('store-share.png'));
 
   // 2. The preview.
   await share.getByRole('button', { name: /^Preview/ }).click();
@@ -160,11 +181,9 @@ test('regenerate the README and store screenshots', async () => {
   await snap(popup, test.info().outputPath('store-done.png'));
 
   // 4. Manage access, on an artifact that already has people (the popup reads the active tab).
-  const tab = await context.newPage();
   await tab.goto(SHARED);
-  await tab.bringToFront();
   await popup.reload();
-  await share.getByRole('button', { name: 'Manage access' }).click();
+  await manage.click();
   await expect(share.locator('ul.people > li')).toHaveCount(4);
   await snap(popup, `${DOCS}/manage.png`);
 
@@ -188,4 +207,31 @@ test('regenerate the README and store screenshots', async () => {
     'Follow each invite as it goes. If claude.ai asks it to slow down, the run waits and retries.',
   );
   await context.close();
+
+  await sidePanelImage();
 });
+
+/** The side panel, a taller page than the popup, with a long list open in the Lists tab. */
+async function sidePanelImage() {
+  const { context, popup: panel } = await openPopup('sidepanel.html', { width: 400, height: 800 });
+  const lists = panel.getByRole('tabpanel', { name: /Lists/ });
+
+  // Forty made-up addresses: enough to need the taller box, which is what the picture is for.
+  const emails = Array.from(
+    { length: 40 },
+    (_, i) => `guest${String(i + 1).padStart(2, '0')}@summit.example`,
+  );
+  await panel.getByRole('tab', { name: /Lists/ }).click();
+  await lists.getByRole('button', { name: 'New list' }).click();
+  await lists.getByLabel('List name').last().fill('Summit attendees');
+  await lists.getByLabel('Email addresses').last().fill(emails.join('\n'));
+  await lists.getByLabel('Permission').filter({ visible: true }).selectOption({ label: 'Can view' });
+  await lists.getByRole('button', { name: 'Save list' }).click();
+  const card = lists.locator('details.list-card', { hasText: 'Summit attendees' });
+  await expect(card).toHaveCount(1);
+  await card.locator('summary').click();
+  await expect(card.getByLabel('Email addresses')).toHaveValue(emails.join('\n'));
+
+  await snap(panel, `${DOCS}/sidepanel.png`);
+  await context.close();
+}

@@ -1,124 +1,146 @@
-import type { Page } from '@playwright/test';
-import { answer, confirmation, expect, test } from './fixtures';
+import type { BrowserContext, Page } from '@playwright/test';
+import { answer, expect, test } from './fixtures';
 
-// F004: confirmations are drawn inside the popup. The fixture fails any test in which a native
-// dialog opens, so every spec here also proves none did.
+// F004: an artifact removed with × isn't added back by the tab's prefill, until it is added on
+// purpose (+ Current tab, a paste, Undo) or a new share starts.
 
-async function makeList(panel: Page, name: string, emails: string) {
+const ONE = 'https://claude.ai/artifact/ExampleArtifactOne01';
+const TWO = 'https://claude.ai/artifact/ExampleArtifactTwo02';
+const THREE = 'https://claude.ai/artifact/ExampleArtifactThree3';
+
+test.beforeEach(async ({ context }) => {
+  // Serve the pages ourselves: nothing may reach claude.ai or anywhere else.
+  await context.route(/^https:\/\/(claude\.ai|example\.com)\//, (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<title>page</title>' }),
+  );
+});
+
+/** Makes `url` the active tab and reopens the popup, as closing and reopening it would. */
+async function reopenOver(context: BrowserContext, panel: Page, url: string) {
+  const tab = await context.newPage();
+  await tab.goto(url);
+  // The popup reads the active tab, and clicking a page in Playwright doesn't switch tabs.
+  await tab.bringToFront();
+  await panel.reload();
+}
+
+/** The mount's tab query has been answered and painted, so "nothing was added" can be asserted. */
+async function settled(panel: Page) {
+  await panel.evaluate(() => chrome.tabs.query({ active: true, lastFocusedWindow: true }));
+  await panel.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve(null))));
+}
+
+test('a removed artifact stays out until it is added on purpose', async ({ context, panel }) => {
+  const share = panel.getByRole('tabpanel', { name: 'Share' });
+  const rows = share.locator('.artifact-item');
+  const badges = share.locator('.this-tab');
+  const remove = (url: string) => share.getByRole('button', { name: `Remove ${url}`, exact: true });
+
+  // 1. Added over One, removed, reopened over One: not added back, and nothing carries the badge.
+  await reopenOver(context, panel, ONE);
+  await expect(rows).toHaveText([`${ONE}This tab`]);
+  await remove(ONE).click();
+  await expect(rows).toHaveCount(0);
+  await reopenOver(context, panel, ONE);
+  await settled(panel);
+  await expect(rows).toHaveCount(0);
+  await expect(badges).toHaveCount(0);
+  await expect(share.getByText('No artifacts yet.')).toBeVisible();
+
+  // 2. + Current tab brings it back on purpose, with the badge, and then it is an ordinary row.
+  await share.getByRole('button', { name: 'Current tab' }).click();
+  await expect(rows).toHaveText([`${ONE}This tab`]);
+  await reopenOver(context, panel, ONE);
+  await expect(rows).toHaveText([`${ONE}This tab`]);
+  await settled(panel);
+  await expect(rows).toHaveCount(1);
+
+  // 3. Removing One again holds back only One: Two is added.
+  await remove(ONE).click();
+  await expect(rows).toHaveCount(0);
+  await reopenOver(context, panel, TWO);
+  await expect(rows).toHaveText([`${TWO}This tab`]);
+  await settled(panel);
+  await expect(rows).toHaveCount(1);
+
+  // 4. Remove One and Undo: it is never held back. Over One, nothing is added twice and it is marked.
+  await share.getByLabel(/Artifacts/).fill(ONE);
+  await share.getByLabel(/Artifacts/).press('Enter');
+  await expect(rows).toHaveText([`${TWO}This tab`, ONE]);
+  await remove(ONE).click();
+  await expect(rows).toHaveText([`${TWO}This tab`]);
+  await share.getByRole('button', { name: 'Undo' }).click();
+  await expect(rows).toHaveText([`${TWO}This tab`, ONE]);
+  await remove(TWO).click();
+  await reopenOver(context, panel, ONE);
+  await expect(rows).toHaveText([`${ONE}This tab`]);
+  await settled(panel);
+  await expect(rows).toHaveCount(1);
+
+  // 5. A pasted link counts as adding it on purpose, however it is linked.
+  await remove(ONE).click();
+  await reopenOver(context, panel, ONE);
+  await settled(panel);
+  await expect(rows).toHaveCount(0);
+  await share.getByLabel(/Artifacts/).fill(ONE);
+  await share.getByLabel(/Artifacts/).press('Enter');
+  await expect(rows).toHaveText([`${ONE}This tab`]);
+  await remove(ONE).click();
+  await share.getByLabel(/Artifacts/).fill(THREE);
+  await share.getByLabel(/Artifacts/).press('Enter');
+  await expect(rows).toHaveText([THREE]);
+  await reopenOver(context, panel, ONE);
+  await settled(panel);
+  // Three came back with the draft; One is still held back.
+  await expect(rows).toHaveText([THREE]);
+});
+
+test('a removed artifact is held back for the draft only', async ({ context, panel }) => {
+  const share = panel.getByRole('tabpanel', { name: 'Share' });
+  const rows = share.locator('.artifact-item');
+
+  // A list to send to.
   await panel.getByRole('tab', { name: /Lists/ }).click();
   const lists = panel.getByRole('tabpanel', { name: /Lists/ });
   await lists.getByRole('button', { name: 'New list' }).click();
-  await lists.getByLabel('List name').filter({ visible: true }).fill(name);
-  await lists.getByLabel('Email addresses').filter({ visible: true }).fill(emails);
+  await lists.getByLabel('List name').filter({ visible: true }).fill('Alpha team');
+  await lists.getByLabel('Email addresses').filter({ visible: true }).fill('ana@example.com');
   await lists.getByRole('button', { name: 'Save list' }).click();
-  await expect(lists.locator('summary', { hasText: name })).toBeVisible();
-  return lists;
-}
+  await expect(lists.locator('summary', { hasText: 'Alpha team' })).toBeVisible();
+  await panel.getByRole('tab', { name: 'Share' }).click();
 
-test('deleting a list asks inside the popup; Cancel and Escape keep it, confirming removes it', async ({
-  panel,
-}) => {
-  const lists = await makeList(panel, 'Doomed team', 'ana@example.com');
-  await lists.locator('summary', { hasText: 'Doomed team' }).click();
-  const summary = lists.locator('summary', { hasText: 'Doomed team' });
-  const del = lists.getByRole('button', { name: 'Delete' });
-
-  // Cancel button.
-  await del.click();
-  await expect(confirmation(panel)).toBeVisible();
-  await expect(confirmation(panel)).toContainText('Delete the list "Doomed team"?');
-  await expect(confirmation(panel).getByRole('button', { name: 'Delete', exact: true })).toBeVisible();
-  // The safe answer has the focus, so a stray Enter doesn't delete anything.
-  await expect(confirmation(panel).getByRole('button', { name: 'Cancel' })).toBeFocused();
-  await answer(panel, 'Cancel');
-  await expect(confirmation(panel)).toHaveCount(0);
-  await expect(summary).toBeVisible();
-
-  // Escape.
-  await del.click();
-  await expect(confirmation(panel)).toBeVisible();
-  await panel.keyboard.press('Escape');
-  await expect(confirmation(panel)).toHaveCount(0);
-  await expect(summary).toBeVisible();
-  // The Delete button is usable again after a cancel: nothing was left busy.
-  await expect(del).toBeEnabled();
-
-  // Confirm.
-  await del.click();
-  await answer(panel, 'Delete');
-  await expect(summary).toHaveCount(0);
-  await expect(confirmation(panel)).toHaveCount(0);
-});
-
-test('Send asks how many invitations go to how many artifacts; Cancel keeps the preview, Send starts the run', async ({
-  panel,
-}) => {
-  const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await share.getByLabel('List name').fill('Sendable team');
-  await share.getByLabel('Email addresses').fill('ana@example.com\nbo@example.com');
-  await share
-    .getByLabel(/Artifacts/)
-    .fill('https://claude.ai/artifact/ConfirmSendOne01\nhttps://claude.ai/artifact/ConfirmSendTwo02');
+  // 1. One removed, with Two kept: a run of Two, then a new share over One adds One again.
+  await reopenOver(context, panel, ONE);
+  await expect(rows).toHaveText([`${ONE}This tab`]);
+  await share.getByLabel(/Artifacts/).fill(TWO);
+  await share.getByLabel(/Artifacts/).press('Enter');
+  await share.getByRole('button', { name: `Remove ${ONE}`, exact: true }).click();
+  await expect(rows).toHaveText([TWO]);
+  await share.locator('label.pick', { hasText: 'Alpha team' }).getByRole('checkbox').check();
   await share.getByRole('button', { name: /^Preview/ }).click();
-  const send = share.getByRole('button', { name: 'Send 4 invitations' });
-  await send.click();
-  await expect(confirmation(panel)).toContainText(
-    'Send 4 invitations across 2 artifacts as owner@example.com?',
-  );
-  await expect(confirmation(panel)).toContainText('People outside your organization will get an email');
-
-  // Cancel keeps the preview and leaves Send usable.
-  await answer(panel, 'Cancel');
-  await expect(confirmation(panel)).toHaveCount(0);
-  await expect(send).toBeEnabled();
-  await expect(share.getByText('Running', { exact: true })).toHaveCount(0);
-
-  // Escape does the same.
-  await send.click();
-  await panel.keyboard.press('Escape');
-  await expect(confirmation(panel)).toHaveCount(0);
-  await expect(send).toBeEnabled();
-
-  // Confirming starts the run.
-  await send.click();
+  await share.getByRole('button', { name: /^Send \d+ invitations?$/ }).click();
   await answer(panel, 'Send');
-  await expect(share.getByText(/Running|Done/).first()).toBeVisible();
-  await expect(share.getByText('Done', { exact: true })).toBeVisible({ timeout: 30_000 });
-});
+  await expect(share.getByText('Done', { exact: true })).toBeVisible({ timeout: 20_000 });
 
-test('discarding a stopped run asks inside the popup; Cancel keeps it, Discard opens a fresh form', async ({
-  panel,
-}) => {
-  const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await share.getByLabel('List name').fill('Discardable team');
-  // The run pauses between invites, which leaves time to press Stop with some pending.
-  await share
-    .getByLabel('Email addresses')
-    .fill('ana@example.com\nbo@example.com\ncy@example.com\ndi@example.com\ned@example.com');
-  await share.getByLabel(/Artifacts/).fill('https://claude.ai/artifact/DiscardRunArtifact01');
-  await share.getByRole('button', { name: /^Preview/ }).click();
-  await share.getByRole('button', { name: 'Send 5 invitations' }).click();
-  await answer(panel, 'Send');
-  await expect(share.getByText(/[1-9]\d* invited/).first()).toBeVisible();
-  await share.getByRole('button', { name: 'Stop' }).click();
-  await expect(share.getByText('Stopped', { exact: true })).toBeVisible();
+  const other = await context.newPage();
+  await other.goto(ONE);
+  await other.bringToFront();
+  await share.getByRole('button', { name: 'Start a new share' }).click();
+  await expect(rows).toHaveText([`${ONE}This tab`]);
 
-  const startNew = share.getByRole('button', { name: 'Start a new share' });
-  await startNew.click();
-  await expect(confirmation(panel)).toContainText('Discard this run?');
-  await expect(confirmation(panel)).toContainText('The remaining invites will not be sent.');
-  await answer(panel, 'Cancel');
-  await expect(confirmation(panel)).toHaveCount(0);
-  await expect(share.getByText('Stopped', { exact: true })).toBeVisible();
-  await expect(share.getByRole('button', { name: 'Resume' })).toBeVisible();
-
-  await startNew.click();
-  await panel.keyboard.press('Escape');
-  await expect(confirmation(panel)).toHaveCount(0);
-  await expect(share.getByRole('button', { name: 'Resume' })).toBeVisible();
-
-  await startNew.click();
-  await answer(panel, 'Discard');
-  await expect(share.getByLabel(/Artifacts/)).toHaveValue('');
-  await expect(share.getByText('Stopped', { exact: true })).toHaveCount(0);
+  // 2. Removed again, then the browser quits: the draft (session storage) is gone, so One is added again.
+  await share.getByRole('button', { name: `Remove ${ONE}`, exact: true }).click();
+  await expect(rows).toHaveCount(0);
+  await expect
+    .poll(() =>
+      panel.evaluate(
+        async () =>
+          ((await chrome.storage.session.get('shareDraft')).shareDraft as { removed?: string[] } | undefined)
+            ?.removed ?? [],
+      ),
+    )
+    .toHaveLength(1);
+  await panel.evaluate(() => chrome.storage.session.remove('shareDraft'));
+  await panel.reload();
+  await expect(rows).toHaveText([`${ONE}This tab`]);
 });

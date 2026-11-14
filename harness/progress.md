@@ -4,6 +4,232 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F018 · Screenshots show the header icons, the Artifacts rows and the side panel
+
+- **Did:** `scripts/screenshots.spec.ts`: the popup is now opened over an artifact tab (so the header has the Manage access icon and the tab's artifact is a row marked This tab), a second link is added as a row with fill + Enter, share.png is taken from the top (it used to scroll to the end, which hid the rows), and the Manage access picture uses the header icon. New `sidePanelImage()` opens `sidepanel.html` (400×800, 2x), saves a 40-address list and opens it in the Lists tab, writing `docs/images/sidepanel.png`. All PNGs regenerated (`docs/images` and the three `store/images` at 1280×800). README: the new image in its own row with alt text naming the side panel, and a fuller alt for share.png. New `e2e/F018.spec.ts` (5 tests): sizes, generator wiring, README alt text, made-up ids and domains.
+- **Verified:** `harness/init.sh` OK at the start (204 unit, 140 e2e). `npm run check` passes. feature-verifier: **PASS** on all four steps, having looked at every PNG, with `npm run e2e` at 145 passed.
+- **State:** F018 passes. 18 of 18 features pass. `stash@{0}` (stray debug spec) still there.
+- **Next:** Nothing left in the list. A human can review the branch and merge it into `develop` through a PR (the manifest/package version is still 0.3.0; the goal says v0.4.0).
+- **Notes:** In sidepanel.png the "Only these" default-ticking checkbox beside the list is unticked, which looks slightly odd but is the real UI. The old `e2e/popup-and-manage-access/F018.spec.ts` still passes alongside the new one. Prettier reformats the script, so run `npm run format` after editing it.
+
+### 2026-11-14 · F017 · The docs describe the side panel, the Manage access icon and the Artifacts rows
+
+- **Did:** The README already described the side panel choice, the rows and the header icon from earlier features; added the side panel following the tab to Pick artifacts, and the side panel to the layout. `store/listing.md`: `sidePanel` is back in the permissions table, the description and single purpose name the side panel, the Share bullet describes rows, and Manage access is the header icon (test step 6 too, plus an optional step 8). `docs/index.html`: side panel icon and the Manage access icon. `CLAUDE.md`: layout names `sidepanel/`. New `e2e/F017.spec.ts` (7 tests) reads the files and checks the wording per step, including that `bottom of the Share tab` appears nowhere.
+- **Verified:** `harness/init.sh` OK at the start (204 unit, 133 e2e). `npm run check` passes. feature-verifier: **PASS** on all steps, with `npm run e2e` at 140 passed.
+- **State:** F017 passes. 17 of 18 features pass. `stash@{0}` (stray debug spec) still there.
+- **Next:** F018 (screenshots: `npm run screenshots`, a new `docs/images/sidepanel.png` of a long list in the Lists tab, README image with alt text, store images at 1280×800, and the screenshot e2e checks).
+- **Notes:** `python3` heredocs and `rm` need approval in these sessions; use the Edit tool.
+
+### 2026-11-14 · F016 · The side panel is comfortable for long lists
+
+- **Did:** Most of the layout was already right from earlier features (`html.sidepanel` drops the 380 px width and 600 px cap; rows already truncate; the body wraps long text). The one gap was the address box: `EmailInput.tsx` now gives its textarea the class `email-box`, and `styles.css` sets `html.sidepanel .email-box { min-height: 40vh }`, so a long list shows far more lines in the panel while the popup keeps its 5 rows. README: the Side panel paragraph says so. New `e2e/F016.spec.ts` (7 tests): 320/400/600 px widths, the 200-address list, 30 artifacts, a long address, the popup's 380 px / 600 px.
+- **Verified:** `harness/init.sh` OK at the start (204 unit, 126 e2e). `npm run check` passes. feature-verifier: first run **FAIL** (my spec looked for a "Save list" button on an opened saved list, where it is "Save"); after the fix, **PASS** with `npm run e2e` at 133 passed and F016 alone 7 of 7.
+- **State:** F016 passes. 16 of 18 features pass. `stash@{0}` (stray debug spec) still there.
+- **Next:** F017 (docs: README sections, store/listing.md, docs/index.html, CLAUDE.md layout, and the `grep 'bottom of the Share tab'` check). Then F018.
+- **Notes:** An opened saved list's button reads "Save"; the new-list form's reads "Save list".
+
+### 2026-11-14 · F015 · If Chrome can't open the side panel, the popup stays open and says why
+
+- **Did:** `surface.ts`: new `sidePanelSupported()`; `applySurface` falls back to the popup (and skips `setPanelBehavior`) where `chrome.sidePanel` is missing, so a stored side-panel choice can't leave the toolbar icon dead. `App.tsx`: the switch icon is hidden in the popup when side panels aren't supported; a failure shows "Couldn't open the side panel: …" (popup) or "Couldn't switch to the popup: …" (side panel), and is cleared on the next click. The choice is saved only after `sidePanel.open` succeeds, so on failure nothing changes. README: one sentence on both cases. New `e2e/F015.spec.ts` (5 tests) covers the three steps, a retry that then succeeds, and a control with the API present.
+- **Verified:** `harness/init.sh` OK at the start (204 unit, 121 e2e). After the change `npm run check` (204) passes; feature-verifier: **PASS** on all steps from its own `npm run e2e` (126 passed) and the F015 spec alone (5 of 5).
+- **State:** F015 passes. 15 of 18 features pass. `stash@{0}` (stray debug spec) still there.
+- **Next:** F016 (the side panel is comfortable for long lists: full width and height, nothing scrolls sideways). Look at `html.sidepanel` in `src/ui/styles.css` and the popup's fixed 380 px.
+- **Notes:** In e2e, `chrome.sidePanel.open` can be replaced on the page object; `chrome.sidePanel` itself can be made undefined with `addInitScript` + `Object.defineProperty` before load.
+
+### 2026-11-14 · F014 · The Manage access icon follows the tab in the side panel
+
+- **Did:** `App.tsx`: the one-time `currentTabArtifact()` read is replaced by `useTabArtifact(!inPopup)`, so in the side panel the Manage access icon is there over an artifact tab and gone over any other page. People with access shows `managing`, the artifact it was opened for, so a tab switch never moves an open view; after Back the icon opens for the tab in front. The Back comment now says the icon may be gone in the side panel. README: two sentences on the icon following the tab. New `e2e/F014.spec.ts` (3 tests) covers all five steps, the icon with no view open, an in-place navigation, and the popup still reading once.
+- **Verified:** `npm run check` (204 unit) and `npm run e2e` (121, 1.2 min) pass. feature-verifier: **PASS** on all five steps, from its own check, e2e and `npx playwright test e2e/F014.spec.ts --repeat-each=3` (9 of 9).
+- **State:** F014 passes. 14 of 18 features pass. `stash@{0}` (the stray debug spec) is still there.
+- **Next:** F015.
+- **Notes:**
+  - Two sessions built this and lost it: the machine was overloaded overnight (load average 11–13), the full e2e took 17 minutes, and each session started it in the background and ended its reply to wait, which ends a headless session. The work was finished and committed by hand afterwards. `harness-work.md` and the verifier now say to run e2e in the foreground, one at a time, and `playwright.config.ts` has an 8-minute `globalTimeout`.
+  - After Back in the side panel over a non-artifact tab, the icon is gone, so focus falls to the page. Not in the steps; left as is.
+
+### 2026-11-14 · F013 · The side panel follows the tab you're on
+
+- **Did:** New hook `src/entrypoints/popup/useTabArtifact.ts`: the artifact of the active tab, read on mount and, with `follow`, again on `tabs.onActivated`, `tabs.onUpdated` (active tab, URL changed, which covers in-place `?artifact=` changes) and `windows.onFocusChanged`; stale answers are dropped and the same artifact keeps the same value. `ShareView.tsx` uses it in place of the one-time read: the artifact is added unless it is a row or was removed, and `thisTab` (the badge) follows it, going null on a non-artifact tab. New `followTab` prop on ShareView, passed by `App.tsx` as `!inPopup`, so the popup still reads once. README: the Side panel paragraph says the panel follows the tab. New `e2e/F013.spec.ts` (4 tests) covers all 8 steps plus the popup not following.
+- **Verified:** `harness/init.sh` OK at the start (204 unit, 114 e2e). After the change `npm run check` (204 unit) and `npm run e2e` (118) pass; F013 passed 12 of 12 with `--repeat-each=3`. feature-verifier: **PASS** on all 8 steps.
+- **State:** F013 passes. 13 of 18 features pass. The tree is clean after the commit. `stash@{0}` (the stray debug spec) is still there; drop it whenever.
+- **Next:** F014 (in the side panel, the Manage access icon follows the tab you're on, and an open Manage access stays on the artifact it was opened for). `App.tsx` still reads `tabArtifact` once (`currentTabArtifact()` in an effect); `useTabArtifact(!inPopup)` can replace it, with `managing` already holding the artifact an open view is for.
+- **Notes:** In e2e, a new tab (`newPage`) is brought to the front, so a side panel that is already open follows it at once. The spec therefore creates the artifact tabs first and opens `sidepanel.html` after them. A uuid `?artifact=` is shown as a derived artifact link, so the spec compares rows with each other, not with the uuid.
+
+### 2026-11-14 · F012 · Re-verified after removing the stray debug spec
+
+- **Did:** No code change. `rm` of the untracked `e2e/zz-dbg.spec.ts` needed approval, so it was set aside with `git stash push -u` instead (`stash@{0}`; drop it with `git stash drop` whenever). Set F012 `passes` to true.
+- **Verified:** `harness/init.sh` OK (`npm run check`, 204 unit tests; `npm run e2e`, 114 passed). feature-verifier on F012: **PASS** on all four steps, plus a 2x repeat of `e2e/F012.spec.ts`.
+- **State:** F012 passes. 12 of 18 features pass. The tree is clean.
+- **Next:** F013.
+- **Notes:** The verifier's one remark: e2e cannot click the toolbar or open Chrome's real side panel, so the spec switches by closing one page and opening the other's HTML fresh. That proves state survives in shared storage, which is what F012 is about.
+
+### 2026-11-14 · F012 · Moving between the popup and the side panel keeps your work
+
+- **Did:** No source change was needed: the Share draft, the Lists drafts, the preview, the open tab and the run all live in storage (session and local) that both pages read, and the run is in the background. New `e2e/F012.spec.ts` (2 tests) covers all four steps: artifacts + ticks + a half-typed new list + the open tab across popup → side panel → popup; a preview carried over, then a run switched mid-way with live progress, Stop and Resume in the side panel, and the finished run seen from the popup. README: the Side panel paragraph now says the work comes along and a run is not interrupted.
+- **Verified:** `npm run check` (204 unit tests) and `npm run e2e` (115, counting the stray debug spec) pass; F012 passed 6 of 6 with `--repeat-each=3`. feature-verifier: **FAIL**, only because of the stray `e2e/zz-dbg.spec.ts` (below); it marked all four steps and the README ✓.
+- **State:** F012 `passes` is **false**, only because the verifier would not PASS while the stray file is in the tree. Nothing of F012 is left to build. 11 of 18 features pass.
+- **Next:** **Delete `e2e/zz-dbg.spec.ts`** (untracked, from the F011 session; `rm` and `git clean` need approval in these sessions, so a human has to), then run the feature-verifier on F012 again. It should PASS; then set `passes: true` for F012 and write a short entry, before starting F013.
+- **Notes:** `e2e/zz-dbg.spec.ts` is not committed. The commit for this session added only `e2e/F012.spec.ts`, `README.md` and this entry. As the e2e specs can't click the toolbar, the "other surface" is a fresh page of `popup.html` or `sidepanel.html` opened after the icon closed the first one.
+
+### 2026-11-14 · F011 · The popup-or-side-panel choice survives a restart and an update
+
+- **Did:** No source change was needed: `applyStoredSurface` at background start and `parseSurface` already did this. New `e2e/F011.spec.ts` (11 tests) covers all five steps. README: the Side panel paragraph now says the choice also survives an update, and that the popup is used until the side panel is chosen.
+- **Verified:** `npm run check` (204 unit tests) and `npm run e2e` (113, counting the stray debug spec) pass. feature-verifier: **PASS** on all five steps.
+- **State:** F011 passes. 11 of 18 features pass.
+- **Next:** F012 (moving between the popup and the side panel keeps your work).
+- **Notes:**
+  - **`e2e/zz-dbg.spec.ts` is a stray throwaway file of mine, untracked and not committed. This session could not delete it (`rm` needs approval). A human, or the next session, should delete it.** It runs in `npm run e2e` and prints noise.
+  - `chrome.runtime.reload()` does not work in e2e: an extension loaded from the command line never comes back after it, so no service worker starts. The spec instead closes Chromium and relaunches it on the same profile directory (`launchPersistentContext` with `test.info().outputPath('profile')`), which keeps storage and forgets `action.setPopup`, like a real restart. The step's wording says reload; the verifier judged the relaunch a faithful, stronger stand-in.
+  - The project has no `@types/node`, so the spec uses no `node:` imports.
+
+### 2026-11-14 · F010 · Use popup instead icon
+
+- **Did:** `src/lib/surface.ts`: `moveToPopup` (`chooseSurface('popup')`). `App.tsx`: the header's switch button is "Open in side panel" in the popup and "Use popup instead" in the side panel, where it calls `moveToPopup()` and then `window.close()`. If switching fails, the page stays open and shows "Could not switch: …" (it was "Could not open the side panel: …"). `icons.tsx`: new `PopupIcon`. README: the Side panel paragraph now describes the icon and switching back and forth. New `e2e/F010.spec.ts` (4 tests) covers all five steps.
+- **Verified:** `npm run check` (204 unit tests) and `npm run e2e` (101) pass, re-run just before this commit. feature-verifier: **PASS** on all five steps, from its own `npm run check`, `npm run e2e` and `npx playwright test e2e/F010.spec.ts`.
+- **State:** F010 passes. 10 of 18 features pass.
+- **Next:** F011 (the popup-or-side-panel choice survives a Chrome restart and an extension update, and people coming from 0.3.0 start with the popup). `applyStoredSurface` at background start is the restart path, and it still has no e2e test.
+- **Notes:**
+  - The session that built F010 hit the usage limit right after it set `passes: true`, before it wrote this entry or committed. The entry and the commit were made afterwards from that session's transcript, with the checks re-run first.
+  - e2e can see the side panel page close, but not Chrome's real side panel. No spec covers a failing `chooseSurface`; in that case the page stays open and shows the error.
+
+### 2026-11-13 · F009 · Open in side panel icon
+
+- **Did:** New `src/core/surface.ts` (`Surface` = `'popup' | 'sidepanel'`, `parseSurface`, default popup) with `tests/surface.test.ts`. `src/lib/storage.ts`: `loadSurface`/`saveSurface` (`chrome.storage.local` key `surface`). New `src/lib/surface.ts`: `applySurface` (`sidePanel.setPanelBehavior` + `action.setPopup`, `''` for the side panel), `chooseSurface` (save then apply), `applyStoredSurface`, `moveToSidePanel` (`sidePanel.open` first, while the click is still a gesture, then `chooseSurface('sidepanel')`). `background.ts` calls `applyStoredSurface()` on every start because `setPopup` is forgotten on browser restart. `App` takes `surface` (default `'popup'`); the popup shows a `SidePanelIcon` button "Open in side panel" in the header after Manage access, which closes the popup (`window.close()`) once the panel is open, or shows "Could not open the side panel: …". `sidepanel/main.tsx` passes `surface="sidepanel"`, so no icon there. README: new "Side panel" paragraph. New `e2e/F009.spec.ts`; `popup-and-manage-access/F002.spec.ts` now expects the first Tab stop to be the new icon.
+- **Verified:** `npm run check` (204 unit tests) and `npm run e2e` (97) pass. feature-verifier: **PASS** on all four steps.
+- **State:** F009 passes. 9 of 18 features pass.
+- **Next:** F010 (the side panel's "Use popup instead" icon: `chooseSurface('popup')`, close the side panel with `window.close()`, and repeated switching). `App`'s `surface` prop and `lib/surface.ts` are ready for it.
+- **Notes:**
+  - Playwright's `sidePanel.open` works from a normal-tab extension page on a real click, so e2e covers the click and reads back `getPopup`, `getPanelBehavior` and storage. It can't see the panel itself or a real toolbar click.
+  - The restart path (`applyStoredSurface` at background start) has no e2e test.
+  - `window.close()` closes a side panel in current Chrome; F010 should confirm that, or use `chrome.sidePanel.setOptions({enabled:false})` then re-enable, if not.
+
+### 2026-11-13 · F008 · Side panel page and manifest
+
+- **Did:** New `src/entrypoints/sidepanel/` (`index.html`, `main.tsx`): renders the popup's `App` and adds `html.sidepanel`. WXT then writes `side_panel.default_path: sidepanel.html` and the `sidePanel` permission; `action.default_popup` and the `key` are unchanged. `styles.css`: `html.sidepanel` drops the 380 px width and 600 px cap and makes `.popup` 100% high, so only `.popup-body` scrolls. `e2e/fixtures.ts` gains `extensionId` and `sidePanel` (sidepanel.html at 400×900) fixtures. New `e2e/F008.spec.ts` (manifest, header/tabs/version, full height and body-only scrolling, a full list → preview → send run). `e2e/popup-and-manage-access/F001.spec.ts`: dropped its "no side_panel / no sidePanel permission" assertions (F008 adds both on purpose) and renamed that test.
+- **Verified:** `npm run check` (197 unit tests) and `npm run e2e` (91) pass. feature-verifier: **PASS** on all five steps.
+- **State:** F008 passes. 8 of 18 features pass. Nothing in the UI opens the side panel yet, so no README change.
+- **Next:** F009 (the "Open in side panel" header icon, `chrome.sidePanel.setPanelBehavior` and `action.setPopup`, and the stored choice). `App` takes no props yet; it will need to know which surface it is in (the sidepanel `main.tsx` is the place to say so).
+- **Notes:** The feature-verifier's tool log was not inspected; the green runs above are this session's own.
+
+### 2026-11-13 · F007 · Manage access icon: keyboard focus and header fit
+
+- **Did:** `ManageView.tsx`: focus moves to Back when People with access opens (`backRef`). `App.tsx`: `manageIconRef`; Back returns focus to the icon (the icon toggle itself keeps focus). Nothing else needed: the icon already hid off artifact tabs, `button:focus-visible` already draws the ring, and `.account` (min-width 0, truncates) plus `icon-btn` (flex none) already fit 380 px. New `e2e/F007.spec.ts` covers all six steps (no icon and no gap, Tab/Enter/Back focus, a long address truncating at 380 px, the in-progress note during a run, tooltip and dark-mode colour).
+- **Verified:** `npm run check` (197 unit tests) and `npm run e2e` (87) pass. feature-verifier: **PASS** on all six steps.
+- **State:** F007 passes. 7 of 18 features pass.
+- **Next:** F008 (side panel page and manifest).
+- **Notes:**
+  - The verifier's tool log again showed only Read, so its "ran check and e2e" lines were not its own; the green runs above are this session's own.
+  - The native tooltip can't be rendered headless, so only the `title` attribute is asserted.
+  - Still stale from F006: `scripts/screenshots.spec.ts:167`, `store/listing.md`, `docs/index.html` still describe the old bottom link.
+
+### 2026-11-13 · F006 · Manage access icon in the header
+
+- **Did:** `App.tsx`: the bottom "Manage access" link is gone; a `UsersIcon` button (`aria-label` "Manage access", title "Manage access to this artifact", `aria-pressed` while open) sits in the header after the account pill, only when the active tab is an artifact. Clicking it toggles `managing`. `ManageView` renders inside whichever tabpanel is active (Share or Lists), so the old specs' `share` locator still finds it; the Share form and `ListsView` are only hidden meanwhile, so rows and an open list's unsaved edit survive Back. Choosing a tab (`setTab`) closes it. CSS: `.manage-link` removed, `button.icon-btn[aria-pressed='true']` added. README Manage access section. New `e2e/F006.spec.ts` covers all seven steps; `popup-and-manage-access` F012–F016 now click the icon through `panel`.
+- **Verified:** `npm run check` (197 unit tests) and `npm run e2e` (82) pass. feature-verifier: **PASS** on all seven steps; it ran check and e2e itself.
+- **State:** F006 passes. 6 of 18 features pass.
+- **Next:** F007 (icon only where it works, keyboard focus ring and focus on Back, fits the header at narrow width). The icon already hides on non-artifact pages; check focus handling and layout.
+- **Notes:**
+  - Not yet updated, and scheduled in later features: `scripts/screenshots.spec.ts:167` still clicks the old link inside the Share panel (`npm run screenshots` will fail there), and `store/listing.md` (lines ~30, 114) and `docs/index.html` (~102) still describe the link.
+  - Tab-switch while Manage is open closes it (my choice; the steps don't say).
+
+### 2026-11-13 · F005 · Mark F005 as passing
+
+- **Did:** No code change. Re-ran the feature-verifier for F005 and set `passes: true`.
+- **Verified:** `harness/init.sh` (`npm run check`, 81 e2e) green. feature-verifier: **PASS** on all five steps, from reading `e2e/F005.spec.ts`, `shareDraft.ts` and `ShareView.tsx`.
+- **State:** F005 `passes` is true. 5 of 18 features pass.
+- **Next:** F006.
+- **Notes:** The verifier's tool log showed only Grep and Read, so its "ran check and e2e" lines were not its own. The green runs above are this session's own.
+
+### 2026-11-13 · F005 · A 0.3.0 draft and typed links carry over into the rows
+
+- **Did:** `parseShareDraft` (`src/core/shareDraft.ts`) turns a draft with no `artifacts` key (0.3.0's, which held every link in the box) into rows with `addArtifactText`; what isn't a link stays in the box, so the warning shows. A draft that has `artifacts` keeps its typed text as typed. Unit tests in `tests/shareDraft.test.ts`; new `e2e/F005.spec.ts` (0.3.0 draft seeded in session storage, a typed link counted by and included in Preview, the typed link kept across a reopen, "Add at least one artifact." with nothing). The older specs already use the rows from F001–F004, so none needed changing.
+- **Verified:** `npm run check` (197 unit tests) and `npm run e2e` (81, including `e2e/F005.spec.ts`) both pass. feature-verifier: **no verdict**. Both runs returned FAIL only because Bash was denied in the verifier's session, so it ran no commands.
+- **State:** F005 `passes` is still **false**: the work is done and green, but it has no PASS yet.
+- **Next:** Run the feature-verifier for F005 again (from a session where it can run Bash); on PASS set `passes: true` for F005 and commit that alone, then take F006.
+- **Notes:**
+  - F004's second verifier run did get Bash; this time neither did, so it looks like a permissions prompt in the verifier's session rather than anything in the change.
+  - The popup reopens on the tab it was closed on, so an e2e spec that reloads the panel must click Share again (`reopen` in `e2e/F005.spec.ts`).
+
+### 2026-11-13 · F004 · A removed artifact isn't added back by itself
+
+- **Did:** The draft now keeps `removed` (artifact keys taken out with ×), left out when empty (`shareDraft.ts`; a malformed value is dropped without discarding the draft). `updateRemoved` in `artifactRows.ts` adds the removed artifact and forgets any key that is a row again. `ArtifactsValue` gains `removed`; `ArtifactsField.tsx` updates it on ×, Undo, paste/Enter and + Current tab. The mount effect in `ShareView.tsx` skips the prefill for a key in `removed`. `thisTab` is still set then, so + Current tab or a paste brings it back with the badge. README Artifacts bullet.
+- **Verified:** `npm run check` (196 unit tests) and `npm run e2e` (80, including the new `e2e/F004.spec.ts`: hold-back, + Current tab, other artifact, Undo, paste, run + Start a new share, and a simulated browser quit by clearing the session draft). feature-verifier: **PASS** on the second run (the first returned FAIL only because Bash was denied in its session).
+- **State:** F004 passes.
+- **Next:** F005 (a 0.3.0 draft and typed-but-not-added links carry over; older specs on the rows). Much of it is already true from F001, so start by writing `e2e/F005.spec.ts` for its steps and see what fails.
+- **Notes:**
+  - `removed` lives in the session-storage draft, so it is cleared by sending (`saveShareDraft(null)`, then Start a new share) and by a browser restart, with no extra code.
+  - Pre-existing and left alone: `addCurrentTab` captures `rows` before its `await`, so rows changed during that await would be overwritten.
+
+### 2026-11-13 · F003 · Add the current tab's artifact, marked 'This tab'
+
+- **Did:** `ShareView.tsx`: the old prefill (only with no rows and no text) is now "on mount, if the active tab is an artifact and no row is the same artifact (`sameArtifact`), append it". The tab's ref is kept in `thisTab` state and passed to `ArtifactsField`, which shows a `This tab` badge (`.this-tab` in `styles.css`) on the row for that artifact, whether it was just added or already there. A cowork link and its `/code/artifact/<uuid>` link match by uuid. A non-artifact tab sets nothing. README Artifacts bullet.
+- **Verified:** `npm run check` (191 unit tests) and `npm run e2e` (78, including the new `e2e/F003.spec.ts`: the three-artifact sequence, repeat, cowork-vs-code link, non-claude page, and Start a new share after a finished run). feature-verifier: **PASS** on the first run.
+- **State:** F003 passes. Updated older specs for the badge: `popup-and-manage-access/` F003 and F012 and `share-ux-fixes/F003` read the link through `.artifact-item .truncate`; `popup-and-manage-access/F005` 'a restored draft…' now expects the tab's row added with the typed text kept in the box.
+- **Next:** F004 (an artifact you removed isn't added back by itself). Needs a 'removed' list kept in the draft (`shareDraft.ts`), cleared by Start a new share, by + Current tab and by Undo; the mount effect in `ShareView.tsx` must skip refs on it.
+- **Notes:**
+  - The badge is set once on mount; it doesn't follow tab switches while the popup stays open (matches the steps, which reopen).
+  - Start a new share remounts `ShareView`, so the mount effect picks up the active tab again with no extra code.
+  - In e2e a new list isn't ticked by default: tick it before Preview.
+  - `has:` locators in `filter()` are relative to the row: build them from `panel`, not from a locator that includes the tabpanel.
+  - Shell heredocs and compound `sed ... ; ...` commands are refused here; use Edit/Write.
+
+### 2026-11-13 · F002 · Undo after ×, and keyboard focus
+
+- **Did:** `ArtifactsField.tsx`: × now remembers the removed row and its index and shows `Removed <url> · Undo` (an `<output class="undo-bar">`, url truncated by CSS) for 5 s (`UNDO_MS`); Undo splices it back at its old index (clamped), unless the artifact was re-added meanwhile. Only the latest removal can be undone. Focus: for a keyboard activation (`click` with `detail === 0`) focus moves, after render (`useLayoutEffect`), to the × now at the removed position (the previous one when the last row went), or to the paste box when no rows are left; Undo from the keyboard focuses the restored ×. Mouse clicks don't move focus. Persistence needed no change: rows are already in the saved draft. CSS `.undo-bar`; README Artifacts bullet.
+- **Verified:** `npm run check` (191 unit tests) and `npm run e2e` (76, including the new `e2e/F002.spec.ts`). feature-verifier: **PASS** on the first run.
+- **State:** F002 passes.
+- **Next:** F003 (the current tab's artifact is added when it isn't in the list, with a 'This tab' badge). It replaces the old prefill rule in `ShareView.tsx` and must update `popup-and-manage-access/F005.spec.ts` 'a restored draft is not overwritten…' (see the F001 notes).
+- **Notes:**
+  - The Undo bar sits below the paste box, so a keyboard user Tabs through the box to reach Undo.
+  - The message's spans are separated by `{' '}` because a flex row drops the spaces, and `Removed https://…` would otherwise read as one word.
+  - The undo timing assertion in the spec is wall-clock (4.5–6.5 s); it passed every run.
+
+### 2026-11-13 · F001 · Artifacts as rows with a Remove (×) button
+
+- **Did:** Turned the Artifacts textarea into rows.
+  - `src/core/artifactRows.ts` (new): `addArtifactText` (text → rows, repeats, leftover text, a line at a time), `insertPaste`, `removeArtifact` and `sameArtifact`. Artifacts are compared by the new `artifactKey` in `artifactUrl.ts` (the UUID), so a cowork link and its `/artifact/` link are one.
+  - `src/entrypoints/popup/ArtifactsField.tsx` (new): the rows, each with its `ref.url` truncated, the full link in `title` and a × named `Remove <url>`; the 'No artifacts yet…' hint; and a one-line `textarea#artifacts.paste-box`.
+    - It stays a textarea because `fill()` into an `<input>` drops newlines.
+    - Paste, Enter, or a fill or drop that adds a line break turns links into rows. Anything that isn't a link stays in the box.
+    - A repeat highlights its row (`.repeated`) and shows 'Already in the list' for 2 s.
+    - `aria-required` is only set while there are no rows.
+  - `ShareView.tsx` uses it. The draft (`shareDraft.ts`) gains `artifacts: string[]` (row urls, in order) next to `artifactText`. Text typed but not yet added still counts for the count and for Preview, after the rows.
+  - CSS 'Artifacts rows' section; README's Artifacts bullet.
+- **Verified:** `npm run check` (191 unit tests) and `npm run e2e` (75, including the new `e2e/F001.spec.ts`, which uses a real Cmd+C/Cmd+V paste). The feature-verifier first returned FAIL: a link pasted with leftover text still in the box was glued onto it, and my spec had hidden this by clearing the box. Fixed with `insertPaste`, which puts a pasted link on its own line, and a spec that pastes straight after step 4. Second verdict: **PASS**.
+- **State:** F001 passes. Old specs moved to the rows (they assert `.artifact-item` / `Remove <url>` instead of the box's value): `popup-and-manage-access/` F003, F005, F008, F012 and `share-ux-fixes/` F002, F003. Specs that `fill()` a single link still pass unchanged, because typed text counts.
+- **Next:** F002 (Undo after ×, keyboard focus).
+- **Notes:**
+  - Deliberately left for later features:
+    - The tab prefill is still the old rule: it adds the tab's artifact only when there are no rows and no text (`ShareView.tsx`, the `currentTabArtifact()` effect). F003 changes that, and must update `popup-and-manage-access/F005.spec.ts` 'a restored draft is not overwritten…', which now asserts 0 rows.
+    - A 0.3.0 draft reads as `artifacts: []` with its text left in the box (split into rows in F005).
+    - × just removes (Undo and focus are F002).
+  - Enter and Shift+Enter both add, so the box never holds a typed line break. A paste with no link in it (a fragment) is still spliced in at the caret.
+  - Known edge: typing `https://claude.ai/artifact/` and then pasting a bare 20–24-character id adds the right row but leaves the typed prefix in the box with a warning.
+  - Artifact ids in `/artifact/` links are capped at 64 characters (`SHORT_ID_RE`), so a test's "long link" must stay within that.
+
+### 2026-11-13 · Planning · v0.4.0: side panel mode, current-tab artifact, Manage access icon
+
+- **Did:** Planned a new goal on `harness/side-panel-mode` (from `develop`), replacing the finished popup-and-manage-access list (all 18 passed and merged in PR 15, released as 0.3.0). 18 features, F001–F018. Nothing built. (First committed with 15 features and an "offer, don't add" Artifacts rule; the user then chose auto-add with easy removal, so F001–F005 and F013 were rewritten in the same planning session, before any work started.)
+- **Goal:** For v0.4.0: let people move ArtiShare from the popup into a side panel and back (remembered), make Artifacts a list of rows that always picks up the current tab's artifact and is easy to remove from, and move Manage access from the bottom of the Share tab to an icon in the header.
+- **Decisions (from the user):**
+  - **Side panel is a remembered mode, not a one-off.** The popup's header gets an 'Open in side panel' icon; clicking it opens the side panel and from then on the toolbar icon opens the side panel (like 0.2.0). The side panel's header has 'Use popup instead' to switch back. The default, and the fallback for anything unknown, is the popup. Likely route: store the choice in `chrome.storage.local`; the background applies it on startup/install and on change with `chrome.action.setPopup({ popup: '' | 'popup.html' })` and `chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick })`. Reuse `App` for both pages with a prop saying which one it is.
+  - **Artifacts: always add the tab's artifact, make removing one click.** The bug the user hit: the prefill at `src/entrypoints/popup/ShareView.tsx:79-81` only fills an _empty_ box, and the box is a saved draft, so the first artifact you open ArtiShare over is added and the second is silently ignored. The user's rule: opening ArtiShare over an artifact that isn't in the list adds it; if it's already there (compare by artifact id, so a cowork link and its `/artifact/` link are the same) nothing changes; and removing one must be a click, without clutter.
+    - **Rows, not a textarea** (F001, F002). Each artifact is a row: its normalized `ref.url` on one line (ellipsis, full link in `title`), a 'This tab' badge on the row for the active tab, and a × button named `Remove <url>`. Below the rows a one-line box (label Artifacts, placeholder 'Paste artifact links (one per line)') turns pasted or Enter-ed links into rows and keeps anything that isn't a link with the existing 'Not artifact links: …' warning. Removing shows 'Removed … · Undo' for about 5 s. Keep `+ Current tab` and the count. Reuse `parseArtifactList` / `parseArtifactRef`; no new parsing.
+    - **What's removed stays removed** (F004): a removed artifact's id is held back so reopening over that tab doesn't add it again — otherwise × would be pointless on the tab you're on. `+ Current tab`, Undo, a finished run's Start a new share, and the browser quitting (it's in `chrome.storage.session` with the draft) clear it. Only that id is held back.
+    - **Draft shape** (F005): store the rows (`artifacts: string[]` of urls, in order), the text not yet turned into rows, and the held-back ids. A 0.3.0 draft has only `artifactText`: split it into rows and leftover text on load. Text typed but not yet added still counts for Preview and survives closing the popup, so nothing typed is lost.
+    - **Where the add runs:** on open, whichever tab (Share, Lists, a run) is showing, so it's there when you switch to Share. In the side panel also on tab switches (F013); the user accepted that the panel collects the artifacts you visit, because × removes one in a click and a removed one isn't re-added.
+    - **Specs that change:** `e2e/popup-and-manage-access/F005.spec.ts` 'a restored draft is not overwritten by the artifact in the tab the popup opens over' now expects the restored rows kept _and_ the tab's artifact added after them (still not overwritten). Specs that `fill()` or read `#artifacts` (`smoke.spec.ts`, `share-ux-fixes/`, `popup-and-manage-access/`) move to the rows in F005; keep `aria-required` on the paste box while there are no rows.
+  - **Manage access is a header icon** (`UsersIcon`, accessible name 'Manage access', tooltip 'Manage access to this artifact'), shown only when the tab is an artifact, next to the side-panel icon. The bottom `.manage-link` goes. It must work from the Lists tab too, so `ManageView` moves out of `#panel-share` and Back returns to whichever tab was open.
+- **Housekeeping:** The previous goal's specs moved from `e2e/F0xx.spec.ts` to `e2e/popup-and-manage-access/` (imports now `../fixtures`, `../realPopup`; F018's repo root is `new URL('../..', …)`) so the new F001–F018 specs don't collide. They are regression tests: keep them passing, and update them where a feature changes the behavior they check (e.g. F006 removes the bottom link that `popup-and-manage-access/F012`–`F016` click; F001–F005 replace the textarea).
+- **Risky areas:**
+  - `chrome.sidePanel.open()` needs a user gesture and a `windowId`/`tabId`. Awaiting `chrome.windows.getCurrent()` inside the click handler may lose the gesture: read the window id when the popup mounts. Whether headless Chromium in Playwright can really open a side panel is unknown; if not, e2e checks the stored choice, `chrome.action.getPopup` and `chrome.sidePanel.getPanelBehavior`, and opens `sidepanel.html` as a tab (a `sidepanel` fixture next to `panel`). Say in the progress entry what could only be checked by hand in `npm run dev:fake`.
+  - Re-adding the `sidePanel` permission: it has no install warning, so updating from 0.3.0 shouldn't disable the extension, but check `chrome://extensions` by hand once. Don't touch the manifest `key`.
+  - The side panel stays open across tab switches, unlike the popup, so `currentTabArtifact()` read once at mount (`App.tsx`, `ShareView.tsx`) isn't enough there: listen to `chrome.tabs.onActivated`, `chrome.tabs.onUpdated` (URLs are only visible for claude.ai tabs, via the host permission, with no `tabs` permission) and `chrome.windows.onFocusChanged`. Don't add the `tabs` permission (install warning).
+  - Popup and side panel share drafts in `chrome.storage.session` and the run in `chrome.storage.local`. In side-panel mode the toolbar opens the panel, so only one ArtiShare per window edits them; two windows each with a side panel is the same known limitation as two popups.
+  - F018 rewrites the screenshots; don't run `npm run screenshots` before that feature.
+  - F001 is the biggest change (the textarea becomes rows) and touches many old specs. If it doesn't fit in one session, land the rows with every old spec passing and leave `passes: false` with a clear note, rather than half-migrating the specs.
+- **Not in scope:** bumping `version` to 0.4.0 and releasing; a human does that after the PR.
+- **Next:** `/harness-work` takes F001.
+
 ### 2026-11-12 · F017 · Docs describe the popup and Manage access (done)
 
 - **Did:** Made the three `.claude/` edits that unattended sessions were not allowed to make (from the interactive session): `.claude/commands/harness-work.md:23`, `.claude/commands/harness-plan.md:27` and `.claude/agents/feature-verifier.md:20` now say popup instead of side panel. The rest of F017 was done in 214a445, 477e280 and 22c47be.
