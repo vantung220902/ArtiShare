@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F016: the side panel uses the width and height it is given, and nothing scrolls sideways.
 

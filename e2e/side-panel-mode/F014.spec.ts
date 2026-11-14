@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F014: the side panel stays open as you switch tabs, so its Manage access icon follows the tab in
 // front, while an open People with access stays on the artifact it was opened for.

@@ -58,12 +58,13 @@ async function openPopup(file = 'popup.html', viewport = { width: 380, height: 6
   return { context, popup };
 }
 
-async function snap(popup: Page, path: string) {
-  // No caret or focus ring in the picture, and the content from the top.
-  await popup.evaluate(() => {
+async function snap(popup: Page, path: string, bottom = false) {
+  // No caret or focus ring in the picture, and the content from the top (or from the bottom, when a
+  // sticky action bar would otherwise hide the last field).
+  await popup.evaluate((toBottom) => {
     (document.activeElement as HTMLElement | null)?.blur();
-    document.querySelector('.popup-body')?.scrollTo(0, 0);
-  });
+    document.querySelector('.popup-body')?.scrollTo(0, toBottom ? 10_000 : 0);
+  }, bottom);
   await popup.locator('.popup').screenshot({ path });
 }
 
@@ -183,9 +184,33 @@ test('regenerate the README and store screenshots', async () => {
   // 4. Manage access, on an artifact that already has people (the popup reads the active tab).
   await tab.goto(SHARED);
   await popup.reload();
+  // One of the three people already invited is in a list, so the picture shows both notes:
+  // 'In Partners' for them and 'Not in a list' for the other two.
+  await popup.getByRole('tab', { name: /Lists/ }).click();
+  await lists.getByRole('button', { name: 'New list' }).click();
+  await lists.getByLabel('List name').last().fill('Partners');
+  await lists.getByLabel('Email addresses').last().fill('viewer@example.com');
+  await lists.getByLabel('Permission').filter({ visible: true }).selectOption({ label: 'Can view' });
+  await lists.getByRole('button', { name: 'Save list' }).click();
+  await expect(lists.locator('details.list-card', { hasText: 'Partners' })).toHaveCount(1);
+  await popup.getByRole('tab', { name: 'Share' }).click();
   await manage.click();
-  await expect(share.locator('ul.people > li')).toHaveCount(4);
+  const people = share.locator('ul.people > li');
+  await expect(people).toHaveCount(4);
+  await expect(people.filter({ hasText: 'In Partners' })).toHaveCount(1);
+  await expect(people.filter({ hasText: 'Not in a list' })).toHaveCount(2);
+  await expect(share.getByText("2 people aren't in any of your lists.")).toBeVisible();
   await snap(popup, `${DOCS}/manage.png`);
+
+  // 5. Save to a list: the two people in no list, ticked, with New list picked and a name typed.
+  await share.getByRole('button', { name: 'Save to a list' }).click();
+  const save = share
+    .locator('section.card')
+    .filter({ has: popup.getByRole('button', { name: /^Save 2 people/ }) });
+  await expect(save.getByRole('checkbox', { checked: true })).toHaveCount(3); // Select all + two people
+  await expect(save.getByRole('radio', { name: 'New list' })).toBeChecked();
+  await save.getByLabel('Name').fill('Pending reviewers');
+  await snap(popup, `${DOCS}/manage-save.png`, true);
 
   const shot = (name: string) => test.info().outputPath(`store-${name}.png`);
   await storeImage(

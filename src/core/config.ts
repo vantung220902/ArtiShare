@@ -120,6 +120,8 @@ export function removeList(config: Config, id: string): Config {
 export type ConfigChange =
   | { type: 'save-list'; list: EmailList; expected: EmailList | null }
   | { type: 'delete-list'; id: string; expected: EmailList }
+  // Appends to the list as it is stored now, so an edit made in another window is kept.
+  | { type: 'add-to-list'; id: string; emails: string[] }
   | { type: 'set-default-mode'; mode: DefaultSelection['mode'] }
   | { type: 'set-default-list'; id: string; selected: boolean };
 
@@ -162,6 +164,13 @@ export function applyConfigChange(config: Config, change: ConfigChange): Config 
       }
 
       return removeList(config, change.id);
+    }
+
+    case 'add-to-list': {
+      const current = config.lists.find((list) => list.id === change.id);
+      if (!current) throw new Error('This list no longer exists. It was deleted in another window.');
+
+      return upsertList(config, { ...current, emails: mergeEmails(current.emails, change.emails) });
     }
 
     case 'set-default-mode':

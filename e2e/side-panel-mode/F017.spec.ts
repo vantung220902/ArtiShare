@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 // F017: the docs describe the side panel choice, the Manage access icon and the Artifacts rows. No
 // browser is needed; this reads the files so the wording can't quietly drift back.
 
-const root = new URL('..', import.meta.url);
+const root = new URL('../..', import.meta.url);
 const text = (path: string) => readFileSync(new URL(path, root)).toString('utf8');
 
 const readme = text('README.md');

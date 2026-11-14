@@ -1,141 +1,149 @@
+import type { BrowserContext, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
-// F002: removing an artifact is one click, can be undone for a few seconds, and works from the keyboard.
+// F002: when Chrome can't open the popup from the side panel the panel stays open and says so,
+// instead of closing and looking just like the X. A real toolbar click can't be made from Playwright,
+// so what the icon will do is read back from the browser: the action's popup, the panel behaviour and
+// the stored choice.
 
-const ONE = 'https://claude.ai/artifact/ExampleArtifactOne01';
-const TWO = 'https://claude.ai/artifact/ExampleArtifactTwo02';
-const THREE = 'https://claude.ai/artifact/ExampleArtifactThree3';
+const CLICK_ICON = 'Click the ArtiShare icon in the toolbar to open it.';
 
-test('removing is one click with an Undo, and works from the keyboard', async ({ context, panel }) => {
-  // Nothing may reach claude.ai.
-  await context.route(/^https:\/\/claude\.ai\//, (route) =>
-    route.fulfill({ contentType: 'text/html', body: '<title>page</title>' }),
+/** What the toolbar icon will do and what was remembered, read from a fresh extension page. */
+async function toolbar(context: BrowserContext, extensionId: string) {
+  const page = await context.newPage();
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+  const state = await page.evaluate(async () => ({
+    popup: await chrome.action.getPopup({}),
+    behavior: (await chrome.sidePanel.getPanelBehavior()).openPanelOnActionClick,
+    stored: (await chrome.storage.local.get('surface')).surface as string | undefined,
+  }));
+  await page.close();
+
+  return state;
+}
+
+/** The toolbar icon opens the side panel, as after "Open in side panel". */
+const iconOpensSidePanel = (page: Page) =>
+  page.evaluate(async () => {
+    await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+    await chrome.action.setPopup({ popup: '' });
+    await chrome.storage.local.set({ surface: 'sidepanel' });
+  });
+
+const openPopupRejects = (page: Page, message: string) =>
+  page.evaluate((reason) => {
+    chrome.action.openPopup = () => Promise.reject(new Error(reason));
+  }, message);
+
+test('when openPopup rejects the panel stays open, says why, and the switch still happened', async ({
+  context,
+  extensionId,
+  sidePanel,
+}) => {
+  await iconOpensSidePanel(sidePanel);
+  await openPopupRejects(sidePanel, 'Could not find an active browser window.');
+  let closed = false;
+  sidePanel.on('close', () => (closed = true));
+
+  await sidePanel.getByRole('button', { name: 'Use popup instead' }).click();
+
+  await expect(sidePanel.locator('output.notice')).toHaveText(
+    `Switched to the popup, but Chrome couldn't open it: Could not find an active browser window. ${CLICK_ICON}`,
   );
+  expect(closed).toBe(false);
+  // Not an error: this is a notice about a switch that worked.
+  await expect(sidePanel.getByText("Couldn't switch to the popup")).toHaveCount(0);
 
-  await panel.getByRole('tab', { name: 'Share' }).click();
-  const share = panel.getByRole('tabpanel', { name: 'Share' });
-  const box = share.getByRole('textbox', { name: /Artifacts/ });
-  const rows = share.locator('.artifact-item');
-  const count = share.locator('label[for="artifacts"] .count');
-  const undoBar = share.locator('.undo-bar');
-  const remove = (url: string) => share.getByRole('button', { name: `Remove ${url}`, exact: true });
-  const focusedLabel = () => panel.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? null);
+  const state = await toolbar(context, extensionId);
+  expect(state.popup).toBe(`chrome-extension://${extensionId}/popup.html`);
+  expect(state.behavior).toBe(false);
+  expect(state.stored).toBe('popup');
+});
 
-  const addAll = async () => {
-    await box.fill(`${ONE}\n${TWO}\n${THREE}\n`);
-    await expect(rows).toHaveText([ONE, TWO, THREE]);
-  };
-  await addAll();
-  await expect(count).toHaveText('3');
-  await expect(undoBar).toHaveCount(0);
+test('without chrome.action.openPopup the panel says to click the icon, with no "couldn\'t open it"', async ({
+  sidePanel,
+}) => {
+  await iconOpensSidePanel(sidePanel);
+  // A Chrome older than 127 has no such function.
+  await sidePanel.evaluate(() => {
+    (chrome.action as { openPopup?: unknown }).openPopup = undefined;
+  });
+  let closed = false;
+  sidePanel.on('close', () => (closed = true));
 
-  // 1. One click takes the second row out at once, with a message to undo it.
-  await remove(TWO).click();
-  await expect(rows).toHaveText([ONE, THREE]);
-  await expect(count).toHaveText('2');
-  await expect(undoBar).toContainText(`Removed ${TWO}`);
-  await expect(undoBar).toContainText('Undo');
+  await sidePanel.getByRole('button', { name: 'Use popup instead' }).click();
 
-  // 2. Undo puts it back in its old place.
-  await undoBar.getByRole('button', { name: 'Undo' }).click();
-  await expect(rows).toHaveText([ONE, TWO, THREE]);
-  await expect(count).toHaveText('3');
-  await expect(undoBar).toHaveCount(0);
+  await expect(sidePanel.locator('output.notice')).toHaveText(`Switched to the popup. ${CLICK_ICON}`);
+  await expect(sidePanel.locator('output.notice')).not.toContainText("couldn't open it");
+  expect(closed).toBe(false);
+});
 
-  // Without Undo the message goes away by itself after about 5 seconds, and not much before.
-  await remove(THREE).click();
-  await expect(undoBar).toBeVisible();
-  const shownAt = Date.now();
-  await panel.waitForTimeout(3000);
-  await expect(undoBar).toBeVisible();
-  await expect(undoBar).toHaveCount(0, { timeout: 5000 });
-  const shownFor = Date.now() - shownAt;
-  expect(shownFor).toBeGreaterThanOrEqual(4500);
-  expect(shownFor).toBeLessThan(6500);
-  await expect(rows).toHaveText([ONE, TWO]);
+test('while the notice shows the icon reads Open popup, tries openPopup again, and closes the panel on success', async ({
+  sidePanel,
+}) => {
+  await iconOpensSidePanel(sidePanel);
+  // Counted in the page, since a successful retry closes it.
+  await sidePanel.evaluate(() => {
+    (window as unknown as { calls: number }).calls = 0;
+    chrome.action.openPopup = () => {
+      (window as unknown as { calls: number }).calls++;
 
-  // Undoing the very first row puts it back first; removing another replaces the message.
-  await box.fill(THREE);
-  await box.press('Enter');
-  await expect(rows).toHaveText([ONE, TWO, THREE]);
-  await remove(ONE).click();
-  await remove(TWO).click();
-  await expect(undoBar).toContainText(`Removed ${TWO}`);
-  await expect(undoBar).not.toContainText(ONE);
-  await undoBar.getByRole('button', { name: 'Undo' }).click();
-  await expect(rows).toHaveText([TWO, THREE]);
-  await box.fill(`${ONE}\n`);
-  await expect(rows).toHaveText([TWO, THREE, ONE]);
-
-  // 3. From the keyboard: Tab reaches each × in order, with a visible focus ring.
-  await share.getByRole('button', { name: 'Current tab' }).focus();
-  await panel.keyboard.press('Tab');
-  expect(await focusedLabel()).toBe(`Remove ${TWO}`);
-  const ring = await panel.evaluate(() => {
-    const style = getComputedStyle(document.activeElement!);
-    return {
-      matches: document.activeElement!.matches(':focus-visible'),
-      style: style.outlineStyle,
-      width: style.outlineWidth,
+      return Promise.reject(new Error('Could not find an active browser window.'));
     };
   });
-  expect(ring).toEqual({ matches: true, style: 'solid', width: '2px' });
-  await panel.keyboard.press('Tab');
-  expect(await focusedLabel()).toBe(`Remove ${THREE}`);
-  await panel.keyboard.press('Tab');
-  expect(await focusedLabel()).toBe(`Remove ${ONE}`);
-  // Back to the first, and Enter takes it out: focus moves to the × of the row that is now there.
-  await panel.keyboard.press('Shift+Tab');
-  await panel.keyboard.press('Shift+Tab');
-  expect(await focusedLabel()).toBe(`Remove ${TWO}`);
-  await panel.keyboard.press('Enter');
-  await expect(rows).toHaveText([THREE, ONE]);
-  expect(await focusedLabel()).toBe(`Remove ${THREE}`);
+  await sidePanel.getByRole('button', { name: 'Use popup instead' }).click();
+  await expect(sidePanel.locator('output.notice')).toBeVisible();
+  expect(await sidePanel.evaluate(() => (window as unknown as { calls: number }).calls)).toBe(1);
 
-  // Removing the last row of the list moves focus to the one before it, not to the page.
-  await panel.keyboard.press('Tab');
-  expect(await focusedLabel()).toBe(`Remove ${ONE}`);
-  await panel.keyboard.press('Enter');
-  await expect(rows).toHaveText([THREE]);
-  expect(await focusedLabel()).toBe(`Remove ${THREE}`);
+  // Still failing: the retry is a real attempt, the panel stays and the notice is still there.
+  await expect(sidePanel.getByRole('button', { name: 'Use popup instead' })).toHaveCount(0);
+  await sidePanel.getByRole('button', { name: 'Open popup' }).click();
+  await expect(sidePanel.locator('output.notice')).toBeVisible();
+  await expect.poll(() => sidePanel.evaluate(() => (window as unknown as { calls: number }).calls)).toBe(2);
+  await expect(sidePanel.getByRole('button', { name: 'Open popup' })).toBeVisible();
 
-  // Undo from the keyboard puts the row back and focuses its ×.
-  await panel.keyboard.press('Tab');
-  await expect(box).toBeFocused();
-  await panel.keyboard.press('Tab');
-  await expect(undoBar.getByRole('button', { name: 'Undo' })).toBeFocused();
-  await panel.keyboard.press('Enter');
-  await expect(rows).toHaveText([THREE, ONE]);
-  expect(await focusedLabel()).toBe(`Remove ${ONE}`);
+  // Chrome can open it this time: the panel closes.
+  await sidePanel.evaluate(() => {
+    chrome.action.openPopup = () => Promise.resolve();
+  });
+  const closed = sidePanel.waitForEvent('close');
+  await sidePanel.getByRole('button', { name: 'Open popup' }).click();
+  await closed;
+});
 
-  // 4. Removing the last row with the keyboard moves focus to the box and shows the empty state.
-  await remove(THREE).focus();
-  await panel.keyboard.press('Enter');
-  await panel.keyboard.press('Enter');
-  await expect(rows).toHaveCount(0);
-  await expect(box).toBeFocused();
-  await expect(
-    share.getByText('No artifacts yet. Open one and click + Current tab, or paste links below.'),
-  ).toBeVisible();
-  await expect(count).toHaveCount(0);
+test('if the choice itself can not be saved nothing changes and the existing message shows', async ({
+  context,
+  extensionId,
+  sidePanel,
+}) => {
+  await iconOpensSidePanel(sidePanel);
+  await sidePanel.evaluate(() => {
+    const set = chrome.storage.local.set.bind(chrome.storage.local);
+    // Only the remembered choice is refused; the rest of the page still saves what it needs to.
+    chrome.storage.local.set = ((items: Record<string, unknown>, ...rest: unknown[]) =>
+      'surface' in items
+        ? Promise.reject(new Error('Storage is full'))
+        : (set as (...a: unknown[]) => unknown)(items, ...rest)) as typeof chrome.storage.local.set;
+    (window as unknown as { opened: number }).opened = 0;
+    chrome.action.openPopup = () => {
+      (window as unknown as { opened: number }).opened++;
 
-  // A click with the mouse doesn't take focus to the box.
-  await undoBar.getByRole('button', { name: 'Undo' }).click();
-  await expect(rows).toHaveText([ONE]);
-  await remove(ONE).click();
-  await expect(rows).toHaveCount(0);
-  await expect(box).not.toBeFocused();
+      return Promise.resolve();
+    };
+  });
+  let closed = false;
+  sidePanel.on('close', () => (closed = true));
 
-  // 5. A removal is saved with the rest of the draft: closing and reopening keeps it gone.
-  await undoBar.getByRole('button', { name: 'Undo' }).click();
-  await box.fill(`${TWO}\n${THREE}\n`);
-  await expect(rows).toHaveText([ONE, TWO, THREE]);
-  await remove(TWO).click();
-  await expect(rows).toHaveText([ONE, THREE]);
-  await panel.reload();
-  await panel.getByRole('tab', { name: 'Share' }).click();
-  await expect(rows).toHaveText([ONE, THREE]);
-  await expect(count).toHaveText('2');
-  // The message belongs to the closed popup: it isn't there to undo any more.
-  await expect(undoBar).toHaveCount(0);
+  await sidePanel.getByRole('button', { name: 'Use popup instead' }).click();
+
+  await expect(sidePanel.getByText("Couldn't switch to the popup: Storage is full")).toBeVisible();
+  await expect(sidePanel.locator('output.notice')).toHaveCount(0);
+  expect(closed).toBe(false);
+  // Neither the popup nor the toolbar behaviour was touched, and the popup wasn't opened.
+  expect(await sidePanel.evaluate(() => (window as unknown as { opened: number }).opened)).toBe(0);
+  const state = await toolbar(context, extensionId);
+  expect(state.popup).toBe('');
+  expect(state.behavior).toBe(true);
+  expect(state.stored).toBe('sidepanel');
+  await expect(sidePanel.getByRole('button', { name: 'Use popup instead' })).toBeVisible();
 });

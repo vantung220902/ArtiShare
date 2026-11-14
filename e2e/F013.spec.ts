@@ -1,159 +1,101 @@
-import type { BrowserContext, Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { readFileSync } from 'node:fs';
+import { expect, test } from '@playwright/test';
 
-// F013: the side panel stays open as you switch tabs, so it follows them: the artifact in the tab in
-// front is added to Artifacts (unless it was removed) and the 'This tab' badge moves with it. A tab
-// is brought to the front with `bringToFront`, which fires the same events as clicking its title.
+// F013: the screenshots show Manage access with the lists each person is in, and Save to a list.
+// The pictures come from `npm run screenshots`; this checks they exist at the right size, that the
+// generator builds the scene the steps describe (and waits for it before taking the picture), that
+// the README shows manage-save.png beside manage.png with alt text, and that everything is made up.
 
-const ONE = 'https://claude.ai/artifact/ExampleArtifactOne01';
-const TWO = 'https://claude.ai/artifact/ExampleArtifactTwo02';
-const UUID_A = 'c0ffee00-1234-4abc-8def-0000000000a1';
-const UUID_B = 'c0ffee00-1234-4abc-8def-0000000000b2';
-const SESSION = 'https://claude.ai/cowork/cse_01ExampleCoworkSession00';
-const OTHER = 'https://example.com/some/page';
+const root = new URL('..', import.meta.url);
+const read = (path: string) => readFileSync(new URL(path, root));
+const source = read('scripts/screenshots.spec.ts').toString();
+const readme = read('README.md').toString();
 
-// "Within a second" is part of the feature, so waits for a follow are held to that.
-const WITHIN_A_SECOND = { timeout: 1_000 };
+/** Width and height from a PNG's IHDR chunk. */
+function size(path: string) {
+  const png = read(path);
+  expect(png.subarray(1, 4).toString(), `${path} is a PNG`).toBe('PNG');
 
-test.beforeEach(async ({ context }) => {
-  // Serve the pages ourselves: nothing may reach claude.ai or anywhere else.
-  await context.route(/^https:\/\/(claude\.ai|example\.com)\//, (route) =>
-    route.fulfill({ contentType: 'text/html', body: '<title>page</title>' }),
+  return { width: png.readUInt32BE(16), height: png.readUInt32BE(20) };
+}
+
+/** The generator's code between the line that matches `from` and the next one that matches `to`. */
+function between(from: string, to: string) {
+  const start = source.indexOf(from);
+  expect(start, `${from} is in the generator`).toBeGreaterThan(-1);
+  const end = source.indexOf(to, start);
+  expect(end, `${to} follows`).toBeGreaterThan(start);
+
+  return source.slice(start, end);
+}
+
+test('manage.png is Manage access over a Shared artifact: one person in a list, two in none, the note', () => {
+  expect(source).toContain("const SHARED = 'https://claude.ai/artifact/Ex4mpleShared");
+  const scene = between('await tab.goto(SHARED)', '`${DOCS}/manage.png`');
+  // A saved list holds one of the fake's three people, so one reads 'In Partners'…
+  expect(scene).toContain("fill('viewer@example.com')");
+  expect(scene).toContain("'In Partners'");
+  // …and the other two read 'Not in a list', with the note and the button under them.
+  expect(scene).toContain("'Not in a list'");
+  expect(scene).toContain('toHaveCount(2)');
+  expect(scene).toContain("2 people aren't in any of your lists.");
+  expect(scene).toContain('toHaveCount(4)'); // you (owner) and the three people
+  const { width, height } = size('docs/images/manage.png');
+  expect(width).toBe(760);
+  expect(height).toBeGreaterThan(400);
+  expect(height).toBeLessThanOrEqual(1200);
+});
+
+test('manage-save.png is Save to a list with the boxes ticked, New list picked and a name typed', () => {
+  const scene = between("name: 'Save to a list' }).click()", '`${DOCS}/manage-save.png`');
+  expect(scene).toContain("getByRole('checkbox', { checked: true })");
+  expect(scene).toContain("getByRole('radio', { name: 'New list' })).toBeChecked()");
+  expect(scene).toContain("fill('Pending reviewers')");
+  // The sticky Save bar would hide the Permission field if the picture were taken from the top.
+  expect(source).toContain('`${DOCS}/manage-save.png`, true)');
+  const { width, height } = size('docs/images/manage-save.png');
+  expect(width).toBe(760);
+  expect(height).toBeGreaterThan(400);
+  expect(height).toBeLessThanOrEqual(1200);
+});
+
+test('the README shows manage-save.png right beside manage.png, with alt text for each', () => {
+  const manage = /<img src="docs\/images\/manage\.png"[^>]*alt="([^"]+)">/.exec(readme);
+  const save = /<img src="docs\/images\/manage-save\.png"[^>]*alt="([^"]+)">/.exec(readme);
+  expect(manage, 'manage.png is in the README').not.toBeNull();
+  expect(save, 'manage-save.png is in the README').not.toBeNull();
+  // Next to each other: only the spacer is between the two tags, so they share a row.
+  expect(readme).toMatch(
+    /<img src="docs\/images\/manage\.png"[^>]*>\s*&nbsp;\s*<img src="docs\/images\/manage-save\.png"[^>]*>/,
   );
+  expect(manage![1]).toMatch(/popup/i);
+  expect(manage![1]).toMatch(/Manage access/);
+  expect(manage![1]).toMatch(/lists/i);
+  expect(manage![1]).toMatch(/Save to a list/);
+  expect(save![1]).toMatch(/popup/i);
+  expect(save![1]).toMatch(/Save to a list/);
+  expect(save![1]).toMatch(/New list/);
+  expect(save![1]).toMatch(/name/i);
+  // The other pictures are still there.
+  for (const name of ['share', 'preview', 'done', 'sidepanel']) {
+    expect(readme, name).toContain(`docs/images/${name}.png`);
+  }
 });
 
-/** A tab at `url`. A new tab is brought to the front, which a panel that is already open would follow. */
-async function tabAt(context: BrowserContext, url: string) {
-  const tab = await context.newPage();
-  await tab.goto(url);
-
-  return tab;
-}
-
-/** Opens the side panel (or popup) as its own page, which is then the active tab: no artifact. */
-async function openPanel(context: BrowserContext, extensionId: string, file: 'sidepanel' | 'popup') {
-  const page = await context.newPage();
-  await page.goto(`chrome-extension://${extensionId}/${file}.html`);
-  await page.setViewportSize({ width: 400, height: 900 });
-  await expect(page.getByRole('heading', { name: 'ArtiShare' })).toBeVisible();
-
-  return page;
-}
-
-/** The panel has heard about the active tab and painted, so "nothing changed" can be asserted. */
-async function settled(page: Page) {
-  await page.evaluate(() => chrome.tabs.query({ active: true, lastFocusedWindow: true }));
-  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 300)));
-}
-
-test('the rows and the This tab badge follow the tab in front', async ({ context, extensionId }) => {
-  const other = await tabAt(context, OTHER);
-  const one = await tabAt(context, ONE);
-  const two = await tabAt(context, TWO);
-  const sidePanel = await openPanel(context, extensionId, 'sidepanel');
-
-  const share = sidePanel.getByRole('tabpanel', { name: 'Share' });
-  const rows = share.locator('.artifact-item');
-  const badges = share.locator('.this-tab');
-  const badged = rows.filter({ has: sidePanel.locator('.this-tab') });
-  const count = share.locator('label[for="artifacts"] .count');
-
-  // 1. Over a tab that isn't an artifact: no rows.
-  await other.bringToFront();
-  await settled(sidePanel);
-  await expect(rows).toHaveCount(0);
-  await expect(share.getByText('No artifacts yet.')).toBeVisible();
-
-  // 2. To One: a row with the badge.
-  await one.bringToFront();
-  await expect(rows).toHaveText([`${ONE}This tab`], WITHIN_A_SECOND);
-
-  // 3. To Two: a second row, and the badge moves to it.
-  await two.bringToFront();
-  await expect(rows).toHaveText([ONE, `${TWO}This tab`], WITHIN_A_SECOND);
-  await expect(badged).toHaveText([`${TWO}This tab`]);
-  await expect(count).toHaveText('2');
-
-  // 4. Back to One: no new row, the badge goes back.
-  await one.bringToFront();
-  await expect(rows).toHaveText([`${ONE}This tab`, TWO], WITHIN_A_SECOND);
-  await expect(badged).toHaveText([`${ONE}This tab`]);
-  await expect(count).toHaveText('2');
-
-  // 5. Remove Two with ×; away and back to Two: it is not added again.
-  await share.getByRole('button', { name: `Remove ${TWO}` }).click();
-  await expect(rows).toHaveText([`${ONE}This tab`]);
-  await other.bringToFront();
-  await expect(badges).toHaveCount(0, WITHIN_A_SECOND);
-  await two.bringToFront();
-  await settled(sidePanel);
-  await expect(rows).toHaveText([ONE]);
-  // + Current tab adds it on purpose.
-  await share.getByRole('button', { name: 'Current tab' }).click();
-  await expect(rows).toHaveText([ONE, `${TWO}This tab`]);
-
-  // 6. A tab that isn't an artifact: no badge, the rows unchanged.
-  await other.bringToFront();
-  await expect(badges).toHaveCount(0, WITHIN_A_SECOND);
-  await settled(sidePanel);
-  await expect(rows).toHaveText([ONE, TWO]);
+test('the store screenshots stay 1280×800', () => {
+  for (const name of ['1-share', '2-preview', '3-done']) {
+    expect(size(`store/images/screenshot-${name}.png`), name).toEqual({ width: 1280, height: 800 });
+    expect(source, name).toContain(`screenshot-${name}.png`);
+  }
 });
 
-test('an artifact opened in place in the same tab is picked up', async ({ context, extensionId }) => {
-  const tab = await tabAt(context, `${SESSION}?artifact=${UUID_A}`);
-  const sidePanel = await openPanel(context, extensionId, 'sidepanel');
-  const rows = sidePanel.getByRole('tabpanel', { name: 'Share' }).locator('.artifact-item');
-  const badged = rows.filter({ has: sidePanel.locator('.this-tab') });
+test('every address and artifact id the generator uses is made up', () => {
+  const ids = [...source.matchAll(/claude\.ai\/artifact\/(\w+)/g)].map((m) => m[1]);
+  expect(ids.length).toBeGreaterThan(0);
+  for (const id of ids) expect(id, id).toMatch(/^Ex4mple/);
 
-  await tab.bringToFront();
-  await expect(rows).toHaveCount(1, WITHIN_A_SECOND);
-  await expect(badged).toHaveCount(1);
-  const first = (await rows.first().innerText()).replace('This tab', '').trim();
-
-  // The page changes its own URL without a navigation, as claude.ai does when you open another artifact.
-  await tab.evaluate((url) => history.pushState({}, '', url), `${SESSION}?artifact=${UUID_B}`);
-  await expect(rows).toHaveCount(2, WITHIN_A_SECOND);
-  await expect(badged).toHaveCount(1);
-  // The first stays as it was, now without the badge; the new one has it. (An id is shown as the
-  // artifact link it maps to, so the rows are compared with each other, not with the ids.)
-  await expect(rows.nth(0)).toHaveText(first);
-  await expect(rows.nth(1)).not.toHaveText(first);
-  await expect(rows.nth(1).locator('.this-tab')).toHaveCount(1);
-});
-
-test('+ Current tab adds nothing new, with no error, over a tab already in the list', async ({
-  context,
-  extensionId,
-}) => {
-  const one = await tabAt(context, ONE);
-  const two = await tabAt(context, TWO);
-  const sidePanel = await openPanel(context, extensionId, 'sidepanel');
-  const share = sidePanel.getByRole('tabpanel', { name: 'Share' });
-  const rows = share.locator('.artifact-item');
-
-  await one.bringToFront();
-  await expect(rows).toHaveText([`${ONE}This tab`], WITHIN_A_SECOND);
-  await two.bringToFront();
-  await expect(rows).toHaveText([ONE, `${TWO}This tab`], WITHIN_A_SECOND);
-  await one.bringToFront();
-  await expect(rows).toHaveText([`${ONE}This tab`, TWO], WITHIN_A_SECOND);
-
-  // The tab active now is One, not the one the panel was opened over (it was opened over none).
-  await share.getByRole('button', { name: 'Current tab' }).click();
-  await expect(share.getByText('Already in the list')).toBeVisible();
-  await expect(rows).toHaveText([`${ONE}This tab`, TWO]);
-  await expect(share.locator('.alert')).toHaveCount(0);
-  await expect(share.getByText('The current tab is not a claude.ai artifact.')).toHaveCount(0);
-});
-
-test('the popup still reads the tab once and does not follow', async ({ context, extensionId }) => {
-  const one = await tabAt(context, ONE);
-  const popup = await openPanel(context, extensionId, 'popup');
-  const rows = popup.getByRole('tabpanel', { name: 'Share' }).locator('.artifact-item');
-  await settled(popup);
-
-  // A real popup closes when you switch tabs, so there is nothing to follow.
-  await one.bringToFront();
-  await settled(popup);
-  await expect(rows).toHaveCount(0);
+  const domains = [...source.matchAll(/@([a-z][\w.]*)/g)].map((m) => m[1]).filter((d) => d?.includes('.'));
+  expect(domains).toContain('example.com'); // viewer@example.com
+  for (const domain of domains) expect(domain, domain).toMatch(/\.example(\.com)?$|^example\.com$/);
+  expect(source).not.toMatch(/@(gmail|outlook|yahoo|anthropic)\./);
 });

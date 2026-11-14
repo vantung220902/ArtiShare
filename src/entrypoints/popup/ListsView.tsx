@@ -18,9 +18,11 @@ interface ListsViewProps {
   save: Save;
   /** The tab's unsaved work from before the popup last closed. Only read when the tab mounts. */
   initial: ListsDraft;
+  /** A list to expand, e.g. one just saved from People with access. */
+  reveal?: { id: string } | null;
 }
 
-export function ListsView({ config, save, initial }: ListsViewProps) {
+export function ListsView({ config, save, initial, reveal }: ListsViewProps) {
   const [adding, setAdding] = useState(initial.adding);
   const [newList, setNewList] = useState<ListFormDraft | null>(initial.newList);
   const [open, setOpen] = useState<string[]>(initial.open);
@@ -52,6 +54,10 @@ export function ListsView({ config, save, initial }: ListsViewProps) {
       current.includes(id) === isOpen ? current : isOpen ? [...current, id] : current.filter((x) => x !== id),
     );
   }, []);
+  useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- a request from another view; there is no event here to open it from
+    if (reveal) setOpened(reveal.id, true);
+  }, [reveal, setOpened]);
   const lists = byName(config.lists);
   const sel = config.defaultSelection;
   const change = (next: ConfigChange) =>

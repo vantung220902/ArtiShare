@@ -35,9 +35,35 @@ export async function applyStoredSurface(): Promise<void> {
   await applySurface(await loadSurface());
 }
 
-/** Moves ArtiShare back to the popup: the toolbar icon opens the popup again. */
-export async function moveToPopup(): Promise<void> {
+/** How opening the popup went: `reason` is Chrome's error, absent when `openPopup` doesn't exist. */
+export type PopupOpening = { opened: true } | { opened: false; reason?: string };
+
+/**
+ * Opens the popup under the toolbar icon of this page's window. It opens whatever the action's popup
+ * is set to, so call it only once the choice has been applied.
+ */
+export async function openPopupHere(): Promise<PopupOpening> {
+  // Chrome 127 added it for every extension; before that there is nothing to call.
+  if (typeof chrome.action.openPopup !== 'function') return { opened: false };
+  try {
+    const { id: windowId } = await chrome.windows.getCurrent();
+    await chrome.action.openPopup({ windowId: windowId! });
+
+    return { opened: true };
+  } catch (e) {
+    return { opened: false, reason: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/**
+ * Moves ArtiShare back to the popup: the toolbar icon opens the popup from now on, and it is opened
+ * now. The choice stays made if the popup can't be opened (the caller tells the user to click the
+ * icon); this only rejects if the choice itself couldn't be saved, and then nothing has changed.
+ */
+export async function moveToPopup(): Promise<PopupOpening> {
   await chooseSurface('popup');
+
+  return openPopupHere();
 }
 
 /**

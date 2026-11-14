@@ -28,6 +28,7 @@
   --shadow: 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.04);
   --cta-shadow: 0 4px 12px rgb(20 22 26 / 0.18);
   --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+  --dash: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round'%3E%3Cpath d='M6 12h12'/%3E%3C/svg%3E");
   --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b616e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   --font: 'Plus Jakarta Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -63,6 +64,7 @@
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.04);
     --cta-shadow: 0 4px 14px rgb(0 0 0 / 0.4);
     --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f1115' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+    --dash: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f1115' stroke-width='3.5' stroke-linecap='round'%3E%3Cpath d='M6 12h12'/%3E%3C/svg%3E");
     --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa1ad' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   }
 }
@@ -211,6 +213,11 @@ html.sidepanel .email-box {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+/* An <output> is inline; the message sits on its own line under the header. */
+.hint.notice {
+  display: block;
+  margin: 0 0 8px;
 }
 .hint {
   color: var(--muted);
@@ -441,6 +448,15 @@ input[type='checkbox']:checked {
   background-color: var(--accent);
   border-color: var(--accent);
   background-image: var(--check);
+  background-size: 14px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+/* Some but not all ticked, as in Select all: a dash rather than an empty box. */
+input[type='checkbox']:indeterminate {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  background-image: var(--dash);
   background-size: 14px;
   background-position: center;
   background-repeat: no-repeat;
@@ -676,6 +692,19 @@ button.link:hover:not(:disabled) {
 .choices.nested {
   padding-left: 28px;
   gap: 8px;
+}
+/* Buttons that end a long form stay at the bottom of the scrolling body, so a long list of checkboxes
+   never leaves Save out of reach. It spans the card (its padding is cancelled) so nothing shows
+   through beside it, and it sits at the card's foot when the form is short. */
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin: 0 -14px -14px;
+  padding: 10px 14px 14px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 14px 14px;
 }
 
 /* ---------- Confirmation ---------- */
