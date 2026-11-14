@@ -4,6 +4,8 @@
 
 ArtiShare is a Chrome extension. You save groups of email addresses as **lists** once. After that you can invite a list (or several) to one or more artifacts at once, without adding each person through the Share menu and without making the artifact public.
 
+> **Unofficial.** ArtiShare is an independent tool. It isn't made, endorsed or supported by Anthropic. It sends the same requests as claude.ai's Share menu from your own signed-in session, not through a public API, so it may stop working whenever claude.ai changes. Read [Anthropic's Consumer Terms](https://www.anthropic.com/legal/consumer-terms) before you use it: you use ArtiShare at your own risk.
+
 <p align="center">
   <img src="docs/images/share.png" width="190" alt="The popup's Share tab: the artifacts as rows with a × to remove each, the lists to tick, and the Manage access and Open in side panel icons in the header">
   &nbsp;
