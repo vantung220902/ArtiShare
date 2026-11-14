@@ -12,7 +12,7 @@ import { ListsView } from './ListsView';
 import { ManageView } from './ManageView';
 import { RunView } from './RunView';
 import { ShareView } from './ShareView';
-import { currentTabArtifact } from './viewUtils';
+import { useTabArtifact } from './useTabArtifact';
 
 /** The header has an icon that moves ArtiShare to the other surface: the popup offers the side panel and the side panel offers the popup. */
 export function App({ surface = 'popup' }: { surface?: Surface }) {
@@ -23,10 +23,12 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
   const [stored, setStored] = useState<PopupState | undefined>(undefined);
   const [tabChoice, setTabChoice] = useState<Tab | null>(null);
   const tab = tabChoice ?? stored?.tab ?? 'share';
-  // The artifact in the tab the popup opened over, which Manage access is about. Read once: a popup
-  // closes when you click away, so it can't outlive a change of tab.
-  const [tabArtifact, setTabArtifact] = useState<ArtifactRef | null>(null);
-  // Set while People with access is open, whichever tab it was opened from.
+  const inPopup = surface === 'popup';
+  // The artifact in the tab in front, which the Manage access icon opens. A popup closes when you click
+  // away, so it reads once; the side panel stays open and follows the tab.
+  const tabArtifact = useTabArtifact(!inPopup);
+  // The artifact People with access is open for, kept when the tab changes underneath it so a view
+  // never silently becomes about something else.
   const [managing, setManaging] = useState<ArtifactRef | null>(null);
   const manageIconRef = useRef<HTMLButtonElement>(null);
   const setTab = (next: Tab) => {
@@ -38,14 +40,9 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
   const [account, setAccount] = useState<Account | null>(null);
   const [accountError, setAccountError] = useState('');
   const [surfaceError, setSurfaceError] = useState('');
-  const inPopup = surface === 'popup';
   const switchLabel = inPopup ? 'Open in side panel' : 'Use popup instead';
   // Set by "Start a new share", so the fresh Share form is ready to type in. Not on a plain panel open.
   const [focusArtifacts, setFocusArtifacts] = useState(false);
-
-  useEffect(() => {
-    void currentTabArtifact().then(setTabArtifact, () => {});
-  }, []);
 
   const refreshAccount = () => {
     // oxlint-disable-next-line react/set-state-in-effect -- also a click handler; clears the old error before re-checking
@@ -101,7 +98,8 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
       run={run}
       onBack={() => {
         setManaging(null);
-        // The icon opened this and is still in the header, so focus returns to it.
+        // Focus returns to the icon that opened this. In the side panel it is gone if you've since
+        // switched to a tab without an artifact, and focus is left where the browser puts it.
         manageIconRef.current?.focus();
       }}
     />
