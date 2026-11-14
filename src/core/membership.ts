@@ -19,6 +19,13 @@ export function listNamesByInbox(lists: readonly EmailList[]): Map<string, strin
   return names;
 }
 
+/** "N people aren't in any of your lists.", singular for one. */
+export function unlistedNote(count: number): string {
+  return count === 1
+    ? "1 person isn't in any of your lists."
+    : `${count} people aren't in any of your lists.`;
+}
+
 /** How many list names are written out before the rest become '+N'. */
 const NAMES_SHOWN = 2;
 

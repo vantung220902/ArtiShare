@@ -78,7 +78,7 @@
         "Open Manage access over an artifact id containing 'Missing': the error and Retry show, and no Save to a list",
         "The note is a quiet line under the people, not a warning: no red, no alert role"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F007",

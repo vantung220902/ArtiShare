@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F006 · People with access offers to save people who aren't in any list
+
+- **Did:** `unlistedNote(count)` in `src/core/membership.ts` ("N people aren't in any of your lists.", singular for 1). `ManageView.tsx` computes `unlisted` (people whose `inboxKey` is in no list; nobody until the config has loaded) and, when there are any, draws a quiet `<p className="hint">` with the note and a **Save to a list** button under the people. Unit test in `tests/membership.test.ts`; `e2e/F006.spec.ts` (5 tests: counts and singular and gone, reopened, empty artifact, Missing artifact, quiet styling).
+- **Verified:** `harness/init.sh` OK at the start (160 e2e). `npm run check` (216 unit) passes. feature-verifier **PASS**, with `npm run e2e` at 165 passed.
+- **State:** F006 passes true. 6 of 13 features pass. **The Save to a list button has no handler yet** (it is a plain `<button>` in `ManageView.tsx`); F007 wires it up.
+- **Next:** F007: the Save to a list view that replaces People with access in place (checkboxes, Select all, New list with Name and Permission, save through `config-change` `save-list` with `expected: null`, then 'Saved N people to X.' with Open list). `unlisted` in `ManageView` is the list of people to offer; `defaultListName` is in the Lists tab code.
+- **Notes:** F006's e2e drives the side panel page (as F005 does); both entrypoints share `ManageView`.
+
 ### 2026-11-14 · F005 · People with access shows which lists each person is in
 
 - **Did:** New `src/core/membership.ts` (`listNamesByInbox` keyed by `inboxKey`, `membershipNote`: 'Not in a list' / 'In A, B' / 'In A, B +N'). `ManageView.tsx` reads `useConfig()` (live, so a list saved in another window updates rows at once) and `PersonRow` appends ' · <note>' to the status hint, with every list name in a `title` tooltip; nothing is shown while the config is still loading; the owner row is untouched. Unit tests in `tests/membership.test.ts`; `e2e/F005.spec.ts` (4 tests). `e2e/F004.spec.ts` now strips the ' · …' suffix when checking the Pending/Accepted statuses.
