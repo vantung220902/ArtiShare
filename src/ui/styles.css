@@ -212,6 +212,11 @@ html.sidepanel .email-box {
   align-items: center;
   gap: 6px;
 }
+/* An <output> is inline; the message sits on its own line under the header. */
+.hint.notice {
+  display: block;
+  margin: 0 0 8px;
+}
 .hint {
   color: var(--muted);
   font-size: 12px;

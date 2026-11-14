@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F001 · Use popup instead opens the popup
+
+- **Did:** `moveToPopup` (`src/lib/surface.ts`) now saves and applies the choice, then calls `chrome.action.openPopup({ windowId })` for the page's window via the new `openPopupHere`, and returns `{ opened }` or `{ opened: false, reason? }` (never rejects for an `openPopup` problem; rejects only if saving the choice fails). `App.tsx` closes the side panel only when `opened`. `e2e/F001.spec.ts` and unit tests in `tests/surface.test.ts` added.
+- **Verified:** `npm run check` and `npm run e2e` (146 passed); feature-verifier PASS. The side-panel-mode F010/F011/F012 specs, which click Use popup instead, still pass with the real `openPopup` (in e2e it is called for real or fails quietly).
+- **State:** F001 passes true. **Not checked by hand in real Chrome** (headless, no `dev:fake` window): whether closing the side panel right after `openPopup` takes the popup down with it, as the planning entry feared. First thing for a human to try in `npm run dev:fake`. If it does, close the panel first via the background (`chrome.sidePanel.close`, Chrome 141+) or order differently.
+- **Next:** F002. Already in the code from F001 (so F002's spec is mostly to write): when `openPopup` is missing or rejects, the panel stays and shows 'Switched to the popup[, but Chrome couldn't open it: …]. Click the ArtiShare icon in the toolbar to open it.' in an `<output class="hint notice">`, and the icon then reads Open popup and retries. Also in the code: the F003 listener (`chrome.storage.onChanged` on `surface` in the side panel closes other windows' panels, skipped by the one that switched through `switchingHere`). F002 and F003 still need their e2e specs and verifier PASS.
+- **Notes:** `chrome.action.getPopup` returns the full `chrome-extension://<id>/popup.html` URL, not `popup.html`. Oxlint warns (doesn't fail) about the `as typeof chrome.action.openPopup` cast in `e2e/F001.spec.ts`.
+
 ### 2026-11-14 · Planning · Use popup instead opens the popup, and save people with access to a list
 
 - **Did:** Planned a new goal on `harness/manage-access-import-and-popup-switch` (from `develop`), replacing the finished side-panel-mode list (all 18 passed, merged in PR 16, released as 0.4.0). 13 features, F001–F013. Nothing built.

@@ -14,7 +14,7 @@
         "Click away so the popup closes, then click the ArtiShare toolbar icon: the popup opens again (not the side panel)",
         "In e2e (sidepanel.html opened as a page): clicking Use popup instead calls `chrome.action.openPopup` after `chrome.action.getPopup` already returns the popup page and `getPanelBehavior` says openPanelOnActionClick is false, and the side panel page closes"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F002",
