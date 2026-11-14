@@ -11,6 +11,9 @@ import type { Account, ShareClient } from './shareClient';
  *  - an artifact id containing "Shared" starts with three people invited: an accepted Can view
  *    (viewer@example.com), a pending Commenter (commenter@example.com) and locked@example.com,
  *    who joined the organization, so their permission can't be changed or removed
+ *  - an artifact id containing "Crowded" starts with 45 people invited, to try a long list:
+ *    crowd01@example.com … crowd45@example.com, the odd numbers Pending with Can view, the even
+ *    numbers Accepted with Can comment (it wins over "Shared" if an id has both words)
  *  - an artifact id containing "Missing" can't be found: listing its people fails
  *  - an address starting with "fail" is rejected
  *  - an address starting with "slow" is rate-limited once, then succeeds
@@ -21,6 +24,23 @@ export const FAKE_SHARED_PEOPLE: readonly Omit<Sharee, 'id'>[] = [
   { email: 'commenter@example.com', access: 'comment', status: 'pending' },
   { email: 'locked@example.com', access: 'view', status: 'active' },
 ];
+
+export const FAKE_CROWDED_PEOPLE: readonly Omit<Sharee, 'id'>[] = Array.from(
+  { length: 45 },
+  (_, i): Omit<Sharee, 'id'> => {
+    const n = i + 1;
+
+    return {
+      email: `crowd${String(n).padStart(2, '0')}@example.com`,
+      access: n % 2 === 1 ? 'view' : 'comment',
+      status: n % 2 === 1 ? 'pending' : 'active',
+    };
+  },
+);
+
+/** The people a fake artifact starts with besides its owner, by what its id says. */
+const seedPeople = (id: string) =>
+  id.includes('Crowded') ? FAKE_CROWDED_PEOPLE : id.includes('Shared') ? FAKE_SHARED_PEOPLE : [];
 
 export function createFakeShareClient(): ShareClient {
   const shares = new Map<string, Sharee[]>();
@@ -33,7 +53,7 @@ export function createFakeShareClient(): ShareClient {
     if (!shares.has(a.id)) {
       shares.set(a.id, [
         { email: 'owner@example.com', access: 'owner', status: 'active' },
-        ...(a.id.includes('Shared') ? FAKE_SHARED_PEOPLE.map(newInvite) : []),
+        ...seedPeople(a.id).map(newInvite),
       ]);
     }
 
