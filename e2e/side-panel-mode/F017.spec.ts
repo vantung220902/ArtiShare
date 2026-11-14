@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
 // F017: the docs describe the side panel choice, the Manage access icon and the Artifacts rows. No
@@ -8,7 +8,9 @@ const root = new URL('../..', import.meta.url);
 const text = (path: string) => readFileSync(new URL(path, root)).toString('utf8');
 
 const readme = text('README.md');
-const listing = text('store/listing.md');
+// store/ is kept out of git, so the listing is only checked where it exists.
+const hasListing = existsSync(new URL('store/listing.md', root));
+const listing = hasListing ? text('store/listing.md') : '';
 const site = text('docs/index.html').replace(/\s+/g, ' ');
 
 test('README: the side panel choice, remembered, with work carried over', () => {
@@ -41,6 +43,7 @@ test('README: Manage access is a header icon', () => {
 });
 
 test('store listing: sidePanel is justified and the description names the side panel', () => {
+  test.skip(!hasListing, 'store/ is kept out of git');
   expect(listing).toMatch(/\| `sidePanel`\s+\|/);
   const description = listing.slice(listing.indexOf('**Description:**'), listing.indexOf('**Support URL:**'));
   expect(description).toContain('side panel');
@@ -53,13 +56,14 @@ test('website: mentions the side panel and the Manage access icon', () => {
 });
 
 test("CLAUDE.md's layout names the side panel entrypoint", () => {
+  test.skip(!existsSync(new URL('CLAUDE.md', root)), 'CLAUDE.md is kept out of git');
   expect(text('CLAUDE.md')).toMatch(/`popup\/`.*`sidepanel\/`/);
 });
 
 test('no doc says Manage access is at the bottom of the Share tab', () => {
   for (const [name, body] of [
     ['README.md', readme],
-    ['store/listing.md', listing],
+    ...(hasListing ? [['store/listing.md', listing]] : []),
     ['docs/index.html', site],
   ]) {
     expect(body, name).not.toContain('bottom of the Share tab');

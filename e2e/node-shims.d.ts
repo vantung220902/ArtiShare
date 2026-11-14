@@ -7,6 +7,7 @@ interface FileBuffer extends Uint8Array {
 }
 
 declare module 'node:fs' {
+  export function existsSync(path: string | URL): boolean;
   export function readFileSync(path: string | URL): FileBuffer;
   export function writeFileSync(path: string, data: string): void;
   export function mkdirSync(path: string, options?: { recursive?: boolean }): void;

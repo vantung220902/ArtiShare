@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
 // F018: the README and store screenshots show the popup. The pictures themselves come from
@@ -27,6 +27,7 @@ test('README images are the popup at 380 px (drawn at 2x), up to 600 px tall', (
 });
 
 test('store screenshots are 1280×800', () => {
+  test.skip(!existsSync(new URL('store/images', root)), 'store/ is kept out of git');
   for (const name of ['1-share', '2-preview', '3-done']) {
     expect(size(`store/images/screenshot-${name}.png`), name).toEqual({ width: 1280, height: 800 });
   }

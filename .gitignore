@@ -12,14 +12,13 @@ video/
 test-results/
 playwright-report/
 
-# Long-running harness session transcripts (harness/run.sh)
-harness/logs/
-
-# Claude Code: commit only the slash commands and agents. Settings
-# (settings.json, settings.local.json) and anything else Claude Code writes stay local.
-.claude/*
-!.claude/commands/
-!.claude/agents/
+# Internal working files, kept local: the Chrome Web Store listing and images, the
+# long-running harness, Claude Code's files and notes on claude.ai's Share endpoints.
+store/
+harness/
+.claude/
+CLAUDE.md
+docs/claude-share-api.md
 
 # Secrets: never commit. .env.fake is public and needed by the fake build.
 .env
