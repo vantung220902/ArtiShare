@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F004 · The fake claude.ai has a Crowded artifact with 45 people invited
+
+- **Did:** `src/claude/fakeShareClient.ts`: new rule at the top (an id containing "Crowded" starts with `crowd01@example.com` … `crowd45@example.com`; odd numbers pending Can view, even numbers accepted comment), `FAKE_CROWDED_PEOPLE` and a `seedPeople(id)` helper replacing the inline Shared seed. Crowded wins if an id has both "Crowded" and "Shared". Unit tests added in `tests/fakeShareClient.test.ts` (the 45 people, change/remove still work, Shared and plain unchanged). `e2e/F004.spec.ts` (2 tests): Manage access over `ExampleCrowdedArtifact1` lists You (owner) then the 45 in order with their statuses and permissions; Shared and plain artifacts as before.
+- **Verified:** `harness/init.sh` OK at the start (154 e2e). `npm run check` (211 unit) passes; F004 6 of 6 over 3 repeats. feature-verifier **PASS**, with `npm run e2e` at 156 passed.
+- **State:** F004 passes true. 4 of 13 features pass.
+- **Next:** F005: People with access shows, for each person, "In <lists>" or "Not in a list" (`src/entrypoints/popup/ManageView.tsx`, `PersonRow`; use `useConfig` from `src/ui/hooks.ts` and `inboxKey` from `src/core/emails.ts`).
+- **Notes:** The UI calls the `comment` level **"Commenter"** (`ACCESS_LABELS` in `src/core/types.ts`), not "Can comment" as F004/F007/F008 say in their steps; judge those by the data and the UI's own label, don't rename the label. The "You (owner)" row is drawn by `ManageView` itself and isn't in `people`; it has no `.hint` or select. To read Manage access in e2e, open `sidepanel.html` first, then bring the artifact tab to the front (a `popup.html` page is itself the active tab, so it never sees the artifact); see `manageAccessOver` in `e2e/F004.spec.ts`.
+
 ### 2026-11-14 · F003 · Switching to the popup closes every window's side panel and doesn't interrupt a run
 
 - **Did:** No source change: the `chrome.storage.onChanged` listener and the `switchingHere` guard were already in `src/entrypoints/popup/App.tsx` from F001. Added `e2e/F003.spec.ts` (4 tests): three side panel pages all close within 1 s of Use popup instead in one (and the toolbar then reads popup / panel behaviour off / stored popup); the same when `openPopup` rejects (the other panel closes, the switching one stays with its notice); a run of 6 addresses (one `slow-`) switched mid-send finishes in the popup with "Share finished: 6 invited" and Manage access shows the owner plus the six, each once; popup → panel → popup → panel round trips with the toolbar state read back after each.

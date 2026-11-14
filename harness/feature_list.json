@@ -51,7 +51,7 @@
         "Open Manage access for an artifact id containing 'Shared': still the same three people as before (viewer@, commenter@, locked@example.com); one with neither word: still 'Only you have access.'",
         "Unit tests cover the new rule, and every existing unit and e2e test still passes"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F005",
