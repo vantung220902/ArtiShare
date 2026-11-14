@@ -41,10 +41,13 @@ export function SaveToListView({
   // Until the user picks one, the permission follows who is ticked.
   const [chosenAccess, setChosenAccess] = useState<AccessLevel | null>(null);
   const [mode, setMode] = useState<'new' | 'existing'>('new');
-  const [listId, setListId] = useState('');
+  // The list picked to add to, by id; its name is kept for when it is deleted in another window.
+  const [picked, setPicked] = useState<{ id: string; name: string } | null>(null);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  // `busy` only changes on the next render; this stops a second click that arrives before it.
+  const inflight = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const nameId = useId();
   const modeName = useId();
@@ -68,9 +71,13 @@ export function SaveToListView({
   const access = chosenAccess ?? sharedAccess(chosen);
   const placeholder = defaultListName(emails);
   const lists = useMemo(() => byName(config.lists), [config.lists]);
+  const existing = mode === 'existing';
   // Adding needs a list to add to; with none saved the choice isn't offered at all.
-  const adding = mode === 'existing' && lists.length > 0;
-  const target = lists.find((l) => l.id === listId) ?? lists[0];
+  const adding = existing && lists.length > 0;
+  const target = picked ? lists.find((l) => l.id === picked.id) : undefined;
+  // The picked list was deleted in another window: say so rather than quietly using another one.
+  const gone = existing && picked && !target ? picked.name : '';
+  const pick = (list: EmailList | undefined) => setPicked(list ? { id: list.id, name: list.name } : null);
 
   const toggle = (p: Sharee, on: boolean) =>
     setUnticked((current) => {
@@ -82,19 +89,21 @@ export function SaveToListView({
     });
 
   const submit = async () => {
-    if (busy || !emails.length) return;
-    if (adding && target) {
+    if (inflight.current || busy || !emails.length) return;
+    if (adding) {
+      if (!target) return;
+      inflight.current = true;
       setBusy(true);
       setError('');
       try {
-        // The addresses go after the ones already there, and `expected` makes a list edited
-        // elsewhere in the meantime fail instead of being overwritten.
-        const next = { ...target, emails: mergeEmails(target.emails, emails) };
-        await save({ type: 'save-list', list: next, expected: target });
-        onSaved(next, emails.length, true);
+        // Added to the list as it is stored now, so what another window changed is kept.
+        const next = await save({ type: 'add-to-list', id: target.id, emails });
+        onSaved(next.lists.find((l) => l.id === target.id) ?? target, emails.length, true);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
         setBusy(false);
+      } finally {
+        inflight.current = false;
       }
 
       return;
@@ -108,6 +117,7 @@ export function SaveToListView({
     }
 
     const list = createList(listName, emails, access);
+    inflight.current = true;
     setBusy(true);
     setError('');
     try {
@@ -116,6 +126,8 @@ export function SaveToListView({
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setBusy(false);
+    } finally {
+      inflight.current = false;
     }
   };
 
@@ -155,29 +167,61 @@ export function SaveToListView({
       {lists.length > 0 && (
         <div className="choices">
           <label className="choice">
-            <input type="radio" name={modeName} checked={!adding} onChange={() => setMode('new')} />
+            <input
+              type="radio"
+              name={modeName}
+              checked={!adding}
+              onChange={() => {
+                setMode('new');
+                setError('');
+              }}
+            />
             New list
           </label>
           <label className="choice">
-            <input type="radio" name={modeName} checked={adding} onChange={() => setMode('existing')} />
+            <input
+              type="radio"
+              name={modeName}
+              checked={adding}
+              onChange={() => {
+                setMode('existing');
+                setError('');
+                // The drop-down starts on the first list, so that is the one picked (and watched).
+                if (!target) pick(lists[0]);
+              }}
+            />
             Add to an existing list
           </label>
         </div>
       )}
-      {adding && target ? (
+      {adding ? (
         <>
           <label htmlFor={listSelectId}>List</label>
-          <select id={listSelectId} value={target.id} onChange={(e) => setListId(e.target.value)}>
+          <select
+            id={listSelectId}
+            value={target?.id ?? ''}
+            onChange={(e) => {
+              pick(lists.find((l) => l.id === e.target.value));
+              setError('');
+            }}
+          >
+            {!target && (
+              <option value="" disabled>
+                Pick a list
+              </option>
+            )}
             {lists.map((l) => (
               <option key={l.id} value={l.id}>
-                {l.name} ({plural(l.emails.length, 'address')})
+                {l.name} ({plural(l.emails.length, 'address', 'addresses')})
               </option>
             ))}
           </select>
-          <p className="hint">
-            They&apos;ll get {target.name}&apos;s permission ({ACCESS_LABELS[target.access]}) when you share
-            with {target.name}. Their access to this artifact doesn&apos;t change.
-          </p>
+          {target && (
+            <p className="hint">
+              They&apos;ll get {target.name}&apos;s permission ({ACCESS_LABELS[target.access]}) when you share
+              with {target.name}. Their access to this artifact doesn&apos;t change.
+            </p>
+          )}
         </>
       ) : (
         <>
@@ -207,13 +251,19 @@ export function SaveToListView({
           </div>
         </>
       )}
+      {gone && (
+        <p className="alert">
+          The list &quot;{gone}&quot; no longer exists. It was deleted in another window. Pick another list or
+          save a new one.
+        </p>
+      )}
       {error && <p className="alert">{error}</p>}
       <div className="row">
-        <button className="primary" disabled={busy || !emails.length} onClick={submit}>
+        <button className="primary" disabled={busy || !emails.length || (adding && !target)} onClick={submit}>
           {busy
             ? 'Saving…'
-            : adding && target
-              ? `Add ${peopleCount(emails.length)} to ${target.name}`
+            : adding
+              ? `Add ${peopleCount(emails.length)}${target ? ` to ${target.name}` : ''}`
               : `Save ${peopleCount(emails.length)}`}
         </button>
         <button className="ghost" disabled={busy} onClick={onCancel}>

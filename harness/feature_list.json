@@ -133,7 +133,7 @@
         "In e2e, make saving the lists fail (config-change rejects): the reason shows in Save to a list, nothing changes, and clicking save again retries",
         "While the save is in progress the button reads 'Saving…' and is disabled, so a double click saves once"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F011",
