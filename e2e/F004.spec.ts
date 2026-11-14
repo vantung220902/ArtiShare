@@ -50,7 +50,8 @@ test('Manage access over a Crowded artifact lists You, then the 45 people in ord
 
   // Odd numbers Pending with Can view, even numbers Accepted with Can comment.
   const hints = await people.locator('.hint').allTextContents();
-  expect(hints.map((h) => h.trim())).toEqual(
+  // F005 adds ' · Not in a list' after the status; only the status is under test here.
+  expect(hints.map((h) => h.split(' · ')[0]!.trim())).toEqual(
     Array.from({ length: 45 }, (_, i) => ((i + 1) % 2 === 1 ? 'Pending' : 'Accepted')),
   );
   const access = await people
