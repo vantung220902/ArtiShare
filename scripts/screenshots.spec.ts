@@ -81,7 +81,8 @@ async function storeImage(popupPng: string, out: string, headline: string, lead:
       flex-direction: column; justify-content: center; gap: 22px; }
     .brand { display: flex; align-items: center; gap: 16px; font-size: 24px; font-weight: 700; }
     .brand img { width: 44px; height: 44px; }
-    h1 { margin: 6px 0 0; font-size: 56px; line-height: 1.04; letter-spacing: -0.035em; font-weight: 800; }
+    h1 { margin: 6px 0 0; font-size: 56px; line-height: 1.04; letter-spacing: -0.035em; font-weight: 800;
+      text-wrap: balance; }
     p { margin: 0; font-size: 22px; line-height: 1.5; color: #4b525d; max-width: 520px; }
     .frame { position: absolute; right: 97px; top: 50%; transform: translateY(-50%); width: 438px;
       border-radius: 28px; overflow: hidden; border: 1px solid #dfe3e8;
@@ -201,6 +202,7 @@ test('regenerate the README and store screenshots', async () => {
   await expect(people.filter({ hasText: 'Not in a list' })).toHaveCount(2);
   await expect(share.getByText("2 people aren't in any of your lists.")).toBeVisible();
   await snap(popup, `${DOCS}/manage.png`);
+  await snap(popup, test.info().outputPath('store-manage.png'));
 
   // 5. Save to a list: the two people in no list, ticked, with New list picked and a name typed.
   await share.getByRole('button', { name: 'Save to a list' }).click();
@@ -211,6 +213,12 @@ test('regenerate the README and store screenshots', async () => {
   await expect(save.getByRole('radio', { name: 'New list' })).toBeChecked();
   await save.getByLabel('Name').fill('Pending reviewers');
   await snap(popup, `${DOCS}/manage-save.png`, true);
+  // The store picture adds to the existing Partners list instead: that form is shorter, so it fits
+  // from the top with nothing cut off.
+  await share.getByRole('radio', { name: 'Add to an existing list' }).check();
+  await share.getByLabel('List', { exact: true }).selectOption({ label: 'Partners (1 address)' });
+  await expect(share.getByRole('button', { name: 'Add 2 people to Partners' })).toBeEnabled();
+  await snap(popup, test.info().outputPath('store-manage-save.png'));
 
   const shot = (name: string) => test.info().outputPath(`store-${name}.png`);
   await storeImage(
@@ -230,6 +238,18 @@ test('regenerate the README and store screenshots', async () => {
     `${STORE}/screenshot-3-done.png`,
     'Invites go out for you, one at a time',
     'Follow each invite as it goes. If claude.ai asks it to slow down, the run waits and retries.',
+  );
+  await storeImage(
+    shot('manage'),
+    `${STORE}/screenshot-4-manage.png`,
+    'See who has access, and which list they’re in',
+    'Manage access lists everyone on the artifact you are on. Change a permission, remove someone, or spot who isn’t in a list yet.',
+  );
+  await storeImage(
+    shot('manage-save'),
+    `${STORE}/screenshot-5-save.png`,
+    'Save everyone invited to a list',
+    'People with access who aren’t in a list go into a new list or one you already have, ready for the next share.',
   );
   await context.close();
 
