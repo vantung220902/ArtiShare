@@ -191,7 +191,7 @@
         "Click Back, then the icon: Manage access opens for the second artifact, the tab you're on now",
         "Open Manage access, switch to a non-claude.ai tab: the view stays; click Back and see the icon gone"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F015",

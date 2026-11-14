@@ -4,6 +4,16 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F014 · The Manage access icon follows the tab in the side panel
+
+- **Did:** `App.tsx`: the one-time `currentTabArtifact()` read is replaced by `useTabArtifact(!inPopup)`, so in the side panel the Manage access icon is there over an artifact tab and gone over any other page. People with access shows `managing`, the artifact it was opened for, so a tab switch never moves an open view; after Back the icon opens for the tab in front. The Back comment now says the icon may be gone in the side panel. README: two sentences on the icon following the tab. New `e2e/F014.spec.ts` (3 tests) covers all five steps, the icon with no view open, an in-place navigation, and the popup still reading once.
+- **Verified:** `npm run check` (204 unit) and `npm run e2e` (121, 1.2 min) pass. feature-verifier: **PASS** on all five steps, from its own check, e2e and `npx playwright test e2e/F014.spec.ts --repeat-each=3` (9 of 9).
+- **State:** F014 passes. 14 of 18 features pass. `stash@{0}` (the stray debug spec) is still there.
+- **Next:** F015.
+- **Notes:**
+  - Two sessions built this and lost it: the machine was overloaded overnight (load average 11–13), the full e2e took 17 minutes, and each session started it in the background and ended its reply to wait, which ends a headless session. The work was finished and committed by hand afterwards. `harness-work.md` and the verifier now say to run e2e in the foreground, one at a time, and `playwright.config.ts` has an 8-minute `globalTimeout`.
+  - After Back in the side panel over a non-artifact tab, the icon is gone, so focus falls to the page. Not in the steps; left as is.
+
 ### 2026-11-14 · F013 · The side panel follows the tab you're on
 
 - **Did:** New hook `src/entrypoints/popup/useTabArtifact.ts`: the artifact of the active tab, read on mount and, with `follow`, again on `tabs.onActivated`, `tabs.onUpdated` (active tab, URL changed, which covers in-place `?artifact=` changes) and `windows.onFocusChanged`; stale answers are dropped and the same artifact keeps the same value. `ShareView.tsx` uses it in place of the one-time read: the artifact is added unless it is a row or was removed, and `thisTab` (the badge) follows it, going null on a non-artifact tab. New `followTab` prop on ShareView, passed by `App.tsx` as `!inPopup`, so the popup still reads once. README: the Side panel paragraph says the panel follows the tab. New `e2e/F013.spec.ts` (4 tests) covers all 8 steps plus the popup not following.
