@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F002 · If Chrome can't open the popup, the side panel stays and says so
+
+- **Did:** The behaviour was already in the code from F001 (`openPopupHere` in `src/lib/surface.ts`, the notice and the Open popup label in `App.tsx`), so no source change. Added `e2e/F002.spec.ts` (4 tests): `openPopup` rejecting, `openPopup` missing, the retry via the Open popup icon (fails again, then succeeds and the panel closes), and the stored choice failing to save (nothing changed, `openPopup` never called).
+- **Verified:** `harness/init.sh` OK at the start (146 e2e). `npm run check` (208 unit) passes; feature-verifier **PASS** on all five steps, with `npm run e2e` at 150 passed and F002 12 of 12 over 3 repeats.
+- **State:** F002 passes true. 2 of 13 features pass. Still not checked by hand in real Chrome (see F001's entry).
+- **Next:** F003. The listener that closes other windows' side panels and the `switchingHere` guard are already in `App.tsx`; it needs `e2e/F003.spec.ts` (two sidepanel.html pages; a run of 6 addresses surviving the switch; popup ↔ side panel round trips) and a verifier PASS.
+- **Notes:** Verifier's untested corner: if `saveSurface` succeeds but `applySurface` throws, the choice is stored but not applied and the error reads "Couldn't switch…". Rare; left alone. Failure injection in specs: override `chrome.action.openPopup` / `chrome.storage.local.set` in the page.
+
 ### 2026-11-14 · F001 · Use popup instead opens the popup
 
 - **Did:** `moveToPopup` (`src/lib/surface.ts`) now saves and applies the choice, then calls `chrome.action.openPopup({ windowId })` for the page's window via the new `openPopupHere`, and returns `{ opened }` or `{ opened: false, reason? }` (never rejects for an `openPopup` problem; rejects only if saving the choice fails). `App.tsx` closes the side panel only when `opened`. `e2e/F001.spec.ts` and unit tests in `tests/surface.test.ts` added.

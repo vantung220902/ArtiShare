@@ -27,7 +27,7 @@
         "While that message shows, the Use popup instead icon reads Open popup and clicking it tries `openPopup` again; when that succeeds the side panel closes",
         "If saving the choice itself fails (storage rejects), the side panel stays open with the existing 'Couldn't switch to the popup: …' message and nothing is changed: `getPopup` still returns '' and the toolbar icon still opens the side panel"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F003",
