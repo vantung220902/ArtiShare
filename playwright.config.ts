@@ -9,6 +9,10 @@ export default defineConfig({
   // by side. The suite runs 3–4 times per harness session, so this saves minutes each time.
   fullyParallel: true,
   workers: 4,
+  // The suite takes about a minute. On an overloaded machine it once crawled for 17, past the point
+  // where a harness session's command is killed with no report; this stops it first and says which
+  // tests didn't finish.
+  globalTimeout: 8 * 60_000,
   reporter: [['list']],
   use: { trace: 'retain-on-failure' },
 });
