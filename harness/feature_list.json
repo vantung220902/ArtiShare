@@ -215,7 +215,7 @@
         "Paste a 120-character address: it wraps or truncates without widening the panel",
         "Open the popup: it is unchanged, 380 px wide and no taller than 600 px"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F017",

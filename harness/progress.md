@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F016 · The side panel is comfortable for long lists
+
+- **Did:** Most of the layout was already right from earlier features (`html.sidepanel` drops the 380 px width and 600 px cap; rows already truncate; the body wraps long text). The one gap was the address box: `EmailInput.tsx` now gives its textarea the class `email-box`, and `styles.css` sets `html.sidepanel .email-box { min-height: 40vh }`, so a long list shows far more lines in the panel while the popup keeps its 5 rows. README: the Side panel paragraph says so. New `e2e/F016.spec.ts` (7 tests): 320/400/600 px widths, the 200-address list, 30 artifacts, a long address, the popup's 380 px / 600 px.
+- **Verified:** `harness/init.sh` OK at the start (204 unit, 126 e2e). `npm run check` passes. feature-verifier: first run **FAIL** (my spec looked for a "Save list" button on an opened saved list, where it is "Save"); after the fix, **PASS** with `npm run e2e` at 133 passed and F016 alone 7 of 7.
+- **State:** F016 passes. 16 of 18 features pass. `stash@{0}` (stray debug spec) still there.
+- **Next:** F017 (docs: README sections, store/listing.md, docs/index.html, CLAUDE.md layout, and the `grep 'bottom of the Share tab'` check). Then F018.
+- **Notes:** An opened saved list's button reads "Save"; the new-list form's reads "Save list".
+
 ### 2026-11-14 · F015 · If Chrome can't open the side panel, the popup stays open and says why
 
 - **Did:** `surface.ts`: new `sidePanelSupported()`; `applySurface` falls back to the popup (and skips `setPanelBehavior`) where `chrome.sidePanel` is missing, so a stored side-panel choice can't leave the toolbar icon dead. `App.tsx`: the switch icon is hidden in the popup when side panels aren't supported; a failure shows "Couldn't open the side panel: …" (popup) or "Couldn't switch to the popup: …" (side panel), and is cleared on the next click. The choice is saved only after `sidePanel.open` succeeds, so on failure nothing changes. README: one sentence on both cases. New `e2e/F015.spec.ts` (5 tests) covers the three steps, a retry that then succeeds, and a control with the API present.
