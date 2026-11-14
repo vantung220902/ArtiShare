@@ -12,8 +12,7 @@ import {
 import type { Account, ShareClient } from './shareClient';
 
 /**
- * Talks to the same endpoints as claude.ai's artifact Share menu. See docs/claude-share-api.md
- * for how they were found and what each returns.
+ * Talks to the same endpoints as claude.ai's artifact Share menu.
  */
 
 /** The Share menu sends this on every /api/frame request; without it the API answers 404. */

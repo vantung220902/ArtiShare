@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
 // F012: the docs describe Use popup instead opening the popup, and saving people with access to a
@@ -8,7 +8,9 @@ const root = new URL('..', import.meta.url);
 const text = (path: string) => readFileSync(new URL(path, root)).toString('utf8');
 
 const readme = text('README.md');
-const listing = text('store/listing.md');
+// store/ is kept out of git, so the listing is only checked where it exists.
+const hasListing = existsSync(new URL('store/listing.md', root));
+const listing = hasListing ? text('store/listing.md') : '';
 const site = text('docs/index.html').replace(/\s+/g, ' ');
 
 const sidePanelParagraph = readme.slice(
@@ -65,6 +67,7 @@ test('README Manage access: the lists each person is in and Save to a list', () 
 });
 
 test('store listing: the side panel and Manage access say the same', () => {
+  test.skip(!hasListing, 'store/ is kept out of git');
   expect(listing).toContain(
     '"Use popup instead" icon opens the popup straight away and closes the side panel',
   );
@@ -84,7 +87,7 @@ test('website: Use popup instead and Save to a list', () => {
 test('nothing says Use popup instead only switches the toolbar icon', () => {
   for (const [name, body] of [
     ['README.md', readme],
-    ['store/listing.md', listing],
+    ...(hasListing ? [['store/listing.md', listing]] : []),
     ['docs/index.html', site],
   ]) {
     expect(body, name).not.toMatch(/Use popup instead[^.]*(only|just) (switch|chang|mak)/i);

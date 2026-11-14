@@ -3,13 +3,14 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 // Regenerates the README and store screenshots from the fake build's popup (`npm run screenshots`).
-// It is not part of `npm run e2e`: it writes files into docs/images and store/images. Nothing is
-// sent anywhere, and every address and artifact id below is made up.
+// It is not part of `npm run e2e`: it writes files into docs/images and store/images (kept out of
+// git). Nothing is sent anywhere, and every address and artifact id below is made up.
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const EXTENSION_DIR = `${ROOT}.output/chrome-mv3-fake`;
 const DOCS = `${ROOT}docs/images`;
 const STORE = `${ROOT}store/images`;
+mkdirSync(STORE, { recursive: true });
 const FONT = `${ROOT}node_modules/@fontsource-variable/plus-jakarta-sans/files/plus-jakarta-sans-latin-wght-normal.woff2`;
 
 // Not real artifacts: the ids only have to look like the real thing. One contains "Shared", which
@@ -70,7 +71,7 @@ async function snap(popup: Page, path: string, bottom = false) {
 
 /** A store screenshot: the headline on the left, the popup in a rounded frame on the right. */
 async function storeImage(popupPng: string, out: string, headline: string, lead: string) {
-  const icon = readFileSync(`${ROOT}store/icon.svg`).toString('base64');
+  const icon = readFileSync(`${DOCS}/icon.svg`).toString('base64');
   const shot = readFileSync(popupPng).toString('base64');
   const html = `<!doctype html><meta charset="utf-8"><style>
     @font-face { font-family: Jakarta; src: url('file://${FONT}'); font-weight: 200 800; }

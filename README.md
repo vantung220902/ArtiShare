@@ -58,17 +58,12 @@ ArtiShare works inside your own signed-in claude.ai session. It never asks for y
 
 ## Install
 
-You install it once. After that it starts with Chrome like any other extension. You only need Chrome (or another Chromium browser): no terminal, no Node, no server.
+You only need Chrome (or another Chromium browser): no terminal, no Node, no server.
 
-1. Get `artishare-<version>-chrome.zip` from the team's shared drive.
-2. Unzip it into a folder you'll keep, for example `~/Applications/ArtiShare`. Chrome loads the extension from this folder every time, so **don't leave it in Downloads** and don't delete it.
-3. Open `chrome://extensions` and turn on **Developer mode** (top right).
-4. Click **Load unpacked** and pick that folder.
-5. Pin **ArtiShare** in the toolbar. Clicking the icon opens the popup.
+1. Open [ArtiShare in the Chrome Web Store](https://chromewebstore.google.com/detail/artishare/cnlgmcplbaihjijbebfkkkfebjobmnhm) and click **Add to Chrome**.
+2. Pin **ArtiShare** in the toolbar. Clicking the icon opens the popup.
 
-The extension's card should show the ID `eeihicglfclmofckclcpjleekpddjflg`. It's the same on every machine, whichever folder you use.
-
-**To update:** replace the folder's contents with the new zip's, then click the reload icon ↻ on the extension's card. Your lists and settings are kept. The installed version is shown at the bottom of the popup.
+Chrome updates it on its own and keeps your lists and settings. The installed version is shown at the bottom of the popup.
 
 ## Use it
 
@@ -166,53 +161,32 @@ You only need this section to change or publish the extension.
 
 ### Publish a new version
 
-There are two builds. They differ only in the manifest's `key`.
-
-| Build                    | Command                 | Output                                         | `key` |
-| ------------------------ | ----------------------- | ---------------------------------------------- | ----- |
-| Zip for the shared drive | `npm run release`       | `.output/artishare-<version>-chrome.zip`       | Yes   |
-| Chrome Web Store         | `npm run release:store` | `.output/artishare-<version>-chrome-store.zip` | No    |
-
-Both scripts first run `npm run check`, which covers the typecheck, lint, format check and tests.
-
-**Zip for the shared drive**
-
-1. Bump `version` in `package.json`.
-2. Run the release script.
-3. Upload the zip to the shared drive and tell the team to update.
+1. Bump `version` in `package.json`. The store refuses an upload that isn't a higher version than the last one.
+2. Run the store release script. It first runs `npm run check`, which covers the typecheck, lint, format check and tests.
+3. In the [Developer Dashboard](https://chrome.google.com/webstore/devconsole), open ArtiShare. Upload the zip on the **Package** tab, then submit it for review.
 
 ```bash
 npm install
 ```
 
 ```bash
-npm run release
-```
-
-The manifest's `key` in `wxt.config.ts` pins the extension ID. Without it, Chrome derives the ID from the folder path, so unzipping an update into a different folder would look like a new extension and lose everyone's saved lists. Don't remove or change the key.
-
-**Chrome Web Store**
-
-1. Bump `version` in `package.json`. The store refuses an upload that isn't a higher version than the last one.
-2. Run the store release script.
-3. In the [Developer Dashboard](https://chrome.google.com/webstore/devconsole), open ArtiShare. Upload the zip on the **Package** tab, then submit it for review.
-
-```bash
 npm run release:store
 ```
 
-The store rejects a manifest with `key` and gives the extension its own ID, so `release:store` sets `ARTISHARE_STORE=true`, which leaves the key out of the build. Because the IDs differ, lists saved in the shared-drive version don't carry over to the store version. The listing text, privacy answers and images are in [store/listing.md](store/listing.md). The privacy policy is [docs/privacy.html](docs/privacy.html).
+The output is `.output/artishare-<version>-chrome-store.zip`. The store rejects a manifest with `key` and gives the extension its own ID, so `release:store` sets `ARTISHARE_STORE=true`, which leaves the key out of the build.
+
+Every other build keeps the manifest's `key` in `wxt.config.ts`, which pins the extension ID for unpacked copies. Without it, Chrome derives the ID from the folder path, so loading the same build from another folder would look like a new extension and lose its saved lists. Don't remove or change the key. `npm run release` makes such a zip (`.output/artishare-<version>-chrome.zip`) for loading unpacked. The privacy policy is [docs/privacy.html](docs/privacy.html).
 
 **Website.** GitHub Pages publishes the `docs/` folder on `develop` at https://vantung220902.github.io/ArtiShare/. It's the listing's homepage (`index.html`, with a support section) and privacy policy (`privacy.html`). Everything in `docs/` becomes public there, and `.nojekyll` makes Pages serve the files as they are.
 
-**Icons.** The PNGs in `public/icon/` are rendered from [store/icon.svg](store/icon.svg). WXT adds them to the manifest on its own. To change the icon, edit the SVG, then render the PNGs again with [librsvg](https://gitlab.gnome.org/GNOME/librsvg) and ImageMagick:
+**Icons.** The PNGs in `public/icon/` are rendered from [docs/images/icon.svg](docs/images/icon.svg). WXT adds them to the manifest on its own. To change the icon, edit the SVG, then render the PNGs again with [librsvg](https://gitlab.gnome.org/GNOME/librsvg) and ImageMagick:
 
 ```bash
-for s in 16 32 48; do rsvg-convert -w $s -h $s store/icon.svg -o public/icon/$s.png; done
+for s in 16 32 48; do rsvg-convert -w $s -h $s docs/images/icon.svg -o public/icon/$s.png; done
 ```
 
 ```bash
-rsvg-convert -w 96 -h 96 store/icon.svg | magick - -background none -gravity center -extent 128x128 public/icon/128.png
+rsvg-convert -w 96 -h 96 docs/images/icon.svg | magick - -background none -gravity center -extent 128x128 public/icon/128.png
 ```
 
 The 128 px icon has 16 px of transparent padding, as the store asks.
@@ -227,14 +201,14 @@ npm run typecheck
 npm run lint       # Oxlint, type-aware (config in .oxlintrc.json)
 npm run format     # Prettier, rewrites files in place (format:check only checks)
 npm run build:fake # fake build in .output/chrome-mv3-fake
-npm run screenshots # rebuilds the fake build and rewrites docs/images and store/images
+npm run screenshots # rebuilds the fake build and rewrites the pictures in docs/images
 ```
 
 Linting uses [Oxlint](https://oxc.rs/docs/guide/usage/linter) rather than ESLint, because typescript-eslint doesn't support TypeScript 7 yet. Its type-aware rules run on `oxlint-tsgolint`, which is built on TypeScript 7.
 
 The dev server listens on port **47613** (set in `wxt.config.ts`). If that port is busy, WXT moves to the next free one. The built extension uses no port; it only talks to claude.ai over HTTPS.
 
-**Fake mode** lets you click through the whole flow safely. The screenshots in this README and the store listing come from it (`scripts/screenshots.spec.ts`, using made-up addresses and artifact ids). Its fake claude.ai behaves like this:
+**Fake mode** lets you click through the whole flow safely. The screenshots in this README come from it (`scripts/screenshots.spec.ts`, using made-up addresses and artifact ids). Its fake claude.ai behaves like this:
 
 - an artifact whose ID contains `Forbidden` rejects every invite, permission change and removal
 - an artifact whose ID contains `Shared` starts with three people invited: `viewer@example.com` (accepted, Can view), `commenter@example.com` (pending, Commenter) and `locked@example.com`, who joined the organization, so their permission can't be changed or removed
@@ -254,9 +228,9 @@ src/
   entrypoints/  background worker (runs invites), the popup and the side panel
   ui/           shared React components and styles
 tests/          Vitest specs for src/core
-docs/           claude.ai sharing API notes and README screenshots
+docs/           the website, privacy policy and README screenshots
 ```
 
 ### How it talks to claude.ai
 
-Requests run inside a claude.ai tab (`chrome.scripting.executeScript` in the extension's isolated world). They use your existing session, and the page's own scripts can't see or change them. If no claude.ai tab is open, the extension opens one in the background. The endpoints, IDs and error reasons are written up in [docs/claude-share-api.md](docs/claude-share-api.md).
+Requests run inside a claude.ai tab (`chrome.scripting.executeScript` in the extension's isolated world). They use your existing session, and the page's own scripts can't see or change them. If no claude.ai tab is open, the extension opens one in the background. The endpoints it calls are in `src/claude/apiShareClient.ts`.

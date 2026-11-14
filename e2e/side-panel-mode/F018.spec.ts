@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
 // F018: the README and store pictures show the header icons, the Artifacts rows and the side panel.
@@ -56,6 +56,7 @@ test('the README shows the side panel picture with alt text naming the side pane
 });
 
 test('store screenshots are regenerated at 1280×800', () => {
+  test.skip(!existsSync(new URL('store/images', root)), 'store/ is kept out of git');
   for (const name of ['1-share', '2-preview', '3-done']) {
     expect(size(`store/images/screenshot-${name}.png`), name).toEqual({ width: 1280, height: 800 });
     expect(source, name).toContain(`screenshot-${name}.png`);
