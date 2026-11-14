@@ -83,7 +83,7 @@ test('the README shows manage-save.png right beside manage.png, with alt text fo
 });
 
 test('the store screenshots stay 1280×800', () => {
-  for (const name of ['1-share', '2-preview', '3-done']) {
+  for (const name of ['1-share', '2-preview', '3-done', '4-manage', '5-save']) {
     expect(size(`store/images/screenshot-${name}.png`), name).toEqual({ width: 1280, height: 800 });
     expect(source, name).toContain(`screenshot-${name}.png`);
   }
