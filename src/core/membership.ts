@@ -1,5 +1,6 @@
 import { inboxKey } from './emails';
 import type { EmailList } from './config';
+import { ACCESS_LEVELS, type AccessLevel, type Sharee } from './types';
 
 /**
  * For each inbox, the names of the lists holding it, in the order the lists are given. Matching is
@@ -24,6 +25,14 @@ export function unlistedNote(count: number): string {
   return count === 1
     ? "1 person isn't in any of your lists."
     : `${count} people aren't in any of your lists.`;
+}
+
+/** The permission every person has when it is the same for all of them, otherwise the usual default. */
+export function sharedAccess(people: readonly Pick<Sharee, 'access'>[]): AccessLevel {
+  const first = people[0]?.access;
+  const same = first && people.every((p) => p.access === first);
+
+  return same && (ACCESS_LEVELS as readonly string[]).includes(first) ? (first as AccessLevel) : 'view';
 }
 
 /** How many list names are written out before the rest become '+N'. */
