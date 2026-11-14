@@ -4,6 +4,14 @@ The memory between long-running sessions, together with `git log`. Newest entry 
 
 ## Sessions
 
+### 2026-11-14 · F018 · Screenshots show the header icons, the Artifacts rows and the side panel
+
+- **Did:** `scripts/screenshots.spec.ts`: the popup is now opened over an artifact tab (so the header has the Manage access icon and the tab's artifact is a row marked This tab), a second link is added as a row with fill + Enter, share.png is taken from the top (it used to scroll to the end, which hid the rows), and the Manage access picture uses the header icon. New `sidePanelImage()` opens `sidepanel.html` (400×800, 2x), saves a 40-address list and opens it in the Lists tab, writing `docs/images/sidepanel.png`. All PNGs regenerated (`docs/images` and the three `store/images` at 1280×800). README: the new image in its own row with alt text naming the side panel, and a fuller alt for share.png. New `e2e/F018.spec.ts` (5 tests): sizes, generator wiring, README alt text, made-up ids and domains.
+- **Verified:** `harness/init.sh` OK at the start (204 unit, 140 e2e). `npm run check` passes. feature-verifier: **PASS** on all four steps, having looked at every PNG, with `npm run e2e` at 145 passed.
+- **State:** F018 passes. 18 of 18 features pass. `stash@{0}` (stray debug spec) still there.
+- **Next:** Nothing left in the list. A human can review the branch and merge it into `develop` through a PR (the manifest/package version is still 0.3.0; the goal says v0.4.0).
+- **Notes:** In sidepanel.png the "Only these" default-ticking checkbox beside the list is unticked, which looks slightly odd but is the real UI. The old `e2e/popup-and-manage-access/F018.spec.ts` still passes alongside the new one. Prettier reformats the script, so run `npm run format` after editing it.
+
 ### 2026-11-14 · F017 · The docs describe the side panel, the Manage access icon and the Artifacts rows
 
 - **Did:** The README already described the side panel choice, the rows and the header icon from earlier features; added the side panel following the tab to Pick artifacts, and the side panel to the layout. `store/listing.md`: `sidePanel` is back in the permissions table, the description and single purpose name the side panel, the Share bullet describes rows, and Manage access is the header icon (test step 6 too, plus an optional step 8). `docs/index.html`: side panel icon and the Manage access icon. `CLAUDE.md`: layout names `sidepanel/`. New `e2e/F017.spec.ts` (7 tests) reads the files and checks the wording per step, including that `bottom of the Share tab` appears nowhere.

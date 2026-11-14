@@ -240,7 +240,7 @@
         "store/images screenshots are regenerated the same way, at 1280×800",
         "Every screenshot uses only made-up addresses and artifact ids, and the screenshot e2e checks (sizes, README tags and alt text, made-up ids) pass with the new image"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }

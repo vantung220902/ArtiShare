@@ -5,13 +5,17 @@
 ArtiShare is a Chrome extension. You save groups of email addresses as **lists** once. After that you can invite a list (or several) to one or more artifacts at once, without adding each person through the Share menu and without making the artifact public.
 
 <p align="center">
-  <img src="docs/images/share.png" width="190" alt="The popup's Share tab: pick artifacts and lists">
+  <img src="docs/images/share.png" width="190" alt="The popup's Share tab: the artifacts as rows with a × to remove each, the lists to tick, and the Manage access and Open in side panel icons in the header">
   &nbsp;
   <img src="docs/images/preview.png" width="190" alt="Preview in the popup: who will be invited and who already has access">
   &nbsp;
   <img src="docs/images/done.png" width="190" alt="Finished run in the popup: every invite sent">
   &nbsp;
   <img src="docs/images/manage.png" width="190" alt="Manage access in the popup: the people already invited to an artifact, each with a permission and a Remove button">
+</p>
+
+<p align="center">
+  <img src="docs/images/sidepanel.png" width="260" alt="ArtiShare in Chrome's side panel: the Lists tab with a saved list of forty addresses open, the address box tall enough to show a long list">
 </p>
 
 ## Contents
