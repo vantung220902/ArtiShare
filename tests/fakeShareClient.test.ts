@@ -7,6 +7,7 @@ const ref = (id: string) => parseArtifactRef(`https://claude.ai/artifact/${id}`)
 const SHARED = ref('SharedExampleArtifact01');
 const PLAIN = ref('PlainExampleArtifact01');
 const FORBIDDEN = ref('ForbiddenSharedArtifact1');
+const CROWDED = ref('ExampleCrowdedArtifact1');
 const MISSING = ref('MissingExampleArtifact1');
 
 const byEmail = async (client: ReturnType<typeof createFakeShareClient>, a = SHARED) =>
@@ -101,6 +102,49 @@ describe('the fake claude.ai', () => {
 
     await expect(client.removeInvite(SHARED, id)).rejects.toMatchObject({ code: 'not-found' });
     await expect(client.changeAccess(SHARED, id, 'edit')).rejects.toMatchObject({ code: 'not-found' });
+  });
+
+  it('starts a Crowded artifact with 45 people: odd numbers pending Can view, even accepted Can comment', async () => {
+    const client = createFakeShareClient();
+    const [owner, ...people] = await client.listSharees(CROWDED);
+
+    expect(owner).toEqual({ email: 'owner@example.com', access: 'owner', status: 'active' });
+    expect(people).toHaveLength(45);
+    expect(people.map((p) => p.email)).toEqual(
+      Array.from({ length: 45 }, (_, i) => `crowd${String(i + 1).padStart(2, '0')}@example.com`),
+    );
+    people.forEach((p, i) => {
+      const odd = (i + 1) % 2 === 1;
+      expect(p).toMatchObject({
+        access: odd ? 'view' : 'comment',
+        status: odd ? 'pending' : 'active',
+      });
+    });
+    expect(new Set(people.map((p) => p.id)).size).toBe(45);
+  });
+
+  it('lets a Crowded artifact’s people be changed and removed like any others', async () => {
+    const client = createFakeShareClient();
+    const first = (await client.listSharees(CROWDED))[1]!;
+    await client.changeAccess(CROWDED, first.id!, 'edit');
+    await client.removeInvite(CROWDED, (await client.listSharees(CROWDED))[2]!.id!);
+
+    const after = await client.listSharees(CROWDED);
+    expect(after).toHaveLength(45);
+    expect(after[1]!.access).toBe('edit');
+    expect(after.some((p) => p.email === 'crowd02@example.com')).toBe(false);
+  });
+
+  it('leaves Shared and plain artifacts as they were', async () => {
+    const client = createFakeShareClient();
+
+    expect((await client.listSharees(SHARED)).map((p) => p.email)).toEqual([
+      'owner@example.com',
+      'viewer@example.com',
+      'commenter@example.com',
+      'locked@example.com',
+    ]);
+    expect((await client.listSharees(PLAIN)).map((p) => p.email)).toEqual(['owner@example.com']);
   });
 
   it('can’t list the people of a Missing artifact', async () => {

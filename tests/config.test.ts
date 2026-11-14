@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applyConfigChange,
   type Config,
   createList,
   defaultListIds,
@@ -120,6 +121,35 @@ describe('list editing', () => {
     const c = removeList(config({ defaultSelection: { mode: 'some', listIds: ['acme', 'qa'] } }), 'acme');
     expect(c.lists).toEqual([qa]);
     expect(c.defaultSelection).toEqual({ mode: 'some', listIds: ['qa'] });
+  });
+});
+
+describe('add-to-list', () => {
+  it('appends to the list as it is stored now, keeping what another window changed', () => {
+    // The popup read Acme with two addresses; another window has since renamed it and added carol.
+    const changed = {
+      ...acme,
+      name: 'Acme Corp',
+      access: 'edit' as const,
+      emails: [...acme.emails, 'carol@acme.com'],
+    };
+    const next = applyConfigChange(config({ lists: [changed, qa] }), {
+      type: 'add-to-list',
+      id: 'acme',
+      emails: ['dave@acme.com', 'Alice@acme.com'],
+    });
+    expect(next.lists[0]).toEqual({
+      ...changed,
+      emails: ['alice@acme.com', 'bob@acme.com', 'carol@acme.com', 'dave@acme.com'],
+    });
+    expect(next.lists[1]).toEqual(qa);
+  });
+
+  it('rejects a list that was deleted in another window and changes nothing', () => {
+    const c = config({ lists: [qa] });
+    expect(() => applyConfigChange(c, { type: 'add-to-list', id: 'acme', emails: ['d@x.io'] })).toThrow(
+      /no longer exists/,
+    );
   });
 });
 

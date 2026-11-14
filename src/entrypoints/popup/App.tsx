@@ -30,6 +30,8 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
   // The artifact People with access is open for, kept when the tab changes underneath it so a view
   // never silently becomes about something else.
   const [managing, setManaging] = useState<ArtifactRef | null>(null);
+  // A list the Lists tab should expand; a new object each time, so asking again for the same list works.
+  const [reveal, setReveal] = useState<{ id: string } | null>(null);
   const manageIconRef = useRef<HTMLButtonElement>(null);
   const setTab = (next: Tab) => {
     // Choosing a tab shows that tab, so People with access closes.
@@ -40,7 +42,11 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
   const [account, setAccount] = useState<Account | null>(null);
   const [accountError, setAccountError] = useState('');
   const [surfaceError, setSurfaceError] = useState('');
-  const switchLabel = inPopup ? 'Open in side panel' : 'Use popup instead';
+  // Set once the side panel has switched to the popup but couldn't open it: this panel stays, and says so.
+  const [popupNotice, setPopupNotice] = useState('');
+  // True from the moment this panel starts switching, so the change it makes isn't taken for another window's.
+  const switchingHere = useRef(false);
+  const switchLabel = inPopup ? 'Open in side panel' : popupNotice ? 'Open popup' : 'Use popup instead';
   // Set by "Start a new share", so the fresh Share form is ready to type in. Not on a plain panel open.
   const [focusArtifacts, setFocusArtifacts] = useState(false);
 
@@ -54,6 +60,18 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
   };
 
   useEffect(refreshAccount, []);
+
+  useEffect(() => {
+    if (inPopup) return;
+    // The toolbar icon opens the popup once any window has switched, so a side panel left open in
+    // another window would be one the icon can't reopen: it closes.
+    const onChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area === 'local' && changes.surface?.newValue === 'popup' && !switchingHere.current) window.close();
+    };
+    chrome.storage.onChanged.addListener(onChanged);
+
+    return () => chrome.storage.onChanged.removeListener(onChanged);
+  }, [inPopup]);
 
   useEffect(() => {
     // Restoring is a convenience: if it can't be read, open on an empty Share tab.
@@ -96,6 +114,10 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
     <ManageView
       artifact={artifact}
       run={run}
+      onOpenList={(id) => {
+        setTab('lists');
+        setReveal({ id });
+      }}
       onBack={() => {
         setManaging(null);
         // Focus returns to the icon that opened this. In the side panel it is gone if you've since
@@ -141,9 +163,30 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
                 // Nothing is left for this page to do once the other surface is chosen, so it closes.
                 // On failure it stays open: the choice is only saved once the side panel has opened.
                 setSurfaceError('');
-                (inPopup ? moveToSidePanel : moveToPopup)().then(
-                  () => window.close(),
-                  (e: unknown) => setSurfaceError(e instanceof Error ? e.message : String(e)),
+                setPopupNotice('');
+                const failed = (e: unknown) => setSurfaceError(e instanceof Error ? e.message : String(e));
+                if (inPopup) {
+                  moveToSidePanel().then(() => window.close(), failed);
+
+                  return;
+                }
+                switchingHere.current = true;
+                moveToPopup().then(
+                  (opening) => {
+                    if (opening.opened) return window.close();
+                    // Switched all the same, so the toolbar icon opens the popup; this panel stays so
+                    // the click isn't a silent close.
+                    const why = opening.reason
+                      ? `, but Chrome couldn't open it: ${opening.reason.replace(/\.$/, '')}`
+                      : '';
+                    setPopupNotice(
+                      `Switched to the popup${why}. Click the ArtiShare icon in the toolbar to open it.`,
+                    );
+                  },
+                  (e: unknown) => {
+                    switchingHere.current = false;
+                    failed(e);
+                  },
                 );
               }}
             >
@@ -157,6 +200,8 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
             {inPopup ? "Couldn't open the side panel" : "Couldn't switch to the popup"}: {surfaceError}
           </p>
         )}
+
+        {popupNotice && <output className="hint notice">{popupNotice}</output>}
 
         {accountError && (
           <p className="alert">
@@ -220,6 +265,7 @@ export function App({ surface = 'popup' }: { surface?: Surface }) {
           {/* Hidden, not unmounted, under Manage access: an open list and its unsaved changes survive. */}
           <div hidden={managing !== null}>
             <ListsView
+              reveal={reveal}
               config={config}
               save={save}
               initial={reconcileListsDraft(

@@ -1,184 +1,164 @@
-import { answer, expect, test } from './fixtures';
+import type { BrowserContext, Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 
-// F007: the Manage access icon only appears on an artifact tab, works from the keyboard, and fits
-// the header at the popup's 380 px width.
-
-const SHARED = 'https://claude.ai/artifact/ExampleSharedArtifact01';
-const EMPTY = 'https://claude.ai/artifact/EmptyArtifactForTests01';
+// F007: Save to a list puts the people who aren't in any list into a new list in a couple of clicks.
+// Driven in the side panel page: a popup page is itself the front tab, so it can't see an artifact.
 
 test.beforeEach(async ({ context }) => {
-  // Serve the pages ourselves: nothing may reach claude.ai or anywhere else.
-  await context.route(/^https:\/\/(claude\.ai|example\.com)\//, (route) =>
+  // Serve the pages ourselves: nothing may reach claude.ai.
+  await context.route(/^https:\/\/claude\.ai\//, (route) =>
     route.fulfill({ contentType: 'text/html', body: '<title>page</title>' }),
   );
 });
 
-test('no icon and no gap on a non-artifact page or on claude.ai without an artifact', async ({
+/** Saves a new list from the given page, through the background like the Lists tab does. */
+async function saveList(page: Page, name: string, emails: string[]) {
+  await page.evaluate(
+    async (args) => {
+      const reply = (await chrome.runtime.sendMessage({
+        type: 'config-change',
+        change: {
+          type: 'save-list',
+          list: { id: crypto.randomUUID(), name: args.name, emails: args.emails, access: 'view' },
+          expected: null,
+        },
+      })) as { ok: boolean; error?: string };
+      if (!reply.ok) throw new Error(reply.error);
+    },
+    { name, emails },
+  );
+}
+
+async function panelOver(context: BrowserContext, extensionId: string, id: string) {
+  const tab = await context.newPage();
+  await tab.goto(`https://claude.ai/artifact/${id}`);
+  // The side panel page follows the tab in front, so it is opened first, then the tab is raised.
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await expect(panel.getByRole('heading', { name: 'ArtiShare' })).toBeVisible();
+  await tab.bringToFront();
+
+  return { panel, tab };
+}
+
+const SHARED = 'ExampleSharedArtifact1';
+const share = (panel: Page) => panel.getByRole('tabpanel', { name: 'Share' });
+// The Share form stays mounted (hidden) under Manage access and has a Name and a Permission of its own.
+const saveView = (panel: Page) =>
+  share(panel)
+    .locator('section.card')
+    .filter({ has: panel.getByRole('heading', { name: 'Save to a list' }) });
+const openManage = (panel: Page) => panel.getByRole('button', { name: 'Manage access' }).click();
+const openSave = (panel: Page) => share(panel).getByRole('button', { name: 'Save to a list' }).click();
+const PLACEHOLDER = 'commenter@example.com & locked@example.com +1 email';
+
+test('Save to a list replaces People with access, lists everyone ticked with their permission', async ({
   context,
-  panel,
+  extensionId,
 }) => {
-  const icon = panel.getByRole('button', { name: 'Manage access' });
-  const pill = panel.locator('header .account');
+  const { panel } = await panelOver(context, extensionId, SHARED);
+  await openManage(panel);
+  await openSave(panel);
 
-  for (const url of ['https://example.com/', 'https://claude.ai/']) {
-    const tab = await context.newPage();
-    await tab.goto(url);
-    await tab.bringToFront();
-    await panel.reload();
-    await expect(pill).toContainText('owner@example.com');
-    await expect(icon).toHaveCount(0);
-    // The pill is the last thing in the header: it ends at the header's padding edge, so nothing
-    // is reserved for an icon.
-    const gap = await panel.locator('header').evaluate((header) => {
-      const last = header.lastElementChild!.getBoundingClientRect();
+  const view = saveView(panel);
+  await expect(view.getByRole('heading', { name: 'Save to a list' })).toBeFocused();
+  await expect(share(panel).getByRole('heading', { name: 'People with access' })).toHaveCount(0);
+  // Back stays at the top.
+  await expect(share(panel).getByRole('button', { name: 'Back' })).toBeVisible();
 
-      return header.getBoundingClientRect().right - last.right;
-    });
-    expect(gap).toBeLessThan(1);
-    await tab.close();
+  // Labelled with the address and what they can do on this artifact; the UI says "Commenter".
+  for (const label of [
+    'commenter@example.com · Commenter',
+    'locked@example.com · Can view',
+    'viewer@example.com · Can view',
+  ]) {
+    await expect(view.getByRole('checkbox', { name: label })).toBeChecked();
   }
+  await expect(view.getByRole('checkbox', { name: 'Select all' })).toBeChecked();
+  await expect(view.getByText('3 of 3 selected')).toBeVisible();
+
+  // No saved lists: only the new-list fields, with the Lists tab's name for an unnamed list.
+  await expect(view.getByLabel('Name')).toHaveAttribute('placeholder', PLACEHOLDER);
+  // They don't all have the same permission, so Can view.
+  await expect(view.getByLabel('Permission')).toHaveValue('view');
+  await expect(view.getByRole('button', { name: 'Save 3 people' })).toBeEnabled();
 });
 
-test('keyboard: Tab reaches the icon with a focus ring, Enter focuses Back, Back returns focus', async ({
+test('saving goes back to People with access, says what was saved and opens the list', async ({
   context,
-  panel,
+  extensionId,
 }) => {
-  const tab = await context.newPage();
-  await tab.goto(SHARED);
-  await tab.bringToFront();
-  await panel.reload();
+  const { panel } = await panelOver(context, extensionId, SHARED);
+  await openManage(panel);
+  await expect(panel.getByRole('tab', { name: /Lists/ })).toContainText('0');
+  await openSave(panel);
+  await saveView(panel).getByLabel('Name').fill('Shared reviewers');
+  await saveView(panel).getByRole('button', { name: 'Save 3 people' }).click();
 
-  const icon = panel.getByRole('button', { name: 'Manage access' });
-  await expect(icon).toBeVisible();
-
-  // Tab from the top of the page: the icon is the first control.
-  await panel.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
-  await panel.keyboard.press('Tab');
-  await expect(icon).toBeFocused();
-  const ring = await icon.evaluate((el) => {
-    const style = getComputedStyle(el);
-
-    return { style: style.outlineStyle, width: parseFloat(style.outlineWidth) };
-  });
-  expect(ring.style).not.toBe('none');
-  expect(ring.width).toBeGreaterThan(0);
-
-  await panel.keyboard.press('Enter');
-  const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await expect(share.getByRole('heading', { name: 'People with access' })).toBeVisible();
-  await expect(share.getByRole('button', { name: 'Back' })).toBeFocused();
-
-  // Enter on Back.
-  await panel.keyboard.press('Enter');
-  await expect(share.getByRole('heading', { name: 'People with access' })).toHaveCount(0);
-  await expect(share.getByRole('button', { name: /^Preview/ })).toBeVisible();
-  await expect(icon).toBeFocused();
-
-  // Open again and click Back with the mouse: focus still returns to the icon.
-  await panel.keyboard.press('Enter');
-  await share.getByRole('button', { name: 'Back' }).click();
-  await expect(icon).toBeFocused();
-});
-
-test('the header fits at 380 px: the long account pill truncates, the icon is never cut off', async ({
-  context,
-  panel,
-}) => {
-  const tab = await context.newPage();
-  await tab.goto(SHARED);
-  await tab.bringToFront();
-  await panel.setViewportSize({ width: 380, height: 700 });
-  await panel.reload();
-
-  const icon = panel.getByRole('button', { name: 'Manage access' });
-  await expect(icon).toBeVisible();
-  // A very long address, so the pill has to give way.
-  await panel
-    .locator('header .account .truncate')
-    .evaluate((el) => (el.textContent = `${'a-very-long-local-part.'.repeat(6)}@example.com`));
-
-  const boxes = await panel.locator('header').evaluate((header) => {
-    const rect = (el: Element) => {
-      const { left, right, top, bottom } = el.getBoundingClientRect();
-
-      return { left, right, top, bottom };
-    };
-    const pillText = header.querySelector('.account .truncate')!;
-
-    return {
-      header: rect(header),
-      logo: rect(header.querySelector('.logo')!),
-      wordmark: rect(header.querySelector('.wordmark')!),
-      pill: rect(header.querySelector('.account')!),
-      icon: rect(header.querySelector('button[aria-label="Manage access"]')!),
-      truncated: pillText.scrollWidth > pillText.clientWidth,
-    };
-  });
-
-  // One line: every part overlaps the logo's vertical span.
-  for (const part of [boxes.wordmark, boxes.pill, boxes.icon]) {
-    expect(part.top).toBeLessThan(boxes.logo.bottom);
-    expect(part.bottom).toBeGreaterThan(boxes.logo.top);
+  const view = share(panel);
+  await expect(view.getByRole('heading', { name: 'People with access' })).toBeVisible();
+  await expect(view.getByText('Saved 3 people to Shared reviewers.')).toBeVisible();
+  await expect(view.getByRole('button', { name: 'Open list' })).toBeVisible();
+  for (const email of ['viewer@example.com', 'commenter@example.com', 'locked@example.com']) {
+    await expect(
+      view
+        .locator('ul.people > li')
+        .filter({ hasText: email })
+        .locator('.hint')
+        .filter({ hasText: 'In Shared reviewers' }),
+    ).toHaveCount(1);
   }
-  // Left to right, with nothing overlapping or past the header.
-  expect(boxes.logo.right).toBeLessThanOrEqual(boxes.wordmark.left + 1);
-  expect(boxes.wordmark.right).toBeLessThanOrEqual(boxes.pill.left + 1);
-  expect(boxes.pill.right).toBeLessThanOrEqual(boxes.icon.left + 1);
-  expect(boxes.icon.right).toBeLessThanOrEqual(boxes.header.right + 1);
-  expect(boxes.truncated).toBe(true);
+  await expect(view.getByText(/in any of your lists/)).toHaveCount(0);
+  await expect(view.getByRole('button', { name: 'Save to a list' })).toHaveCount(0);
+  await expect(panel.getByRole('tab', { name: /Lists/ })).toContainText('1');
+
+  await view.getByRole('button', { name: 'Open list' }).click();
+  const lists = panel.getByRole('tabpanel', { name: 'Lists' });
+  await expect(lists).toBeVisible();
+  const card = lists.locator('details.list-card').filter({ hasText: 'Shared reviewers' });
+  await expect(card).toHaveAttribute('open', '');
+  const emails = await card.locator('textarea').inputValue();
+  expect(emails.split(/\s+/).filter(Boolean).toSorted()).toEqual([
+    'commenter@example.com',
+    'locked@example.com',
+    'viewer@example.com',
+  ]);
+  await expect(card.getByLabel('Permission')).toHaveValue('view');
 });
 
-test('Manage access during a run that sends to this artifact shows the in-progress note', async ({
-  context,
-  panel,
-}) => {
-  const tab = await context.newPage();
-  await tab.goto(EMPTY);
-  await tab.bringToFront();
-  await panel.reload();
-
-  const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await share.getByLabel('List name').fill('Running team');
-  await share.getByLabel('Email addresses').fill('ana@example.com\nbo@example.com\ncy@example.com');
-  await share.getByRole('button', { name: /^Preview/ }).click();
-  await share.getByRole('button', { name: 'Send 3 invitations' }).click();
-  await answer(share, 'Send');
-  await expect(share.getByText('Running', { exact: true })).toBeVisible();
-
-  await panel.getByRole('button', { name: 'Manage access' }).click();
-  await expect(share.getByRole('heading', { name: 'People with access' })).toBeVisible();
-  await expect(
-    share.getByRole('status').filter({ hasText: 'A share is in progress for this artifact.' }),
-  ).toContainText('Refresh shows the latest.');
+test('the permission is preset to the one everybody has', async ({ context, extensionId }) => {
+  // Every odd Crowded person is pending Can view and every even one Commenter, so tick just evens.
+  const { panel } = await panelOver(context, extensionId, 'ExampleCrowdedArtifact1');
+  await openManage(panel);
+  await openSave(panel);
+  const view = saveView(panel);
+  await expect(view.getByLabel('Permission')).toHaveValue('view');
+  await view.getByRole('checkbox', { name: 'Select all' }).uncheck();
+  await view.getByRole('checkbox', { name: 'crowd02@example.com · Commenter' }).check();
+  await view.getByRole('checkbox', { name: 'crowd04@example.com · Commenter' }).check();
+  await expect(view.getByLabel('Permission')).toHaveValue('comment');
 });
 
-test('the icon has a tooltip and is as visible as the other header controls in dark mode', async ({
+test('an empty name gets the placeholder, made unique when a list already has it', async ({
   context,
-  panel,
+  extensionId,
 }) => {
-  const tab = await context.newPage();
-  await tab.goto(SHARED);
-  await tab.bringToFront();
-  await panel.emulateMedia({ colorScheme: 'dark' });
-  await panel.reload();
+  const { panel } = await panelOver(context, extensionId, SHARED);
+  await saveList(panel, PLACEHOLDER, ['other@example.com']);
+  await openManage(panel);
+  await openSave(panel);
+  await share(panel).getByRole('button', { name: 'Save 3 people' }).click();
 
-  const icon = panel.getByRole('button', { name: 'Manage access' });
-  await expect(icon).toHaveAttribute('title', 'Manage access to this artifact');
-  await icon.hover();
+  await expect(share(panel).getByText(`Saved 3 people to ${PLACEHOLDER} (2).`)).toBeVisible();
+});
 
-  // Its colour is the muted text colour the account pill uses, which is readable on the dark
-  // background, and it is neither transparent nor the background itself.
-  const colours = await panel.evaluate(() => {
-    const color = (el: Element) => getComputedStyle(el).color;
+test('Cancel goes back to People with access and saves nothing', async ({ context, extensionId }) => {
+  const { panel } = await panelOver(context, extensionId, SHARED);
+  await openManage(panel);
+  await openSave(panel);
+  await share(panel).getByRole('button', { name: 'Cancel' }).click();
 
-    return {
-      icon: color(document.querySelector('button[aria-label="Manage access"]')!),
-      pill: color(document.querySelector('header .account')!),
-      bg: getComputedStyle(document.body).backgroundColor,
-    };
-  });
-  const parse = (c: string) => c.match(/[\d.]+/g)!.map(Number);
-  const luminance = ([r = 0, g = 0, b = 0]: number[]) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  expect(luminance(parse(colours.icon))).toBeGreaterThan(luminance(parse(colours.bg)) + 60);
-  expect(Math.abs(luminance(parse(colours.icon)) - luminance(parse(colours.pill)))).toBeLessThan(60);
+  await expect(share(panel).getByRole('heading', { name: 'People with access' })).toBeVisible();
+  await expect(share(panel).getByRole('button', { name: 'Save to a list' })).toBeFocused();
+  await expect(panel.getByRole('tab', { name: /Lists/ })).toContainText('0');
 });
