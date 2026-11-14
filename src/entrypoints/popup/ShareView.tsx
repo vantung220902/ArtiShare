@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Account } from '../../claude/shareClient';
-import { parseArtifactList } from '../../core/artifactUrl';
+import { addArtifactText, sameArtifact } from '../../core/artifactRows';
+import { artifactKey, parseArtifactList } from '../../core/artifactUrl';
 import { type Config, defaultListIds, resolveInvites } from '../../core/config';
 import { ACCESS_LABELS, type AccessLevel } from '../../core/types';
 import type { ListFormDraft, PreviewState } from '../../core/popupState';
@@ -11,12 +12,15 @@ import { BackIcon, PlusIcon, SendIcon } from '../../ui/icons';
 import { useConfirm } from '../../ui/useConfirm';
 import { ListBadge } from '../../ui/ListBadge';
 import { type ListDraft, ListForm, type ListFormHandle } from '../../ui/ListForm';
-import { RequiredMark } from '../../ui/RequiredMark';
+import { ArtifactsField, type ArtifactsValue } from './ArtifactsField';
 import { ArtifactLink, EmailGroup } from './viewComponents';
-import { byName, currentTabArtifact, people, plural, type Save } from './viewUtils';
+import { useTabArtifact } from './useTabArtifact';
+import { byName, people, plural, type Save } from './viewUtils';
 
 interface ShareViewProps {
   focusArtifacts?: boolean;
+  /** Keep up with the active tab after mounting: the side panel stays open as you switch tabs. */
+  followTab?: boolean;
   /** Called once the focus asked for by `focusArtifacts` is done, so a later mount doesn't repeat it. */
   onArtifactsFocused?: () => void;
   config: Config;
@@ -42,10 +46,15 @@ function ShareForm({
   save,
   onAccount,
   focusArtifacts = false,
+  followTab = false,
   onArtifactsFocused,
   initial,
 }: ShareViewProps & { initial: ShareDraft | null }) {
-  const [artifactText, setArtifactText] = useState(initial?.artifactText ?? '');
+  const [artifacts, setArtifacts] = useState<ArtifactsValue>(() => ({
+    rows: parseArtifactList(initial?.artifacts ?? []).refs,
+    text: initial?.artifactText ?? '',
+    removed: initial?.removed ?? [],
+  }));
   const [selected, setSelected] = useState<string[]>(() =>
     restoreSelection(
       initial,
@@ -75,10 +84,21 @@ function ShareForm({
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- only when the form mounts
   }, []);
 
-  // Start from the artifact you're looking at.
+  // The artifact in the active tab. It is added when it isn't a row yet, and its row is marked, so the
+  // artifact you're looking at is shared without a click, the second and third one the same as the
+  // first. One you took out with × stays out: it is only marked, so + Current tab or a paste brings
+  // it back with the mark. In the side panel it follows you from tab to tab.
+  const thisTab = useTabArtifact(followTab);
+  const thisTabKey = thisTab && artifactKey(thisTab);
   useEffect(() => {
-    void currentTabArtifact().then((ref) => ref && setArtifactText((text) => (text.trim() ? text : ref.url)));
-  }, []);
+    if (!thisTab) return;
+    setArtifacts((a) =>
+      a.rows.some((row) => sameArtifact(row, thisTab)) || a.removed.includes(artifactKey(thisTab))
+        ? a
+        : { ...a, rows: [...a.rows, thisTab] },
+    );
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- only when the active tab's artifact changes
+  }, [thisTabKey]);
 
   // Changing the default selection in the Lists tab re-applies it here. Not on mount, which
   // would undo the ticks restored from the draft.
@@ -102,12 +122,14 @@ function ShareForm({
     }
     const shown = showingForm ? newList : null;
     void saveShareDraft({
-      artifactText,
+      artifacts: artifacts.rows.map((ref) => ref.url),
+      artifactText: artifacts.text,
+      ...(artifacts.removed.length > 0 && { removed: artifacts.removed }),
       selected,
       ...(creating && { creating }),
       ...(shown && { newList: shown }),
     }).catch(() => {});
-  }, [artifactText, selected, creating, showingForm, newList]);
+  }, [artifacts, selected, creating, showingForm, newList]);
 
   // In "All lists" mode, include lists created in the Lists tab without losing manual unticks.
   useEffect(() => {
@@ -124,7 +146,9 @@ function ShareForm({
   }, [config.lists, config.defaultSelection.mode]);
 
   const lists = byName(config.lists);
-  const artifacts = parseArtifactList(artifactText);
+  // Links typed but not yet added as rows count too, so nothing typed is left out of a preview.
+  const pending = useMemo(() => addArtifactText(artifacts.rows, artifacts.text), [artifacts]);
+  const invalid = pending.leftover ? pending.leftover.split('\n') : [];
   const showForm = creating || lists.length === 0;
   const invites = useMemo(() => resolveInvites(config, selected), [config, selected]);
   // The button counts an unsaved new list too, since Preview saves it first.
@@ -136,18 +160,10 @@ function ShareForm({
   const toggle = (id: string, on: boolean) =>
     setSelected((ids) => (on ? [...ids, id] : ids.filter((x) => x !== id)));
 
-  const addCurrentTab = async () => {
-    const ref = await currentTabArtifact();
-    if (!ref) return setError('The current tab is not a claude.ai artifact.');
-    setError('');
-    if (!artifacts.refs.some((r) => r.id === ref.id))
-      setArtifactText([artifactText.trim(), ref.url].filter(Boolean).join('\n'));
-  };
-
   const runPreview = async () => {
     setError('');
-    if (!artifacts.refs.length) return setError('Add at least one artifact.');
-    if (artifacts.invalid.length) return setError(`Not artifact links: ${artifacts.invalid.join(', ')}`);
+    if (!pending.rows.length) return setError('Add at least one artifact.');
+    if (invalid.length) return setError(`Not artifact links: ${invalid.join(', ')}`);
     let current = { config, selected, invites };
 
     // A new list typed but not saved is meant to be shared with: save it first, like Save list would.
@@ -170,7 +186,7 @@ function ShareForm({
     // Shown at once, while loading, and saved at once: closing the popup now still leaves it to come back to.
     setPreview({
       label,
-      artifacts: artifacts.refs,
+      artifacts: pending.rows,
       invites: current.invites,
       results: null,
       accountEmail: null,
@@ -215,30 +231,13 @@ function ShareForm({
 
   return (
     <div className="stack">
-      <section className="card stack">
-        <div className="row spread">
-          <label htmlFor="artifacts" className="title">
-            Artifacts
-            <RequiredMark />{' '}
-            {artifacts.refs.length > 0 && <span className="count">{artifacts.refs.length}</span>}
-          </label>
-          <button className="pill" onClick={addCurrentTab}>
-            <PlusIcon size={13} /> Current tab
-          </button>
-        </div>
-        <textarea
-          id="artifacts"
-          aria-required="true"
-          rows={3}
-          value={artifactText}
-          onChange={(e) => setArtifactText(e.target.value)}
-          placeholder="https://claude.ai/artifact/…  (one per line)"
-          spellCheck={false}
-        />
-        {artifacts.invalid.length > 0 && (
-          <span className="hint err">Not artifact links: {artifacts.invalid.join(', ')}</span>
-        )}
-      </section>
+      <ArtifactsField
+        value={artifacts}
+        onChange={setArtifacts}
+        pending={pending}
+        thisTab={thisTab}
+        onError={setError}
+      />
 
       <section className="card stack">
         <h2 className="title">Share with</h2>
@@ -303,7 +302,7 @@ function ShareForm({
       <button className="primary block" onClick={runPreview} disabled={busy}>
         {busy
           ? 'Checking current access…'
-          : `Preview ${people(previewCount)} × ${plural(artifacts.refs.length, 'artifact')}`}
+          : `Preview ${people(previewCount)} × ${plural(pending.rows.length, 'artifact')}`}
       </button>
       <p className="hint center">
         Preview only reads who already has access. Nothing is sent until you confirm.

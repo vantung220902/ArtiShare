@@ -5,9 +5,14 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   timeout: 60_000,
-  // One browser with the extension loaded per test; extension storage is not shared between them.
-  fullyParallel: false,
-  workers: 1,
+  // Each test gets its own browser and fresh profile, so tests share no storage and can run side
+  // by side. The suite runs 3–4 times per harness session, so this saves minutes each time.
+  fullyParallel: true,
+  workers: 4,
+  // The suite takes about a minute. On an overloaded machine it once crawled for 17, past the point
+  // where a harness session's command is killed with no report; this stops it first and says which
+  // tests didn't finish.
+  globalTimeout: 8 * 60_000,
   reporter: [['list']],
   use: { trace: 'retain-on-failure' },
 });

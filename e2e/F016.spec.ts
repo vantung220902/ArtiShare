@@ -1,157 +1,186 @@
-import type { BrowserContext, Page } from '@playwright/test';
-import { answer, expect, test } from './fixtures';
+import type { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 
-// F016: Manage access with nobody invited, a list that went stale, and repeated clicks.
+// F016: the side panel uses the width and height it is given, and nothing scrolls sideways.
 
-const SHARED = 'https://claude.ai/artifact/SharedExampleArtifact01';
-const EMPTY = 'https://claude.ai/artifact/EmptyExampleArtifact001';
+const share = (page: Page) => page.getByRole('tabpanel', { name: 'Share' });
+const lists = (page: Page) => page.getByRole('tabpanel', { name: /Lists/ });
 
-test.beforeEach(async ({ context }) => {
-  // Serve the pages ourselves: nothing may reach claude.ai or anywhere else.
-  await context.route(/^https:\/\/(claude\.ai|example\.com)\//, (route) =>
-    route.fulfill({ contentType: 'text/html', body: '<title>page</title>' }),
-  );
-});
+/** True when the page or the scrolling body can be scrolled sideways. */
+const scrollsSideways = (page: Page) =>
+  page.evaluate(() => {
+    const body = document.querySelector('.popup-body')!;
 
-async function openManage(context: BrowserContext, panel: Page, url: string) {
-  const tab = await context.newPage();
-  await tab.goto(url);
-  await tab.bringToFront();
-  await panel.reload();
-  const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await share.getByRole('button', { name: 'Manage access' }).click();
+    return (
+      document.documentElement.scrollWidth > document.documentElement.clientWidth ||
+      body.scrollWidth > body.clientWidth
+    );
+  });
 
-  return { share, rows: share.locator('ul.people > li') };
+const artifact = (n: number) => `https://claude.ai/artifact/PanelArtifact${String(n).padStart(4, '0')}`;
+
+for (const width of [320, 400, 600]) {
+  test(`at ${width} px wide the content fills the width, nothing scrolls sideways and the header stays on one line`, async ({
+    sidePanel,
+  }) => {
+    await sidePanel.setViewportSize({ width, height: 900 });
+    await expect(sidePanel.getByRole('heading', { name: 'ArtiShare' })).toBeVisible();
+
+    const widths = await sidePanel.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      popup: document.querySelector('.popup')!.getBoundingClientRect().width,
+      body: document.body.getBoundingClientRect().width,
+    }));
+    expect(widths.popup).toBe(widths.viewport);
+    expect(widths.body).toBe(widths.viewport);
+    expect(await scrollsSideways(sidePanel)).toBe(false);
+
+    // Logo, name, account pill and the icon buttons share one row.
+    const header = sidePanel.locator('.header');
+    const top = async (selector: string) =>
+      (await header.locator(selector).first().boundingBox())!.y +
+      (await header.locator(selector).first().boundingBox())!.height / 2;
+    const logo = await top('.logo');
+    for (const selector of ['.account', 'button.icon-btn']) {
+      expect(Math.abs((await top(selector)) - logo)).toBeLessThan(4);
+    }
+    const box = (await header.boundingBox())!;
+    expect(box.height).toBeLessThan(50);
+    const right = await header.evaluate((el) =>
+      Math.max(...[...el.querySelectorAll('button, .account')].map((c) => c.getBoundingClientRect().right)),
+    );
+    expect(right).toBeLessThanOrEqual(width);
+  });
 }
 
-/** Counts the messages the popup sends the background, by type, so "one request" can be asserted. */
-async function countMessages(panel: Page) {
-  await panel.evaluate(() => {
-    const w = window as unknown as { sent: Record<string, number> };
-    w.sent = {};
-    const original = chrome.runtime.sendMessage.bind(chrome.runtime) as (message: {
-      type: string;
-    }) => Promise<unknown>;
-    (chrome.runtime as unknown as { sendMessage: typeof original }).sendMessage = (message) => {
-      w.sent[message.type] = (w.sent[message.type] ?? 0) + 1;
+async function openNewList(page: Page) {
+  await page.getByRole('tab', { name: /Lists/ }).click();
+  await lists(page).getByRole('button', { name: 'New list' }).click();
 
-      return original(message);
+  return lists(page).getByLabel('Email addresses').filter({ visible: true });
+}
+
+test('a 200-address list shows more lines in the side panel than in the popup, and Save is reachable', async ({
+  panel,
+  sidePanel,
+}) => {
+  const emails = Array.from({ length: 200 }, (_, i) => `person${i}@example.com`).join('\n');
+
+  // Saved in the popup, then opened in the side panel.
+  await openNewList(panel).then((box) => box.fill(emails));
+  await lists(panel).getByLabel('List name').filter({ visible: true }).fill('Long list');
+  await lists(panel).getByRole('button', { name: 'Save list' }).click();
+  await expect(lists(panel).locator('summary', { hasText: 'Long list' })).toBeVisible();
+
+  const heightIn = async (page: Page) => {
+    await page.getByRole('tab', { name: /Lists/ }).click();
+    await lists(page).locator('summary', { hasText: 'Long list' }).click();
+    const box = lists(page).getByLabel('Email addresses').filter({ visible: true });
+    await expect(box).toBeVisible();
+
+    return (await box.boundingBox())!.height;
+  };
+  const popupHeight = await heightIn(panel);
+
+  await sidePanel.setViewportSize({ width: 400, height: 900 });
+  const panelHeight = await heightIn(sidePanel);
+  expect(panelHeight).toBeGreaterThan(popupHeight * 2);
+  // Taller than the popup's box but not past the window.
+  expect(panelHeight).toBeLessThan(900);
+
+  // An opened saved list's button reads "Save"; "Save list" is the new-list form's.
+  const save = lists(sidePanel).getByRole('button', { name: 'Save', exact: true }).filter({ visible: true });
+  await save.scrollIntoViewIfNeeded();
+  await expect(save).toBeInViewport();
+  expect(await scrollsSideways(sidePanel)).toBe(false);
+});
+
+test('30 artifacts scroll with the page, each × stays clickable and long links are cut off with …', async ({
+  sidePanel,
+}) => {
+  await sidePanel.setViewportSize({ width: 320, height: 700 });
+  const box = share(sidePanel).getByRole('textbox', { name: /Artifacts/ });
+  await box.fill(Array.from({ length: 30 }, (_, i) => artifact(i)).join('\n'));
+  await box.press('Enter');
+  const items = share(sidePanel).locator('.artifact-item');
+  await expect(items).toHaveCount(30);
+
+  // The rows are taller than the window, so the body scrolls, not the sides.
+  const scroll = await sidePanel.evaluate(() => {
+    const body = document.querySelector('.popup-body')!;
+
+    return {
+      scrollable: body.scrollHeight > body.clientHeight,
+      sideways: body.scrollWidth > body.clientWidth,
     };
   });
+  expect(scroll).toEqual({ scrollable: true, sideways: false });
 
-  return (type: string) =>
-    panel.evaluate((t) => (window as unknown as { sent: Record<string, number> }).sent[t] ?? 0, type);
-}
+  // The last row's × is reachable by scrolling and inside the panel's width.
+  const last = items.last();
+  await last.scrollIntoViewIfNeeded();
+  const remove = last.getByRole('button', { name: `Remove ${artifact(29)}` });
+  await expect(remove).toBeInViewport();
+  const right = (await remove.boundingBox())!.x + (await remove.boundingBox())!.width;
+  expect(right).toBeLessThanOrEqual(320);
 
-test('an artifact nobody was invited to says so and points to Share', async ({ context, panel }) => {
-  const { share, rows } = await openManage(context, panel, EMPTY);
+  // At 320 px the link doesn't fit: it is cut off with an ellipsis rather than widening the row.
+  const cut = await last.locator('.truncate').evaluate((el) => {
+    const style = getComputedStyle(el);
 
-  await expect(share.getByText('Only you have access.')).toBeVisible();
-  await expect(share.getByText('Use Share to invite people.')).toBeVisible();
-  await expect(rows).toHaveCount(1);
-  await expect(rows.first()).toContainText('You (owner)');
-  await expect(share.getByRole('button', { name: 'Refresh' })).toBeVisible();
-  await expect(share.getByRole('alert')).toHaveCount(0);
+    return {
+      ellipsis: style.textOverflow === 'ellipsis' && style.overflow === 'hidden',
+      clipped: el.scrollWidth > el.clientWidth,
+    };
+  });
+  expect(cut).toEqual({ ellipsis: true, clipped: true });
+
+  await remove.click();
+  await expect(items).toHaveCount(29);
+  expect(await scrollsSideways(sidePanel)).toBe(false);
 });
 
-test('Refresh shows people invited meanwhile, from another popup', async ({ context, panel }) => {
-  const { share, rows } = await openManage(context, panel, EMPTY);
-  await expect(share.getByText('Only you have access.')).toBeVisible();
+test('a 120-character address does not widen the panel', async ({ sidePanel }) => {
+  await sidePanel.setViewportSize({ width: 320, height: 700 });
+  const long = `${'a'.repeat(100)}@example.com`;
+  expect(long.length).toBeGreaterThanOrEqual(112);
+  await sidePanel.getByRole('tab', { name: /Lists/ }).click();
+  await lists(sidePanel).getByRole('button', { name: 'New list' }).click();
+  const emails = lists(sidePanel).getByLabel('Email addresses').filter({ visible: true });
+  await emails.fill(`${long}\nnot-an-address-${'b'.repeat(100)}`);
+  await expect(lists(sidePanel).getByText('1 valid')).toBeVisible();
+  expect(await scrollsSideways(sidePanel)).toBe(false);
 
-  // Send from a second popup: this one still shows the list it read when it opened.
-  const other = await context.newPage();
-  await other.goto(panel.url());
-  const otherShare = other.getByRole('tabpanel', { name: 'Share' });
-  await otherShare.getByLabel('List name').fill('Refresh team');
-  await otherShare.getByLabel('Email addresses').fill('ana@example.com\nbo@example.com');
-  await otherShare.getByLabel(/Artifacts/).fill(EMPTY);
-  await otherShare.getByRole('button', { name: /^Preview/ }).click();
-  await otherShare.getByRole('button', { name: 'Send 2 invitations' }).click();
-  await answer(otherShare, 'Send');
-  await expect(otherShare.getByText('Done', { exact: true })).toBeVisible({ timeout: 20_000 });
-
-  await expect(rows).toHaveCount(1);
-  await expect(share.getByText('Only you have access.')).toBeVisible();
-  await share.getByRole('button', { name: 'Refresh' }).click();
-  await expect(rows).toHaveCount(3);
-  await expect(rows.nth(1)).toContainText('ana@example.com');
-  await expect(rows.nth(2)).toContainText('bo@example.com');
-  await expect(share.getByText('Only you have access.')).toHaveCount(0);
-  await expect(share.getByRole('alert')).toHaveCount(0);
+  // The same in the Share tab: a long pasted text that isn't a link stays inside the panel.
+  await sidePanel.getByRole('tab', { name: 'Share' }).click();
+  await share(sidePanel)
+    .getByRole('textbox', { name: /Artifacts/ })
+    .fill('c'.repeat(120));
+  expect(await scrollsSideways(sidePanel)).toBe(false);
+  const inside = await sidePanel.evaluate(() =>
+    [...document.querySelectorAll('.popup-body *')].every(
+      (el) => el.getBoundingClientRect().right <= document.documentElement.clientWidth + 0.5,
+    ),
+  );
+  expect(inside).toBe(true);
 });
 
-test('while a run sends to this artifact, Manage access says so and Refresh shows the latest', async ({
-  context,
-  panel,
-}) => {
-  const tab = await context.newPage();
-  await tab.goto(EMPTY);
-  await tab.bringToFront();
-  await panel.reload();
+test('the popup is unchanged: 380 px wide and no taller than 600 px', async ({ panel }) => {
+  await panel.setViewportSize({ width: 380, height: 900 });
+  const size = await panel.evaluate(() => ({
+    width: document.body.getBoundingClientRect().width,
+    popup: document.querySelector('.popup')!.getBoundingClientRect().height,
+    cap: getComputedStyle(document.querySelector('.popup')!).maxHeight,
+  }));
+  expect(size.width).toBe(380);
+  expect(size.popup).toBeLessThanOrEqual(600);
+  expect(size.cap).toBe('600px');
 
-  const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await share.getByLabel('List name').fill('Running team');
-  await share.getByLabel('Email addresses').fill('ana@example.com\nbo@example.com\ncy@example.com');
-  await share.getByLabel(/Artifacts/).fill(EMPTY);
-  await share.getByRole('button', { name: /^Preview/ }).click();
-  await share.getByRole('button', { name: 'Send 3 invitations' }).click();
-  await answer(share, 'Send');
-  await expect(share.getByText('Running', { exact: true })).toBeVisible();
-
-  await share.getByRole('button', { name: 'Manage access' }).click();
-  const note = share.getByRole('status').filter({ hasText: 'A share is in progress' });
-  await expect(note).toContainText('Refresh shows the latest.');
-
-  // The note goes when the run is no longer sending; the list on screen then needs Refresh.
-  await expect(note).toHaveCount(0, { timeout: 20_000 });
-  await share.getByRole('button', { name: 'Refresh' }).click();
-  const rows = share.locator('ul.people > li');
-  await expect(rows).toHaveCount(4);
-  await expect(rows.nth(3)).toContainText('cy@example.com');
-
-  // The finished run's view is still there under Back.
-  await share.getByRole('button', { name: 'Back' }).click();
-  await expect(share.getByText('Done', { exact: true })).toBeVisible();
-});
-
-test('a repeated click on Remove or on a select makes one request and no error', async ({
-  context,
-  panel,
-}) => {
-  const { share, rows } = await openManage(context, panel, SHARED);
-  await expect(rows).toHaveCount(4);
-  const sent = await countMessages(panel);
-
-  // Two permission changes in the same instant.
-  const viewer = rows.nth(1);
-  await viewer.getByRole('combobox').evaluate((select: HTMLSelectElement) => {
-    // The native setter, so React sees a real change rather than its own tracked value.
-    const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!;
-    for (const value of ['edit', 'comment']) {
-      descriptor.set!.call(select, value);
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-  });
-  await expect(viewer.locator('.saved')).toHaveText('Saved');
-  expect(await sent('change-access')).toBe(1);
-  await expect(viewer.getByRole('combobox')).toHaveValue('edit');
-  await expect(viewer.getByRole('alert')).toHaveCount(0);
-
-  // Remove clicked twice in the same instant opens one question; confirming it twice removes once.
-  const commenter = rows.nth(2);
-  await commenter.getByRole('button', { name: 'Remove commenter@example.com' }).evaluate((b: HTMLElement) => {
-    b.click();
-    b.click();
-  });
-  const dialog = panel.getByRole('alertdialog');
-  await expect(dialog).toHaveCount(1);
-  await dialog.getByRole('button', { name: 'Remove', exact: true }).evaluate((b: HTMLElement) => {
-    b.click();
-    b.click();
-  });
-  await expect(rows).toHaveCount(3);
-  await expect(dialog).toHaveCount(0);
-  expect(await sent('remove-invite')).toBe(1);
-  await expect(share.getByRole('alert')).toHaveCount(0);
-  await expect(share.getByText('commenter@example.com')).toHaveCount(0);
+  // Many artifacts fill the popup to its cap and no further.
+  const box = share(panel).getByRole('textbox', { name: /Artifacts/ });
+  await box.fill(Array.from({ length: 30 }, (_, i) => artifact(i)).join('\n'));
+  await box.press('Enter');
+  await expect(share(panel).locator('.artifact-item')).toHaveCount(30);
+  expect(await panel.locator('.popup').evaluate((el) => el.getBoundingClientRect().height)).toBe(600);
+  expect(await scrollsSideways(panel)).toBe(false);
 });

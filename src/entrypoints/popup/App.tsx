@@ -1,18 +1,21 @@
-import { useEffect, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { Account } from '../../claude/shareClient';
+import type { Surface } from '../../core/surface';
 import type { ArtifactRef } from '../../core/types';
 import { emptyPopupState, type PopupState, reconcileListsDraft, type Tab } from '../../core/popupState';
 import { send } from '../../lib/messages';
+import { moveToPopup, moveToSidePanel, sidePanelSupported } from '../../lib/surface';
 import { loadPopupState, patchPopupState } from '../../lib/storage';
 import { useConfig, useRun } from '../../ui/hooks';
-import { SendIcon } from '../../ui/icons';
+import { PopupIcon, SendIcon, SidePanelIcon, UsersIcon } from '../../ui/icons';
 import { ListsView } from './ListsView';
 import { ManageView } from './ManageView';
 import { RunView } from './RunView';
 import { ShareView } from './ShareView';
-import { currentTabArtifact } from './viewUtils';
+import { useTabArtifact } from './useTabArtifact';
 
-export function App() {
+/** The header has an icon that moves ArtiShare to the other surface: the popup offers the side panel and the side panel offers the popup. */
+export function App({ surface = 'popup' }: { surface?: Surface }) {
   const [config, save, configError] = useConfig();
   const [run, runError] = useRun();
   // What was open and typed before the popup last closed. Nothing is drawn until it is known,
@@ -20,22 +23,26 @@ export function App() {
   const [stored, setStored] = useState<PopupState | undefined>(undefined);
   const [tabChoice, setTabChoice] = useState<Tab | null>(null);
   const tab = tabChoice ?? stored?.tab ?? 'share';
+  const inPopup = surface === 'popup';
+  // The artifact in the tab in front, which the Manage access icon opens. A popup closes when you click
+  // away, so it reads once; the side panel stays open and follows the tab.
+  const tabArtifact = useTabArtifact(!inPopup);
+  // The artifact People with access is open for, kept when the tab changes underneath it so a view
+  // never silently becomes about something else.
+  const [managing, setManaging] = useState<ArtifactRef | null>(null);
+  const manageIconRef = useRef<HTMLButtonElement>(null);
   const setTab = (next: Tab) => {
+    // Choosing a tab shows that tab, so People with access closes.
+    setManaging(null);
     setTabChoice(next);
     void patchPopupState({ tab: next });
   };
   const [account, setAccount] = useState<Account | null>(null);
   const [accountError, setAccountError] = useState('');
+  const [surfaceError, setSurfaceError] = useState('');
+  const switchLabel = inPopup ? 'Open in side panel' : 'Use popup instead';
   // Set by "Start a new share", so the fresh Share form is ready to type in. Not on a plain panel open.
   const [focusArtifacts, setFocusArtifacts] = useState(false);
-
-  // The artifact in the tab the popup opened over, which Manage access is about. Read once: a popup
-  // closes when you click away, so it can't outlive a change of tab.
-  const [tabArtifact, setTabArtifact] = useState<ArtifactRef | null>(null);
-  const [managing, setManaging] = useState<ArtifactRef | null>(null);
-  useEffect(() => {
-    void currentTabArtifact().then(setTabArtifact, () => {});
-  }, []);
 
   const refreshAccount = () => {
     // oxlint-disable-next-line react/set-state-in-effect -- also a click handler; clears the old error before re-checking
@@ -85,6 +92,19 @@ export function App() {
       </div>
     );
 
+  const manageView = (artifact: ArtifactRef) => (
+    <ManageView
+      artifact={artifact}
+      run={run}
+      onBack={() => {
+        setManaging(null);
+        // Focus returns to the icon that opened this. In the side panel it is gone if you've since
+        // switched to a tab without an artifact, and focus is left where the browser puts it.
+        manageIconRef.current?.focus();
+      }}
+    />
+  );
+
   return (
     // Header and tabs stay put and only .popup-body scrolls; the popup itself is capped at 600 px.
     // There is no close button: a popup closes when you click away, and a run keeps going in the background.
@@ -98,7 +118,45 @@ export function App() {
             <h1 className="wordmark">ArtiShare</h1>
           </div>
           <AccountPill account={account} error={accountError} />
+          {/* Only where it works: an artifact tab. In the header so it never scrolls out of reach. */}
+          {tabArtifact && (
+            <button
+              ref={manageIconRef}
+              className="ghost icon-btn"
+              aria-label="Manage access"
+              title="Manage access to this artifact"
+              aria-pressed={managing !== null}
+              onClick={() => setManaging(managing ? null : tabArtifact)}
+            >
+              <UsersIcon size={16} />
+            </button>
+          )}
+          {/* A Chrome without side panels has nothing to switch to. */}
+          {(!inPopup || sidePanelSupported()) && (
+            <button
+              className="ghost icon-btn"
+              aria-label={switchLabel}
+              title={switchLabel}
+              onClick={() => {
+                // Nothing is left for this page to do once the other surface is chosen, so it closes.
+                // On failure it stays open: the choice is only saved once the side panel has opened.
+                setSurfaceError('');
+                (inPopup ? moveToSidePanel : moveToPopup)().then(
+                  () => window.close(),
+                  (e: unknown) => setSurfaceError(e instanceof Error ? e.message : String(e)),
+                );
+              }}
+            >
+              {inPopup ? <SidePanelIcon size={16} /> : <PopupIcon size={16} />}
+            </button>
+          )}
         </header>
+
+        {surfaceError && (
+          <p className="alert">
+            {inPopup ? "Couldn't open the side panel" : "Couldn't switch to the popup"}: {surfaceError}
+          </p>
+        )}
 
         {accountError && (
           <p className="alert">
@@ -145,6 +203,7 @@ export function App() {
             ) : (
               <ShareView
                 focusArtifacts={focusArtifacts}
+                followTab={!inPopup}
                 onArtifactsFocused={() => setFocusArtifacts(false)}
                 config={config}
                 save={save}
@@ -154,25 +213,22 @@ export function App() {
                 }}
               />
             )}
-            {tabArtifact && (
-              <p className="manage-link">
-                <button className="link" onClick={() => setManaging(tabArtifact)}>
-                  Manage access
-                </button>
-              </p>
-            )}
           </div>
-          {managing && <ManageView artifact={managing} run={run} onBack={() => setManaging(null)} />}
+          {managing && tab === 'share' && manageView(managing)}
         </div>
         <div id="panel-lists" role="tabpanel" aria-labelledby="tab-lists" hidden={tab !== 'lists'}>
-          <ListsView
-            config={config}
-            save={save}
-            initial={reconcileListsDraft(
-              stored.lists,
-              config.lists.map((list) => list.id),
-            )}
-          />
+          {/* Hidden, not unmounted, under Manage access: an open list and its unsaved changes survive. */}
+          <div hidden={managing !== null}>
+            <ListsView
+              config={config}
+              save={save}
+              initial={reconcileListsDraft(
+                stored.lists,
+                config.lists.map((list) => list.id),
+              )}
+            />
+          </div>
+          {managing && tab === 'lists' && manageView(managing)}
         </div>
       </div>
 

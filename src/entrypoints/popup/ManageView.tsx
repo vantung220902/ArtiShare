@@ -146,6 +146,10 @@ export function ManageView({
   const [error, setError] = useState('');
   const [reading, setReading] = useState(true);
   const [attempt, setAttempt] = useState(0);
+  const backRef = useRef<HTMLButtonElement>(null);
+
+  // Opening replaces what was on screen, so focus goes to the way back instead of being left on nothing.
+  useEffect(() => backRef.current?.focus(), []);
 
   useEffect(() => {
     let stale = false;
@@ -179,7 +183,7 @@ export function ManageView({
   return (
     <div className="stack">
       <div className="row spread">
-        <button className="ghost" onClick={onBack}>
+        <button ref={backRef} className="ghost" onClick={onBack}>
           <BackIcon size={14} /> Back
         </button>
         {people && (

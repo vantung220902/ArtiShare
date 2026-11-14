@@ -106,6 +106,23 @@ label {
 html {
   width: 380px;
 }
+/* The side panel is as wide as the user drags it and as tall as the window: the popup's fixed
+   width and 600 px cap are dropped, and .popup fills the height so only .popup-body scrolls. */
+html.sidepanel,
+html.sidepanel body {
+  width: auto;
+  height: 100%;
+}
+html.sidepanel #root,
+html.sidepanel .popup {
+  height: 100%;
+  max-height: none;
+}
+/* A long list is easier to read and edit with the height a panel has, so the address box takes 40%
+   of it (the popup keeps its 5 rows). It can still be dragged taller. */
+html.sidepanel .email-box {
+  min-height: 40vh;
+}
 /* Chrome can give a popup less than 600 px on a short screen. The page then scrolls as a whole,
    and the sticky header and footer below keep the tabs and version in view. */
 .popup {
@@ -802,6 +819,71 @@ button.copy-btn.failed {
   color: var(--err);
 }
 
+/* ---------- Artifacts rows ---------- */
+
+.artifact-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.artifact-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 1px 1px 1px 8px;
+  border-radius: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  transition: background-color 0.3s;
+}
+.artifact-item > svg {
+  flex: none;
+  color: var(--accent-ink);
+}
+.artifact-item:hover {
+  background: var(--field);
+}
+/* Named again by a paste or + Current tab: shown where it already is instead of added twice. */
+.artifact-item.repeated {
+  background: var(--accent-soft);
+}
+/* Marks the row for the artifact in the tab the popup opened over. */
+.this-tab {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+}
+/* 'Removed <link> · Undo': the link is cut off so Undo always stays in view. */
+.undo-bar {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+.undo-bar .truncate {
+  font-family: var(--mono);
+}
+.undo-bar button.link {
+  flex: none;
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+/* One line until something that isn't a link is left in it; then it grows to show it. */
+.paste-box {
+  resize: none;
+  field-sizing: content;
+  max-height: 8.5em;
+}
+
 details > summary {
   list-style: none;
   cursor: pointer;
@@ -999,15 +1081,10 @@ details[open] > summary .chev {
   font-size: 11.5px;
   font-weight: 700;
 }
-.manage-link {
-  text-align: center;
-  font-size: 12px;
-}
-.manage-link button.link {
-  color: var(--muted);
-}
-.manage-link button.link:hover:not(:disabled) {
-  color: var(--text);
+/* Pressed while People with access is open, so the icon reads as a toggle. */
+button.icon-btn[aria-pressed='true'] {
+  color: var(--accent);
+  background: var(--surface);
 }
 
 /* ---------- Lists tab ---------- */

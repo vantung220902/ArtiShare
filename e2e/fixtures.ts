@@ -2,11 +2,31 @@ import { chromium, expect, test as base, type BrowserContext, type Page } from '
 
 const EXTENSION_DIR = new URL('../.output/chrome-mv3-fake', import.meta.url).pathname;
 
+async function openPage(context: BrowserContext, extensionId: string, file: string) {
+  const page = await context.newPage();
+  // Confirmations are drawn inside the popup because a browser dialog can close it. A native
+  // dialog is therefore always a bug: dismiss it and fail the test that opened it.
+  const dialogs: string[] = [];
+  page.on('dialog', (d) => {
+    dialogs.push(d.message());
+    void d.dismiss();
+  });
+  await page.goto(`chrome-extension://${extensionId}/${file}`);
+
+  return { page, dialogs };
+}
+
 /**
  * `context` is a fresh Chromium profile with the fake build loaded; `panel` is the popup page
- * opened as a normal tab (a real action popup can't be opened from Playwright).
+ * opened as a normal tab (a real action popup can't be opened from Playwright) and `sidePanel`
+ * is the side panel page opened the same way, at 400×900.
  */
-export const test = base.extend<{ context: BrowserContext; panel: Page }>({
+export const test = base.extend<{
+  context: BrowserContext;
+  extensionId: string;
+  panel: Page;
+  sidePanel: Page;
+}>({
   // oxlint-disable-next-line no-empty-pattern -- Playwright fixtures must destructure their deps
   context: async ({}, provide) => {
     const context = await chromium.launchPersistentContext('', {
@@ -16,20 +36,20 @@ export const test = base.extend<{ context: BrowserContext; panel: Page }>({
     await provide(context);
     await context.close();
   },
-  panel: async ({ context }, provide) => {
+  extensionId: async ({ context }, provide) => {
     // The background worker answers the panel's messages, and its URL carries the extension ID,
     // so the ID always matches the build that was loaded.
     const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
-    const extensionId = new URL(worker.url()).host;
-    const page = await context.newPage();
-    // Confirmations are drawn inside the popup because a browser dialog can close it. A native
-    // dialog is therefore always a bug: dismiss it and fail the test that opened it.
-    const dialogs: string[] = [];
-    page.on('dialog', (d) => {
-      dialogs.push(d.message());
-      void d.dismiss();
-    });
-    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+    await provide(new URL(worker.url()).host);
+  },
+  panel: async ({ context, extensionId }, provide) => {
+    const { page, dialogs } = await openPage(context, extensionId, 'popup.html');
+    await provide(page);
+    expect(dialogs, 'no browser dialog should open').toEqual([]);
+  },
+  sidePanel: async ({ context, extensionId }, provide) => {
+    const { page, dialogs } = await openPage(context, extensionId, 'sidepanel.html');
+    await page.setViewportSize({ width: 400, height: 900 });
     await provide(page);
     expect(dialogs, 'no browser dialog should open').toEqual([]);
   },

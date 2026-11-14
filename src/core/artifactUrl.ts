@@ -102,6 +102,9 @@ function uuidToBase58(uuid: string): string {
   return out || '1';
 }
 
+/** What makes two references the same artifact: its base58 and UUID links name the same one. */
+export const artifactKey = (ref: ArtifactRef) => artifactUuid(ref) ?? `${ref.kind}:${ref.id}`;
+
 export interface ParsedArtifacts {
   refs: ArtifactRef[];
   invalid: string[];
@@ -125,7 +128,7 @@ export function parseArtifactList(text: string | readonly string[]): ParsedArtif
     }
 
     // The base58 and UUID URLs can identify the same artifact and must not create two jobs.
-    const key = artifactUuid(ref) ?? `${ref.kind}:${ref.id}`;
+    const key = artifactKey(ref);
     if (seen.has(key)) continue;
     seen.add(key);
     refs.push(ref);

@@ -1,52 +1,105 @@
+import type { BrowserContext, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
-// F010: the fake claude.ai has artifacts that start with people already invited. Preview is the
-// only place the popup shows them so far; Manage access comes in later features.
+// F010: the side panel's "Use popup instead" icon switches back to the popup. A real toolbar click
+// can't be made from Playwright, so what it does is read back from the browser: the action's popup,
+// the panel behaviour and the stored choice.
 
-const SHARED = 'https://claude.ai/artifact/SharedExampleArtifact01';
-const MISSING = 'https://claude.ai/artifact/MissingExampleArtifact1';
+/** What the toolbar icon will do and what was remembered, read from a fresh extension page. */
+async function toolbar(context: BrowserContext, extensionId: string) {
+  const page = await context.newPage();
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+  const state = await page.evaluate(async () => ({
+    popup: await chrome.action.getPopup({}),
+    behavior: await chrome.sidePanel.getPanelBehavior(),
+    stored: (await chrome.storage.local.get('surface')).surface,
+  }));
+  await page.close();
 
-test('previewing a Shared artifact lists its three seeded people under Already have access', async ({
-  panel,
-}) => {
-  await panel.getByRole('tab', { name: /Lists/ }).click();
-  const lists = panel.getByRole('tabpanel', { name: /Lists/ });
-  await lists.getByRole('button', { name: 'New list' }).click();
-  await lists.getByLabel('List name').filter({ visible: true }).fill('Seeded');
-  await lists
-    .getByLabel('Email addresses')
-    .filter({ visible: true })
-    .fill('viewer@example.com\ncommenter@example.com\nlocked@example.com\nnew@example.com');
-  await lists.getByRole('button', { name: 'Save list' }).click();
-  await expect(lists.locator('summary', { hasText: 'Seeded' })).toBeVisible();
-  await panel.getByRole('tab', { name: 'Share' }).click();
+  return state;
+}
 
-  const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await share.getByLabel(/Artifacts/).fill(SHARED);
-  await share.locator('label.pick', { hasText: 'Seeded' }).getByRole('checkbox').check();
-  await share.getByRole('button', { name: /^Preview/ }).click();
+/** Opens a fresh page of the popup or side panel; the side panel is as wide as the real one. */
+async function open(
+  context: BrowserContext,
+  extensionId: string,
+  file: 'popup' | 'sidepanel',
+): Promise<Page> {
+  const page = await context.newPage();
+  await page.goto(`chrome-extension://${extensionId}/${file}.html`);
+  await expect(page.getByRole('heading', { name: 'ArtiShare' })).toBeVisible();
 
-  const card = share.locator('section.card');
-  await expect(card).toHaveCount(1);
-  await expect(card.locator('.stat', { hasText: 'already invited' }).locator('strong')).toHaveText('3');
-  await expect(card.locator('.stat', { hasText: 'to invite' }).locator('strong')).toHaveText('1');
-  await expect(share.getByRole('button', { name: 'Send 1 invitation' })).toBeEnabled();
+  return page;
+}
 
-  // The group is folded; open it to read who is in it and at what level.
-  await card.locator('summary', { hasText: 'Existing email access' }).click();
-  const people = card.locator('details', { hasText: 'Existing email access' }).locator('li');
-  await expect(people).toHaveText([
-    'viewer@example.com · Can view',
-    'commenter@example.com · Commenter (pending)',
-    'locked@example.com · Can view',
-  ]);
+test('the side panel has a "Use popup instead" icon button with that tooltip', async ({ sidePanel }) => {
+  const icon = sidePanel.getByRole('button', { name: 'Use popup instead' });
+  await expect(icon).toBeVisible();
+  await expect(icon).toHaveAttribute('title', 'Use popup instead');
+  await expect(icon).toHaveClass(/icon-btn/);
+  await expect(icon.locator('svg')).toBeVisible();
+  await expect(
+    sidePanel.locator('header.header').getByRole('button', { name: 'Use popup instead' }),
+  ).toBeVisible();
 });
 
-test('previewing a Missing artifact says it was not found', async ({ panel }) => {
-  const share = panel.getByRole('tabpanel', { name: 'Share' });
-  await share.getByLabel(/Artifacts/).fill(MISSING);
-  await share.getByLabel('Email addresses').fill('a@example.com');
-  await share.getByRole('button', { name: /^Preview/ }).click();
+test('clicking it closes the side panel and makes the toolbar icon open the popup', async ({
+  context,
+  extensionId,
+}) => {
+  // Start from the side panel being chosen.
+  const first = await open(context, extensionId, 'popup');
+  const firstClosed = first.waitForEvent('close');
+  await first.getByRole('button', { name: 'Open in side panel' }).click();
+  await firstClosed;
+  expect((await toolbar(context, extensionId)).popup).toBe('');
 
-  await expect(share.getByText(/not found/i)).toBeVisible();
+  const sidePanel = await open(context, extensionId, 'sidepanel');
+  const closed = sidePanel.waitForEvent('close');
+  await sidePanel.getByRole('button', { name: 'Use popup instead' }).click();
+  await closed;
+
+  const state = await toolbar(context, extensionId);
+  expect(state.popup).toMatch(/popup\.html$/);
+  expect(state.behavior.openPanelOnActionClick).toBe(false);
+  expect(state.stored).toBe('popup');
+});
+
+test('the popup has no "Use popup instead" icon', async ({ panel }) => {
+  await expect(panel.getByRole('button', { name: 'Open in side panel' })).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'Use popup instead' })).toHaveCount(0);
+});
+
+test('switching to the side panel and back twice leaves the toolbar icon on the last choice', async ({
+  context,
+  extensionId,
+}) => {
+  for (const round of [1, 2]) {
+    const popup = await open(context, extensionId, 'popup');
+    const popupClosed = popup.waitForEvent('close');
+    await popup.getByRole('button', { name: 'Open in side panel' }).click();
+    await popupClosed;
+    let state = await toolbar(context, extensionId);
+    expect(state, `round ${round}: side panel chosen`).toMatchObject({
+      popup: '',
+      behavior: { openPanelOnActionClick: true },
+      stored: 'sidepanel',
+    });
+
+    const sidePanel = await open(context, extensionId, 'sidepanel');
+    const panelClosed = sidePanel.waitForEvent('close');
+    await sidePanel.getByRole('button', { name: 'Use popup instead' }).click();
+    await panelClosed;
+    state = await toolbar(context, extensionId);
+    expect(state.popup, `round ${round}: popup chosen`).toMatch(/popup\.html$/);
+    expect(state.behavior.openPanelOnActionClick).toBe(false);
+    expect(state.stored).toBe('popup');
+  }
+
+  // Ending on the side panel after a further switch is remembered just the same.
+  const popup = await open(context, extensionId, 'popup');
+  const closed = popup.waitForEvent('close');
+  await popup.getByRole('button', { name: 'Open in side panel' }).click();
+  await closed;
+  expect((await toolbar(context, extensionId)).stored).toBe('sidepanel');
 });
