@@ -101,5 +101,13 @@ export function addressCount(text: string): number {
   ).size;
 }
 
+/** Whether the field holds what we put there: the same entries in the same order, whatever the separators. */
+export function fieldHolds(actual: string, wanted: string): boolean {
+  const have = fieldEntries(actual);
+  const want = fieldEntries(wanted);
+
+  return have.length === want.length && have.every((entry, i) => entry === want[i]);
+}
+
 /** Whether the field holds more people than claude.ai lets an artifact have. ArtiShare's own run skips the rest instead. */
 export const overLimit = (text: string): boolean => addressCount(text) > OUTSIDE_LIMIT;

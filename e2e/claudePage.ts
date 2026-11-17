@@ -40,6 +40,7 @@ declare global {
     __standIn: {
       invited: { emails: string[] }[];
       copied: number;
+      ignoreScriptInput: boolean;
       open: () => void;
       close: () => void;
       navigate: (path: string) => void;

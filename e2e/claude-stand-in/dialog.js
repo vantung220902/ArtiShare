@@ -177,7 +177,13 @@
     const tracker = trackValue(input);
     input.value = state.value;
 
-    input.addEventListener('input', () => {
+    input.addEventListener('input', (event) => {
+      // A hook for the case nobody has seen but must not look like success: a field that drops what
+      // a script puts in it. Typing and pasting by the person (trusted events) still work.
+      if (window.__standIn.ignoreScriptInput && !event.isTrusted) {
+        valueProp.set.call(input, state.value);
+        return;
+      }
       const actual = valueProp.get.call(input);
       if (actual === tracker.seen) return; // React: nothing changed, so no state update
       tracker.seen = actual;
@@ -521,6 +527,8 @@
     invited: [],
     /** How many times Copy link was clicked. */
     copied: 0,
+    /** While true, the invite field ignores input events a script dispatches (see wireInput). */
+    ignoreScriptInput: false,
     open: openDialog,
     close: closeDialog,
     navigate,

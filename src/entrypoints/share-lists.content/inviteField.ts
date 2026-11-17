@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { fieldHolds } from '../../core/inviteField';
 
 export const FIELD = 'input[role=combobox]';
 
@@ -13,7 +14,8 @@ const fieldIn = (entry: Element) => entry.querySelector<HTMLInputElement>(FIELD)
  * Puts text in claude.ai's invite field the way typing does. The field is a React-controlled input:
  * a plain `input.value = …` is ignored by React's value tracker, so the browser's own setter is used
  * and a bubbling `input` event follows, which makes claude.ai read the value and offer Invite.
- * Returns false when the field isn't there (the dialog changed), so the caller can say so.
+ * Returns false when the field isn't there (the dialog changed) or doesn't hold the text right
+ * afterwards (it ignored a script's input), so a silent no-op never looks like success.
  */
 export function fillInviteField(entry: Element, text: string): boolean {
   const field = fieldIn(entry);
@@ -21,6 +23,8 @@ export function fillInviteField(entry: Element, text: string): boolean {
   nativeValue.call(field, text);
   field.dispatchEvent(new Event('input', { bubbles: true }));
   field.focus();
+  // What the page holds now, not what we wrote: a field that dropped the input still says '' or the old text.
+  if (!fieldHolds(readInviteField(entry), text)) return false;
   field.setSelectionRange(text.length, text.length);
 
   return true;

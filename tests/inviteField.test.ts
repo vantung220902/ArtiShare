@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   addressCount,
+  fieldHolds,
   fieldKeys,
   inviteText,
   isPicked,
@@ -42,6 +43,20 @@ describe('fieldKeys and isPicked', () => {
     expect(isPicked(team, 'a@example.com')).toBe(false);
     expect(isPicked(team, '')).toBe(false);
     expect(isPicked([], 'a@example.com')).toBe(false);
+  });
+});
+
+describe('fieldHolds', () => {
+  it('holds the same entries whatever the separators', () => {
+    expect(fieldHolds('a@example.com, b@example.com', 'a@example.com,b@example.com')).toBe(true);
+    expect(fieldHolds('', '')).toBe(true);
+  });
+
+  it('does not hold a field that kept its old text, or lost some entries', () => {
+    expect(fieldHolds('', 'a@example.com')).toBe(false);
+    expect(fieldHolds('x@example.com', 'a@example.com')).toBe(false);
+    expect(fieldHolds('a@example.com', 'a@example.com, b@example.com')).toBe(false);
+    expect(fieldHolds('b@example.com, a@example.com', 'a@example.com, b@example.com')).toBe(false);
   });
 });
 

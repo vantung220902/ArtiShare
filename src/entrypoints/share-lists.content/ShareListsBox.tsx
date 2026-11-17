@@ -1,9 +1,17 @@
 import { useState } from 'react';
-import { fieldEntries, isPicked, overLimit, togglePick, unfinishedEntries } from '../../core/inviteField';
+import {
+  fieldEntries,
+  fieldHolds,
+  isPicked,
+  overLimit,
+  togglePick,
+  unfinishedEntries,
+} from '../../core/inviteField';
 import { inboxKey } from '../../core/emails';
 import { byName } from '../../core/lists';
 import { capResults, searchLists, type CappedResult } from '../../core/search';
 import { fillInviteField, readInviteField, useFieldText } from './inviteField';
+import { CopyFallback, FILL_FAILED } from './CopyFallback';
 import { useLists } from './lists';
 
 const people = (n: number) => `${n} ${n === 1 ? 'person' : 'people'}`;
@@ -14,6 +22,8 @@ const addresses = (n: number) => `${n} ${n === 1 ? 'address' : 'addresses'}`;
 // the person is told while they can still take some out of the field.
 const OVER_LIMIT_NOTE =
   'claude.ai lets at most 50 people outside your organization have access to an artifact, pending invitations included. Some of these may not be invited.';
+
+const TAKE_OUT_FAILED = "Couldn't take the addresses out of claude.ai's field. Remove them there yourself.";
 
 /** `Team's`, `Team's and Design's`, `A's, B's and C's`: whose permission claude.ai's Invite doesn't carry over. */
 const possessive = (names: readonly string[]) => {
@@ -95,6 +105,8 @@ export function ShareListsBox({ entry }: { entry: Element }) {
   // person is just typing their first address.
   const [clicked, setClicked] = useState(false);
   const [query, setQuery] = useState('');
+  // What claude.ai's field wouldn't take, kept until the field holds it (the person pasted it in).
+  const [failure, setFailure] = useState<{ text: string; added: boolean } | null>(null);
   // Until the lists are read the box stays empty: claude.ai's own dialog is what the person came
   // for, and a box that says nothing is better than one that says something wrong.
   if (state.status === 'loading') return null;
@@ -130,11 +142,14 @@ export function ShareListsBox({ entry }: { entry: Element }) {
     // Read the field itself: it may have changed since the last event we saw.
     const result = togglePick(readInviteField(entry), emails, others);
     if (!fillInviteField(entry, result.text)) {
-      setAnnouncement('Could not find claude.ai’s invite field.');
+      // The live region would only repeat the alert, and its old line (3 addresses added) is no longer true.
+      setAnnouncement('');
+      setFailure({ text: result.text, added: result.added });
 
       return;
     }
     // The box only fills the field: choosing claude.ai's own Invite option stays with the person.
+    setFailure(null);
     setClicked(true);
     setAnnouncement(changedMessage(result.added ? 'added' : 'removed', result.changed, result.text));
   }
@@ -212,6 +227,21 @@ export function ShareListsBox({ entry }: { entry: Element }) {
                   <span className="chip-count">{list.emails.length}</span>
                 </button>
               ))}
+            </div>
+          )}
+          {failure && !fieldHolds(fieldText, failure.text) && (
+            <div className="failure">
+              <p className="note warning" role="alert">
+                {failure.added ? FILL_FAILED : TAKE_OUT_FAILED}
+              </p>
+              {failure.added && (
+                <CopyFallback
+                  key={failure.text}
+                  text={failure.text}
+                  label={`Copy ${addresses(fieldEntries(failure.text).length)}`}
+                  onCopied={() => setAnnouncement('Copied. Paste them into claude.ai’s field.')}
+                />
+              )}
             </div>
           )}
           {unfinished.length > 0 && <p className="note warning">{unfinishedNote(unfinished)}</p>}
