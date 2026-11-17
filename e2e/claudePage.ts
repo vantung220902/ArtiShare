@@ -42,6 +42,7 @@ declare global {
       copied: number;
       open: () => void;
       close: () => void;
+      navigate: (path: string) => void;
       setMode: (mode: 'light' | 'dark') => void;
       rerenderPinned: () => void;
     };

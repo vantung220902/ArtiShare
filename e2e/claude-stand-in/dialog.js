@@ -499,6 +499,23 @@
     syncListbox();
   }
 
+  /**
+   * Moving to another artifact without a page load, as claude.ai's router does: the address changes
+   * with `history.pushState` and the old page's dialog is torn down at once (no closing animation).
+   */
+  function navigate(path) {
+    history.pushState(null, '', path);
+    clearTimeout(closingTimer);
+    closingPortal?.remove();
+    closingPortal = null;
+    portal?.remove();
+    portal = null;
+    removeListbox();
+    state.open = false;
+    state.value = '';
+    state.tab = 'share';
+  }
+
   window.__standIn = {
     /** Every time the invite option was chosen: `{ emails }`. Nothing is ever sent. */
     invited: [],
@@ -506,6 +523,7 @@
     copied: 0,
     open: openDialog,
     close: closeDialog,
+    navigate,
     setMode,
     rerenderPinned,
   };
