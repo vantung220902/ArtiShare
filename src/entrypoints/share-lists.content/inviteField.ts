@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export const FIELD = 'input[role=combobox]';
 
@@ -26,17 +26,37 @@ export function fillInviteField(entry: Element, text: string): boolean {
   return true;
 }
 
-/** What the invite field holds now, kept in step with typing, pasting and our own fills. */
-export function useFieldText(entry: Element): string {
-  const [text, setText] = useState(() => fieldIn(entry)?.value ?? '');
+/** What the invite field holds right now, read from the page rather than from what we last saw. */
+export const readInviteField = (entry: Element) => fieldIn(entry)?.value ?? '';
+
+/**
+ * What the invite field holds now, kept in step with typing, pasting and our own fills, plus a
+ * `refresh` for the moments nothing tells us: claude.ai clears the field after Invite without an
+ * input event, so the box re-reads it when the person comes back to it.
+ */
+export function useFieldText(entry: Element): [string, () => void] {
+  const [text, setText] = useState(() => readInviteField(entry));
+  const refresh = useCallback(() => setText(readInviteField(entry)), [entry]);
   useEffect(() => {
-    const read = () => setText(fieldIn(entry)?.value ?? '');
-    read();
+    // The field may have changed between the first render and now (a re-render of claude.ai's own).
+    const timers = [window.setTimeout(refresh, 0)];
     // The event bubbles up from the field, so one listener on the entry survives a re-render of it.
-    entry.addEventListener('input', read);
+    entry.addEventListener('input', refresh);
+    entry.addEventListener('focusin', refresh);
+    // claude.ai cancels a paste and sets the value itself, so no input event follows. Read again once
+    // its own state has settled.
+    const afterPaste = () => {
+      timers.push(window.setTimeout(refresh, 0), window.setTimeout(refresh, 150));
+    };
+    entry.addEventListener('paste', afterPaste);
 
-    return () => entry.removeEventListener('input', read);
-  }, [entry]);
+    return () => {
+      entry.removeEventListener('input', refresh);
+      entry.removeEventListener('focusin', refresh);
+      entry.removeEventListener('paste', afterPaste);
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [entry, refresh]);
 
-  return text;
+  return [text, refresh];
 }

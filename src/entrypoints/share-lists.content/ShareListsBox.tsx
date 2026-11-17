@@ -1,42 +1,63 @@
 import { useState } from 'react';
-import { inviteText, isPicked } from '../../core/inviteField';
+import { fieldEntries, isPicked, togglePick, unfinishedEntries } from '../../core/inviteField';
 import { byName } from '../../core/lists';
 import { useConfig } from '../../ui/hooks';
-import { fillInviteField, useFieldText } from './inviteField';
+import { fillInviteField, readInviteField, useFieldText } from './inviteField';
 
 const people = (n: number) => `${n} ${n === 1 ? 'person' : 'people'}`;
+const addresses = (n: number) => `${n} ${n === 1 ? 'address' : 'addresses'}`;
 
-/** What the live region says after a fill. claude.ai's own option names what it will invite. */
-function addedMessage(emails: readonly string[]) {
-  const n = emails.length;
-  if (n === 1) return `1 address added. Choose Invite ${emails[0]} to invite them.`;
+/** Why claude.ai shows no Invite option, naming what to fix. */
+const unfinishedNote = (entries: readonly string[]) =>
+  `claude.ai offers Invite only when every entry is a full address. Finish or remove ${entries
+    .map((entry) => `"${entry}"`)
+    .join(', ')}.`;
 
-  return `${n} addresses added. Choose Invite ${n} people to invite them.`;
+/** What the live region says after a click. claude.ai's own option names what it will invite. */
+function changedMessage(verb: 'added' | 'removed', changed: number, text: string) {
+  const entries = fieldEntries(text);
+  const done = `${addresses(changed)} ${verb}.`;
+  const unfinished = unfinishedEntries(text);
+  if (unfinished.length > 0) return `${done} ${unfinishedNote(unfinished)}`;
+  if (entries.length === 0) return done;
+  const what = entries.length === 1 ? entries[0] : `${entries.length} people`;
+
+  return `${done} Choose Invite ${what} to invite them.`;
 }
 
 /** The Share lists box drawn under claude.ai's invite field. `entry` is claude.ai's `[data-share-entry]`. */
 export function ShareListsBox({ entry }: { entry: Element }) {
   const [config] = useConfig();
-  const fieldText = useFieldText(entry);
+  const [fieldText, refresh] = useFieldText(entry);
   const [announcement, setAnnouncement] = useState('');
+  // The note about an unfinished entry belongs to a click of ours, so it isn't shown while the
+  // person is just typing their first address.
+  const [clicked, setClicked] = useState(false);
   // Until the lists are read (or if they can't be) the box stays empty: claude.ai's own dialog is
   // what the person came for, and a box that says nothing is better than one that says something wrong.
   if (!config) return null;
   const lists = byName(config.lists);
+  const unfinished = clicked ? unfinishedEntries(fieldText) : [];
 
-  function pick(emails: readonly string[]) {
-    const text = inviteText(emails);
-    if (!fillInviteField(entry, text)) {
+  function pick(id: string) {
+    const list = lists.find((l) => l.id === id);
+    if (!list) return;
+    // Read the field itself: it may have changed since the last event we saw.
+    const current = readInviteField(entry);
+    const others = lists.filter((l) => l.id !== id && isPicked(l.emails, current)).map((l) => l.emails);
+    const result = togglePick(current, list.emails, others);
+    if (!fillInviteField(entry, result.text)) {
       setAnnouncement('Could not find claude.ai’s invite field.');
 
       return;
     }
     // The box only fills the field: choosing claude.ai's own Invite option stays with the person.
-    setAnnouncement(addedMessage(text.split(', ')));
+    setClicked(true);
+    setAnnouncement(changedMessage(result.added ? 'added' : 'removed', result.changed, result.text));
   }
 
   return (
-    <fieldset className="box" aria-label="Share lists">
+    <fieldset className="box" aria-label="Share lists" onPointerEnter={refresh}>
       <h3 className="heading">Share lists</h3>
       {lists.length === 0 ? (
         <p className="note">No saved lists yet. Make one in ArtiShare&apos;s Lists tab.</p>
@@ -56,7 +77,7 @@ export function ShareListsBox({ entry }: { entry: Element }) {
                 type="button"
                 className="chip"
                 aria-pressed={isPicked(list.emails, fieldText)}
-                onClick={() => pick(list.emails)}
+                onClick={() => pick(list.id)}
                 aria-label={`${list.name}, ${people(list.emails.length)}`}
               >
                 <span className="chip-name">{list.name}</span>
@@ -65,6 +86,7 @@ export function ShareListsBox({ entry }: { entry: Element }) {
               </button>
             ))}
           </div>
+          {unfinished.length > 0 && <p className="note warning">{unfinishedNote(unfinished)}</p>}
         </>
       )}
       <output className="visually-hidden" aria-live="polite">

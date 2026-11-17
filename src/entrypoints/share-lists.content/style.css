@@ -26,6 +26,11 @@
   opacity: 0.75;
 }
 
+.warning {
+  margin-top: 6px;
+  opacity: 1;
+}
+
 .search {
   box-sizing: border-box;
   width: 100%;

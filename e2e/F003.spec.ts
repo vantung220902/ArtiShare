@@ -80,9 +80,11 @@ test('the live region says how many addresses were added', async ({ context, pan
   await chip(host, 'Team').click();
   await expect(status(host)).toHaveText('3 addresses added. Choose Invite 3 people to invite them.');
   await chip(host, 'Solo').click();
-  // A click on a filled field replaces its text.
-  await expect(host.locator(FIELD)).toHaveValue('solo@example.com');
-  await expect(status(host)).toHaveText('1 address added. Choose Invite solo@example.com to invite them.');
+  // A second list joins what is there (F004 covers the merge in full).
+  await expect(host.locator(FIELD)).toHaveValue(
+    'a@example.com, b@example.com, c@example.com, solo@example.com',
+  );
+  await expect(status(host)).toHaveText('1 address added. Choose Invite 4 people to invite them.');
 });
 
 test('the box never chooses Invite and starts no run', async ({ context, panel }) => {
@@ -177,6 +179,10 @@ test('the field is filled in the fake build only through the browser’s own set
     el.dispatchEvent(new Event('input', { bubbles: true }));
   });
   await expect(host.locator(OPTION)).toHaveCount(0);
+  // Empty the field again so the click starts from nothing (the box keeps what is in the field).
+  await host.locator(FIELD).evaluate((el: HTMLInputElement) => {
+    el.value = '';
+  });
   await chip(host, 'Team').click();
   await expect(host.locator(OPTION)).toContainText('Invite 2 people');
 });
