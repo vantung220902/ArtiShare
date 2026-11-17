@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 // F012: the docs describe Use popup instead opening the popup, and saving people with access to a
 // list. No browser is needed; this reads the files so the wording can't quietly drift back.
 
-const root = new URL('..', import.meta.url);
+const root = new URL('../..', import.meta.url);
 const text = (path: string) => readFileSync(new URL(path, root)).toString('utf8');
 
 const readme = text('README.md');

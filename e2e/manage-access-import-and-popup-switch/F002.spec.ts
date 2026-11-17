@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F002: when Chrome can't open the popup from the side panel the panel stays open and says so,
 // instead of closing and looking just like the X. A real toolbar click can't be made from Playwright,

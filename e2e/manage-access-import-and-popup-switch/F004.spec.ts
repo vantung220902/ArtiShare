@@ -1,5 +1,5 @@
 import type { BrowserContext } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F004: the fake claude.ai has a "Crowded" artifact with 45 people already invited, so saving many
 // people to a list can be tried. Here only what Manage access lists is checked; the rule itself is

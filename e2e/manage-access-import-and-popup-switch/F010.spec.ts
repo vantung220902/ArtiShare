@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F010: if Save to a list can't save, it says why and keeps what I chose.
 // Driven in the side panel page: a popup page is itself the front tab, so it can't see an artifact.

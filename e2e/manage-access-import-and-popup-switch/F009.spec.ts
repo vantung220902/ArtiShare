@@ -1,5 +1,5 @@
 import type { BrowserContext, Locator, Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F009: in Save to a list I choose exactly who to save, and can back out without saving anything,
 // by mouse or keyboard. Driven in the side panel page: a popup page is itself the front tab, so it

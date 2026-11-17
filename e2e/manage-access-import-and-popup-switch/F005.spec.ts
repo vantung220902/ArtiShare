@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F005: People with access says, for each person invited, which saved lists they're in, or
 // 'Not in a list'. Lists are saved through the same `config-change` message the Lists tab uses.

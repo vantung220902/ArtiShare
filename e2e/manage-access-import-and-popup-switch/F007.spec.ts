@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F007: Save to a list puts the people who aren't in any list into a new list in a couple of clicks.
 // Driven in the side panel page: a popup page is itself the front tab, so it can't see an artifact.

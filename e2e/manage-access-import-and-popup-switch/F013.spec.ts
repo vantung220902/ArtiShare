@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test';
 // generator builds the scene the steps describe (and waits for it before taking the picture), that
 // the README shows manage-save.png beside manage.png with alt text, and that everything is made up.
 
-const root = new URL('..', import.meta.url);
+const root = new URL('../..', import.meta.url);
 const read = (path: string) => readFileSync(new URL(path, root));
 const source = read('scripts/screenshots.spec.ts').toString();
 const readme = read('README.md').toString();

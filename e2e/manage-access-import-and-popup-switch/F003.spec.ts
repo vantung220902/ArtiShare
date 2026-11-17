@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { answer, expect, test } from './fixtures';
+import { answer, expect, test } from '../fixtures';
 
 // F003: switching to the popup closes ArtiShare's side panel in every window, and doesn't interrupt
 // a run. Two windows are two sidepanel.html pages; a real toolbar click and the real popup can't be

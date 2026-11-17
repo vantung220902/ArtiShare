@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F006: when some people with access aren't in any list, People with access says how many and
 // offers a Save to a list button. A quiet line, not a warning.

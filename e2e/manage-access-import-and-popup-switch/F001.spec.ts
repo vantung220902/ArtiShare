@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '../fixtures';
 
 // F001: in the side panel, Use popup instead closes the panel and opens the popup straight away,
 // with the work as it was left. A real toolbar popup can't be seen from here, so `openPopup` is
