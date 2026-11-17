@@ -16,7 +16,7 @@ const file = (name: string) =>
   readFileSync(new URL(`./claude-stand-in/${name}`, import.meta.url)).toString('utf8');
 
 /** The page with its styles and script written into it, so a page is a single request. */
-function render(name: string) {
+export function render(name: string) {
   return file(name)
     .replace('<!-- inline:dialog.css -->', () => `<style>${file('dialog.css')}</style>`)
     .replace('<!-- inline:dialog.js -->', () => `<script>${file('dialog.js')}</script>`);
