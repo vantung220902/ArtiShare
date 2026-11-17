@@ -1,14 +1,26 @@
 import { useState } from 'react';
-import { fieldEntries, isPicked, togglePick, unfinishedEntries } from '../../core/inviteField';
+import { fieldEntries, isPicked, overLimit, togglePick, unfinishedEntries } from '../../core/inviteField';
 import { inboxKey } from '../../core/emails';
 import { byName } from '../../core/lists';
-import { searchLists, type SearchResult } from '../../core/search';
+import { capResults, searchLists, type CappedResult } from '../../core/search';
 import { useConfig } from '../../ui/hooks';
 import { fillInviteField, readInviteField, useFieldText } from './inviteField';
 
 const people = (n: number) => `${n} ${n === 1 ? 'person' : 'people'}`;
 const EMPTY_LIST_TIP = 'This list has no addresses.';
 const addresses = (n: number) => `${n} ${n === 1 ? 'address' : 'addresses'}`;
+
+// ArtiShare's own run skips the people over the limit, but claude.ai's Invite has no such step, so
+// the person is told while they can still take some out of the field.
+const OVER_LIMIT_NOTE =
+  'claude.ai lets at most 50 people outside your organization have access to an artifact, pending invitations included. Some of these may not be invited.';
+
+/** `Team's`, `Team's and Design's`, `A's, B's and C's`: whose permission claude.ai's Invite doesn't carry over. */
+const possessive = (names: readonly string[]) => {
+  const own = names.map((name) => `${name}'s`);
+
+  return own.length > 1 ? `${own.slice(0, -1).join(', ')} and ${own.at(-1)}` : own[0];
+};
 
 /** Why claude.ai shows no Invite option, naming what to fix. */
 const unfinishedNote = (entries: readonly string[]) =>
@@ -29,7 +41,7 @@ function changedMessage(verb: 'added' | 'removed', changed: number, text: string
 }
 
 interface SearchResultsProps {
-  found: SearchResult;
+  found: CappedResult;
   query: string;
   fieldText: string;
   onList: (id: string) => void;
@@ -69,6 +81,7 @@ function SearchResults({ found, query, fieldText, onList, onPerson }: SearchResu
           <span className="result-lists">In {person.inLists.join(', ')}</span>
         </button>
       ))}
+      {found.more > 0 && <p className="note more">and {found.more} more. Keep typing to narrow it down.</p>}
     </div>
   );
 }
@@ -90,6 +103,8 @@ export function ShareListsBox({ entry }: { entry: Element }) {
   // later in ArtiShare would come back behind a search for something that is gone.
   if (lists.length === 0 && query !== '') setQuery('');
   const unfinished = clicked ? unfinishedEntries(fieldText) : [];
+  // Which list is picked follows the field, so the note goes the moment the field no longer holds it.
+  const editLists = lists.filter((l) => l.access === 'edit' && isPicked(l.emails, fieldText));
 
   /** Adds `emails` to the field, or takes them out if they are all in it, as a click on a chip does. */
   function apply(emails: readonly string[], others: readonly (readonly string[])[]) {
@@ -143,7 +158,7 @@ export function ShareListsBox({ entry }: { entry: Element }) {
           </div>
           {searching ? (
             <SearchResults
-              found={searchLists(lists, query)}
+              found={capResults(searchLists(lists, query))}
               query={query.trim()}
               fieldText={fieldText}
               onList={pick}
@@ -172,6 +187,13 @@ export function ShareListsBox({ entry }: { entry: Element }) {
             </div>
           )}
           {unfinished.length > 0 && <p className="note warning">{unfinishedNote(unfinished)}</p>}
+          {overLimit(fieldText) && <p className="note warning">{OVER_LIMIT_NOTE}</p>}
+          {editLists.length > 0 && (
+            <p className="note warning">
+              Here claude.ai&apos;s Invite sets the permission, not {possessive(editLists.map((l) => l.name))}{' '}
+              Can edit. Change it in People with access afterwards, or invite from the ArtiShare popup.
+            </p>
+          )}
         </>
       )}
       <output className="visually-hidden" aria-live="polite">

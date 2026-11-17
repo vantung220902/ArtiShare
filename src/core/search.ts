@@ -40,3 +40,19 @@ export function searchLists(lists: readonly EmailList[], query: string): SearchR
     people: [...people.values()],
   };
 }
+
+/** The most rows the box lists for one search; a longer list of matches is cut and counted. */
+export const MAX_RESULT_ROWS = 20;
+
+export interface CappedResult extends SearchResult {
+  /** How many rows were left out. */
+  more: number;
+}
+
+/** Keeps the first `max` rows, lists before people, and counts the rest. */
+export function capResults(found: SearchResult, max = MAX_RESULT_ROWS): CappedResult {
+  const lists = found.lists.slice(0, max);
+  const people = found.people.slice(0, max - lists.length);
+
+  return { lists, people, more: found.lists.length + found.people.length - lists.length - people.length };
+}

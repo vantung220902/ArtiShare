@@ -86,3 +86,20 @@ export function togglePick(
     added: true,
   };
 }
+
+/** claude.ai lets this many people outside the organization have access to an artifact, pending invitations included. */
+export const OUTSIDE_LIMIT = 50;
+
+/** How many different people the field holds as full addresses; an unfinished entry isn't one yet. */
+export function addressCount(text: string): number {
+  const unfinished = new Set(unfinishedEntries(text));
+
+  return new Set(
+    fieldEntries(text)
+      .filter((entry) => !unfinished.has(entry))
+      .map(inboxKey),
+  ).size;
+}
+
+/** Whether the field holds more people than claude.ai lets an artifact have. ArtiShare's own run skips the rest instead. */
+export const overLimit = (text: string): boolean => addressCount(text) > OUTSIDE_LIMIT;

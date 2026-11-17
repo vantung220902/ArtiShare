@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { fieldKeys, inviteText, isPicked } from '../src/core/inviteField';
+import {
+  addressCount,
+  fieldKeys,
+  inviteText,
+  isPicked,
+  OUTSIDE_LIMIT,
+  overLimit,
+} from '../src/core/inviteField';
 
 describe('inviteText', () => {
   it('joins with a comma and a space, in the list order', () => {
@@ -35,5 +42,26 @@ describe('fieldKeys and isPicked', () => {
     expect(isPicked(team, 'a@example.com')).toBe(false);
     expect(isPicked(team, '')).toBe(false);
     expect(isPicked([], 'a@example.com')).toBe(false);
+  });
+});
+
+describe('addressCount and overLimit', () => {
+  const crowd = (n: number) => Array.from({ length: n }, (_, i) => `p${i}@example.com`).join(', ');
+
+  it('counts different inboxes, not entries', () => {
+    expect(addressCount('Ab@gmail.com, ab+x@gmail.com, c@example.com')).toBe(2);
+    expect(addressCount('')).toBe(0);
+  });
+
+  it('does not count an unfinished entry', () => {
+    expect(addressCount('a@example.com, ali')).toBe(1);
+  });
+
+  it('is over the limit only above 50', () => {
+    expect(OUTSIDE_LIMIT).toBe(50);
+    expect(overLimit(crowd(45))).toBe(false);
+    expect(overLimit(crowd(50))).toBe(false);
+    expect(overLimit(crowd(51))).toBe(true);
+    expect(overLimit(`${crowd(50)}, ali`)).toBe(false);
   });
 });

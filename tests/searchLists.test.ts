@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { EmailList } from '../src/core/config';
-import { searchLists } from '../src/core/search';
+import { capResults, searchLists } from '../src/core/search';
 
 const list = (name: string, emails: string[]): EmailList => ({ id: name, name, emails, access: 'view' });
 const TEAM = list('Team', ['alice@example.com', 'bob@example.com']);
@@ -49,5 +49,33 @@ describe('searchLists', () => {
 
     expect(result.lists.map((l) => l.name)).toEqual(['Dana crew']);
     expect(result.people.map((p) => p.email)).toEqual(['dana@example.com']);
+  });
+});
+
+describe('capResults', () => {
+  const people = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ email: `p${i}@example.com`, inLists: ['Crowd'] }));
+
+  it('keeps 20 rows and counts the rest', () => {
+    const capped = capResults({ lists: [], people: people(45) });
+
+    expect(capped.people).toHaveLength(20);
+    expect(capped.more).toBe(25);
+  });
+
+  it('leaves a short result alone', () => {
+    const capped = capResults({ lists: [TEAM], people: people(19) });
+
+    expect(capped.lists).toHaveLength(1);
+    expect(capped.people).toHaveLength(19);
+    expect(capped.more).toBe(0);
+  });
+
+  it('shows lists before people when the rows run out', () => {
+    const capped = capResults({ lists: [TEAM, DESIGN], people: people(30) }, 5);
+
+    expect(capped.lists).toHaveLength(2);
+    expect(capped.people).toHaveLength(3);
+    expect(capped.more).toBe(27);
   });
 });

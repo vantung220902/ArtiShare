@@ -125,6 +125,18 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  /* About three rows of chips (26px each with the gaps), then it scrolls, so a long list of lists
+     never pushes the invite field out of claude.ai's scrolling area. The padding and the equal
+     negative margin keep the focus ring of a chip on the edge from being cut off. */
+  box-sizing: content-box;
+  max-height: 90px;
+  padding: 3px;
+  margin: -3px;
+  overflow-y: auto;
+}
+
+.more {
+  padding: 4px 8px;
 }
 
 .chip {
