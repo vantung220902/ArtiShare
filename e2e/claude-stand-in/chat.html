@@ -1,0 +1,26 @@
+<!doctype html>
+<!-- The top-frame variant, https://claude.ai/chat/{id}?artifact={uuid}: an artifact open beside a chat,
+     where the Share dialog is in the page itself and there is no iframe. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Test chat</title>
+    <!-- inline:dialog.css -->
+  </head>
+  <body>
+    <header class="si-header">
+      <strong>Test Artifact</strong>
+      <button type="button" data-stand-in-share class="si-pill">Share</button>
+    </header>
+    <main class="si-artifact">
+      <p>A chat with an artifact open beside it.</p>
+      <button type="button" id="artifact-button" class="si-pill">Artifact button</button>
+    </main>
+    <!-- inline:dialog.js -->
+    <script>
+      document
+        .querySelector('[data-stand-in-share]')
+        .addEventListener('click', () => window.__standIn.open());
+    </script>
+  </body>
+</html>
