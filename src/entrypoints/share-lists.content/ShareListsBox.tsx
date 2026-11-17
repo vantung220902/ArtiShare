@@ -83,6 +83,9 @@ export function ShareListsBox({ entry }: { entry: Element }) {
   // what the person came for, and a box that says nothing is better than one that says something wrong.
   if (!config) return null;
   const lists = byName(config.lists);
+  // With no lists there is no search field to clear, so drop the text now: otherwise a list made
+  // later in ArtiShare would come back behind a search for something that is gone.
+  if (lists.length === 0 && query !== '') setQuery('');
   const unfinished = clicked ? unfinishedEntries(fieldText) : [];
 
   /** Adds `emails` to the field, or takes them out if they are all in it, as a click on a chip does. */
