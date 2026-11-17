@@ -149,6 +149,14 @@ export function ShareListsBox({ entry }: { entry: Element }) {
               autoComplete="off"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                // Escape with text clears the search and stays in the dialog, which would otherwise
+                // take that same Escape and close. With nothing to clear it goes on and closes it.
+                if (e.key === 'Escape' && query !== '') {
+                  e.stopPropagation();
+                  setQuery('');
+                }
+              }}
             />
             {query !== '' && (
               <button type="button" className="clear" aria-label="Clear search" onClick={() => setQuery('')}>
@@ -175,7 +183,8 @@ export function ShareListsBox({ entry }: { entry: Element }) {
                   // aria-disabled rather than disabled: the chip stays reachable by keyboard, so
                   // a screen reader user can find out why it does nothing.
                   aria-disabled={list.emails.length === 0 || undefined}
-                  title={list.emails.length === 0 ? EMPTY_LIST_TIP : undefined}
+                  // A long name is cut with …, so the full name is in the tooltip.
+                  title={list.emails.length === 0 ? EMPTY_LIST_TIP : list.name}
                   onClick={() => list.emails.length > 0 && pick(list.id)}
                   aria-label={`${list.name}, ${people(list.emails.length)}`}
                 >

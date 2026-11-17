@@ -121,17 +121,24 @@
   border-radius: 8px;
 }
 
+/* The browser's own placeholder grey is fixed, so on a dark dialog it can't be read. */
+.search::placeholder {
+  color: inherit;
+  opacity: 0.7;
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   /* About three rows of chips (26px each with the gaps), then it scrolls, so a long list of lists
-     never pushes the invite field out of claude.ai's scrolling area. The padding and the equal
-     negative margin keep the focus ring of a chip on the edge from being cut off. */
+     never pushes the invite field out of claude.ai's scrolling area. The padding keeps the focus
+     ring of a chip on the edge from being cut off, and the negative margin takes the space back.
+     Not on the right: it would push the box 3px past the dialog's edge and sideways-scroll it. */
   box-sizing: content-box;
   max-height: 90px;
   padding: 3px;
-  margin: -3px;
+  margin: -3px 0 -3px -3px;
   overflow-y: auto;
 }
 
