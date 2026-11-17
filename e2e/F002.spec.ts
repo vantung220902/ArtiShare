@@ -3,7 +3,7 @@ import type { BrowserContext, Frame, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { openArtifact, openChatArtifact } from './claudePage';
 
-// F002: the Share lists box under claude.ai's invite field, with a chip per saved list. The page is
+// F002: the ArtiShare lists box under claude.ai's invite field, with a chip per saved list. The page is
 // the stand-in from F001. The fake build leaves the box's shadow root open so these tests can look
 // inside it; the one test that needs it closed says so.
 
@@ -60,9 +60,9 @@ test('saving two lists in the popup, the box shows a chip for each, in the Lists
   await expect(lists.locator('.choices.nested .truncate')).toHaveText(['Design', 'Team']);
 
   const { host } = await openShare(context);
-  const group = box(host).getByRole('group', { name: 'Share lists' });
+  const group = box(host).getByRole('group', { name: 'ArtiShare lists' });
   await expect(group).toBeVisible();
-  await expect(group.getByRole('heading', { name: 'Share lists' })).toBeVisible();
+  await expect(group.getByRole('heading', { name: 'ArtiShare lists' })).toBeVisible();
   await expect(chips(host)).toHaveText(['Design 2', 'Team 3']);
   await expect(chips(host).nth(0)).toHaveAccessibleName('Design, 2 people');
   await expect(chips(host).nth(1)).toHaveAccessibleName('Team, 3 people');
@@ -151,7 +151,7 @@ test('the box has a closed shadow root: the page can’t read into it', async ({
     if (node.contentDocument) walk(node.contentDocument as typeof node);
   };
   walk(root);
-  expect(text).toContain('Share lists');
+  expect(text).toContain('ArtiShare lists');
   expect(text).toContain('Team');
 });
 

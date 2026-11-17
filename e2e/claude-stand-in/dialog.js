@@ -1,6 +1,6 @@
 /*
  * A stand-in for claude.ai's artifact Share dialog, built from harness/claude-share-dialog.md (what
- * the real one looked like on 2026-11-17). It exists so the in-page "Share lists" box can be tested
+ * the real one looked like on 2026-11-17). It exists so the in-page "ArtiShare lists" box can be tested
  * without signing in and without inviting anyone: choosing its invite option only records the
  * choice in `window.__standIn.invited`, and nothing here touches the network.
  *

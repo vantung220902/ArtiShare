@@ -96,7 +96,7 @@ function SearchResults({ found, query, fieldText, onList, onPerson }: SearchResu
   );
 }
 
-/** The Share lists box drawn under claude.ai's invite field. `entry` is claude.ai's `[data-share-entry]`. */
+/** The ArtiShare lists box drawn under claude.ai's invite field. `entry` is claude.ai's `[data-share-entry]`. */
 export function ShareListsBox({ entry }: { entry: Element }) {
   const { state, retry, checkAlive } = useLists();
   const [fieldText, refresh] = useFieldText(entry);
@@ -112,8 +112,8 @@ export function ShareListsBox({ entry }: { entry: Element }) {
   if (state.status === 'loading') return null;
   if (state.status === 'problem') {
     return (
-      <fieldset className="box" aria-label="Share lists">
-        <h3 className="heading">Share lists</h3>
+      <fieldset className="box" aria-label="ArtiShare lists">
+        <h3 className="heading">ArtiShare lists</h3>
         <p className="note warning" role="alert">
           {state.message}
         </p>
@@ -168,8 +168,8 @@ export function ShareListsBox({ entry }: { entry: Element }) {
   const searching = query.trim() !== '';
 
   return (
-    <fieldset className="box" aria-label="Share lists" onPointerEnter={() => checkAlive() && refresh()}>
-      <h3 className="heading">Share lists</h3>
+    <fieldset className="box" aria-label="ArtiShare lists" onPointerEnter={() => checkAlive() && refresh()}>
+      <h3 className="heading">ArtiShare lists</h3>
       {lists.length === 0 ? (
         <p className="note">No saved lists yet. Make one in ArtiShare&apos;s Lists tab.</p>
       ) : (

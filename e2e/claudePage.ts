@@ -3,7 +3,7 @@ import type { BrowserContext, Frame, Page } from '@playwright/test';
 
 /**
  * A stand-in for a claude.ai artifact page and its Share dialog (the files in `claude-stand-in/`),
- * served at claude.ai URLs through `context.route`, so the in-page Share lists box can be tested
+ * served at claude.ai URLs through `context.route`, so the in-page ArtiShare lists box can be tested
  * without signing in and without inviting anyone. Nothing leaves the machine: every request to
  * claude.ai is answered here, and anything that isn't one of the stand-in's pages gets a 404.
  */

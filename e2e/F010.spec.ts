@@ -353,14 +353,14 @@ test('Escape on a chip, which is not the search field, still closes the dialog',
   await expect(host.locator('[data-share-pop]')).toHaveCount(0);
 });
 
-test('the box is a group named Share lists, chips are toggle buttons named with their count, and messages are polite', async ({
+test('the box is a group named ArtiShare lists, chips are toggle buttons named with their count, and messages are polite', async ({
   context,
   panel,
 }) => {
   await writeLists(panel, [...LISTS, { name: 'Empty', emails: [] }]);
   const { host } = await openShare(context);
 
-  const group = host.getByRole('group', { name: 'Share lists' });
+  const group = host.getByRole('group', { name: 'ArtiShare lists' });
   await expect(group).toHaveCount(1);
   // The group holds every chip, including the one that can't be picked.
   await expect(group.getByRole('button')).toHaveCount(4);

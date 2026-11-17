@@ -8,7 +8,7 @@ export interface SenderInfo {
 
 export type Verdict = { allow: true } | { allow: false; reason: string };
 
-/** The one thing a page on claude.ai may ask ArtiShare for: the saved lists, to show in the Share lists box. */
+/** The one thing a page on claude.ai may ask ArtiShare for: the saved lists, to show in the ArtiShare lists box. */
 const CONTENT_SCRIPT_MESSAGES: ReadonlySet<string> = new Set(['config-get']);
 
 const parse = (url: string | undefined): URL | null => {

@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
-// F014: the README, the privacy policy and the website describe the Share lists box in claude.ai's
+// F014: the README, the privacy policy and the website describe the ArtiShare lists box in claude.ai's
 // Share dialog. No browser is needed; this reads the files so the wording can't quietly drift.
 
 const root = new URL('../', import.meta.url);
@@ -12,17 +12,17 @@ const readme = text('README.md');
 const privacy = flat(text('docs/privacy.html'));
 const site = flat(text('docs/index.html'));
 
-const sectionStart = readme.indexOf("### Optional: the Share lists box in claude.ai's Share dialog");
+const sectionStart = readme.indexOf("### Optional: the ArtiShare lists box in claude.ai's Share dialog");
 const section = readme.slice(sectionStart, readme.indexOf('## Good to know', sectionStart));
 
-test("README: a section about the Share lists box in claude.ai's Share dialog", () => {
+test("README: a section about the ArtiShare lists box in claude.ai's Share dialog", () => {
   expect(sectionStart).toBeGreaterThan(0);
   expect(section.length).toBeGreaterThan(500);
 });
 
 test('README: where it appears, chips with counts, search, and picking fills the field', () => {
   for (const phrase of [
-    '**Share lists** box',
+    '**ArtiShare lists** box',
     "claude.ai's own Share dialog",
     '**Invite people by email** field',
     "isn't on the dialog's Export tab",
@@ -69,7 +69,7 @@ test('README: the popup and side panel sections and the Limits table are still t
     expect(readme, phrase).toContain(phrase);
   }
   // The new section is linked from the popup's introduction, and the anchor resolves.
-  expect(readme).toContain('(#optional-the-share-lists-box-in-claudeais-share-dialog)');
+  expect(readme).toContain('(#optional-the-artishare-lists-box-in-claudeais-share-dialog)');
 });
 
 test('README: the layout names the content script', () => {
@@ -77,12 +77,12 @@ test('README: the layout names the content script', () => {
 });
 
 test('privacy policy: it also runs on claude.ai, reads only the lists, fills the field when you pick, sends nothing', () => {
-  const start = privacy.indexOf('<h2>The Share lists box on claude.ai</h2>');
+  const start = privacy.indexOf('<h2>The ArtiShare lists box on claude.ai</h2>');
   expect(start).toBeGreaterThan(0);
   const part = privacy.slice(start, privacy.indexOf('<h2>', start + 10));
   for (const phrase of [
     'also runs on claude.ai pages',
-    'Share lists</strong> box',
+    'ArtiShare lists</strong> box',
     'reads your saved lists from the extension, and nothing else',
     'only when you pick a list or a person',
     "doesn't invite anyone itself",
@@ -104,8 +104,8 @@ test("privacy policy: 'last updated' is the day of the change or later", () => {
   expect(updated).toBeGreaterThanOrEqual(Date.parse('17 November 2026 UTC'));
 });
 
-test('website: mentions the Share lists box in a sentence or two', () => {
-  const at = site.indexOf('Share lists</strong> box');
+test('website: mentions the ArtiShare lists box in a sentence or two', () => {
+  const at = site.indexOf('ArtiShare lists</strong> box');
   expect(at).toBeGreaterThan(0);
   const item = site.slice(at, site.indexOf('</li>', at));
   expect(item).toContain("claude.ai's own Share dialog");

@@ -15,7 +15,7 @@ export interface SearchResult {
 }
 
 /**
- * What a search in the Share lists box finds: lists whose name contains the text and people whose
+ * What a search in the ArtiShare lists box finds: lists whose name contains the text and people whose
  * address does, each person once however many lists they are in. Case and the spaces around the text
  * are ignored; an empty search finds nothing, because the box shows its chips then.
  */

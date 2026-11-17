@@ -41,7 +41,7 @@ test('with no saved lists the box says so and shows no search field', async ({ c
   const { host } = await openShare(context);
 
   await expect(box(host)).toHaveCount(1);
-  await expect(box(host).getByRole('group', { name: 'Share lists' })).toBeVisible();
+  await expect(box(host).getByRole('group', { name: 'ArtiShare lists' })).toBeVisible();
   await expect(box(host)).toContainText("No saved lists yet. Make one in ArtiShare's Lists tab.");
   await expect(box(host).locator('.chip')).toHaveCount(0);
   await expect(search(host)).toHaveCount(0);
