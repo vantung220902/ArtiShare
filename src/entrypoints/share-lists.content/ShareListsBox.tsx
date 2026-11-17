@@ -7,6 +7,7 @@ import { useConfig } from '../../ui/hooks';
 import { fillInviteField, readInviteField, useFieldText } from './inviteField';
 
 const people = (n: number) => `${n} ${n === 1 ? 'person' : 'people'}`;
+const EMPTY_LIST_TIP = 'This list has no addresses.';
 const addresses = (n: number) => `${n} ${n === 1 ? 'address' : 'addresses'}`;
 
 /** Why claude.ai shows no Invite option, naming what to fix. */
@@ -49,7 +50,9 @@ function SearchResults({ found, query, fieldText, onList, onPerson }: SearchResu
           type="button"
           className="result"
           aria-pressed={isPicked(list.emails, fieldText)}
-          onClick={() => onList(list.id)}
+          aria-disabled={list.emails.length === 0 || undefined}
+          title={list.emails.length === 0 ? EMPTY_LIST_TIP : undefined}
+          onClick={() => list.emails.length > 0 && onList(list.id)}
         >
           <span className="result-name">{list.name}</span> · <span>{people(list.emails.length)}</span>
         </button>
@@ -154,7 +157,11 @@ export function ShareListsBox({ entry }: { entry: Element }) {
                   type="button"
                   className="chip"
                   aria-pressed={isPicked(list.emails, fieldText)}
-                  onClick={() => pick(list.id)}
+                  // aria-disabled rather than disabled: the chip stays reachable by keyboard, so
+                  // a screen reader user can find out why it does nothing.
+                  aria-disabled={list.emails.length === 0 || undefined}
+                  title={list.emails.length === 0 ? EMPTY_LIST_TIP : undefined}
+                  onClick={() => list.emails.length > 0 && pick(list.id)}
                   aria-label={`${list.name}, ${people(list.emails.length)}`}
                 >
                   <span className="chip-name">{list.name}</span>

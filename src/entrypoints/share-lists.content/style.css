@@ -145,6 +145,12 @@
   background: color-mix(in srgb, currentColor 8%, transparent);
 }
 
+.chip[aria-disabled='true'],
+.result[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .chip[aria-pressed='true'] {
   background: color-mix(in srgb, currentColor 14%, transparent);
   border-color: currentColor;
