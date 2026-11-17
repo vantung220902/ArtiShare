@@ -3,8 +3,8 @@ import { fieldEntries, isPicked, overLimit, togglePick, unfinishedEntries } from
 import { inboxKey } from '../../core/emails';
 import { byName } from '../../core/lists';
 import { capResults, searchLists, type CappedResult } from '../../core/search';
-import { useConfig } from '../../ui/hooks';
 import { fillInviteField, readInviteField, useFieldText } from './inviteField';
+import { useLists } from './lists';
 
 const people = (n: number) => `${n} ${n === 1 ? 'person' : 'people'}`;
 const EMPTY_LIST_TIP = 'This list has no addresses.';
@@ -88,16 +88,33 @@ function SearchResults({ found, query, fieldText, onList, onPerson }: SearchResu
 
 /** The Share lists box drawn under claude.ai's invite field. `entry` is claude.ai's `[data-share-entry]`. */
 export function ShareListsBox({ entry }: { entry: Element }) {
-  const [config] = useConfig();
+  const { state, retry, checkAlive } = useLists();
   const [fieldText, refresh] = useFieldText(entry);
   const [announcement, setAnnouncement] = useState('');
   // The note about an unfinished entry belongs to a click of ours, so it isn't shown while the
   // person is just typing their first address.
   const [clicked, setClicked] = useState(false);
   const [query, setQuery] = useState('');
-  // Until the lists are read (or if they can't be) the box stays empty: claude.ai's own dialog is
-  // what the person came for, and a box that says nothing is better than one that says something wrong.
-  if (!config) return null;
+  // Until the lists are read the box stays empty: claude.ai's own dialog is what the person came
+  // for, and a box that says nothing is better than one that says something wrong.
+  if (state.status === 'loading') return null;
+  if (state.status === 'problem') {
+    return (
+      <fieldset className="box" aria-label="Share lists">
+        <h3 className="heading">Share lists</h3>
+        <p className="note warning" role="alert">
+          {state.message}
+        </p>
+        {/* After an update only a reload of the page helps, so there is nothing to retry. */}
+        {state.problem !== 'updated' && (
+          <button type="button" className="retry" onClick={retry}>
+            Retry
+          </button>
+        )}
+      </fieldset>
+    );
+  }
+  const { config } = state;
   const lists = byName(config.lists);
   // With no lists there is no search field to clear, so drop the text now: otherwise a list made
   // later in ArtiShare would come back behind a search for something that is gone.
@@ -108,6 +125,8 @@ export function ShareListsBox({ entry }: { entry: Element }) {
 
   /** Adds `emails` to the field, or takes them out if they are all in it, as a click on a chip does. */
   function apply(emails: readonly string[], others: readonly (readonly string[])[]) {
+    // The lists in the box are from before the update: say so rather than act as if all were well.
+    if (!checkAlive()) return;
     // Read the field itself: it may have changed since the last event we saw.
     const result = togglePick(readInviteField(entry), emails, others);
     if (!fillInviteField(entry, result.text)) {
@@ -134,7 +153,7 @@ export function ShareListsBox({ entry }: { entry: Element }) {
   const searching = query.trim() !== '';
 
   return (
-    <fieldset className="box" aria-label="Share lists" onPointerEnter={refresh}>
+    <fieldset className="box" aria-label="Share lists" onPointerEnter={() => checkAlive() && refresh()}>
       <h3 className="heading">Share lists</h3>
       {lists.length === 0 ? (
         <p className="note">No saved lists yet. Make one in ArtiShare&apos;s Lists tab.</p>

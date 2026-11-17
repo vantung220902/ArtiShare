@@ -3,6 +3,7 @@ import type { ContentScriptContext } from 'wxt/utils/content-script-context';
 import { createShadowRootUi, type ShadowRootContentScriptUi } from 'wxt/utils/content-script-ui/shadow-root';
 import css from './style.css?inline';
 import { FIELD } from './inviteField';
+import { extensionGone } from './lists';
 import { ShareListsBox } from './ShareListsBox';
 
 // Only the markers claude.ai's Share dialog is known to carry (see harness/claude-share-dialog.md).
@@ -113,6 +114,15 @@ function watchShareDialogs(ctx: ContentScriptContext) {
   else document.addEventListener('DOMContentLoaded', start, { once: true });
 
   ctx.onInvalidated(() => {
+    if (extensionGone()) {
+      // The extension was reloaded or updated and this page wasn't: nothing newer is coming to take
+      // over, so the box stays, now telling the person to reload. WXT is taking its boxes down
+      // right now; they are put back once it has.
+      setTimeout(() => watchers.forEach((_observer, portal) => void sync(portal)));
+
+      return;
+    }
+    // A newer copy of this script has started and shows its own box.
     body.disconnect();
     for (const observer of watchers.values()) observer.disconnect();
     for (const portal of mounted.keys()) release(portal);

@@ -61,9 +61,17 @@ async function preview(req: Messages['preview']['req']): Promise<PreviewResponse
   return { account: me, results };
 }
 
+/**
+ * Tests only: with this key set in session storage the fake build never answers `config-get`, as a
+ * background that has hung would, so the box's "couldn't reach ArtiShare" can be seen.
+ */
+const SILENT_KEY = 'fakeSilentConfigGet';
+
 async function handle(msg: Envelope): Promise<unknown> {
   switch (msg.type) {
     case 'config-get':
+      if (FAKE && (await chrome.storage.session.get(SILENT_KEY))[SILENT_KEY]) return new Promise(() => {});
+
       return configController.get();
     case 'config-change':
       return configController.change(msg.change);

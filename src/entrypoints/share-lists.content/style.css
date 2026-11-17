@@ -202,3 +202,23 @@
 .chip-count {
   opacity: 0.65;
 }
+
+.retry {
+  margin-top: 6px;
+  padding: 3px 12px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 999px;
+}
+
+.retry:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.retry:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
