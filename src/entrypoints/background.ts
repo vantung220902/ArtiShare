@@ -6,6 +6,7 @@ import { planArtifact } from '../core/planner';
 import { abortableSleep } from '../core/runner';
 import type { Envelope, Messages, PreviewResponse, PreviewResult, Reply } from '../lib/messages';
 import { createRunManager } from '../lib/runManager';
+import { judgeSender } from '../lib/senderPolicy';
 import { applyStoredSurface } from '../lib/surface';
 import { loadConfig, loadRun, saveConfig, saveRun } from '../lib/storage';
 
@@ -61,9 +62,17 @@ async function preview(req: Messages['preview']['req']): Promise<PreviewResponse
   return { account: me, results };
 }
 
+/**
+ * Tests only: with this key set in session storage the fake build never answers `config-get`, as a
+ * background that has hung would, so the box's "couldn't reach ArtiShare" can be seen.
+ */
+const SILENT_KEY = 'fakeSilentConfigGet';
+
 async function handle(msg: Envelope): Promise<unknown> {
   switch (msg.type) {
     case 'config-get':
+      if (FAKE && (await chrome.storage.session.get(SILENT_KEY))[SILENT_KEY]) return new Promise(() => {});
+
       return configController.get();
     case 'config-change':
       return configController.change(msg.change);
@@ -106,6 +115,13 @@ export default defineBackground(() => {
 
   chrome.runtime.onMessage.addListener((msg: Envelope, sender, sendResponse: (r: Reply<unknown>) => void) => {
     if (sender.id !== chrome.runtime.id) return false;
+    // Content scripts run on claude.ai, next to scripts we don't control: they may only read the lists.
+    const verdict = judgeSender(msg?.type, sender, chrome.runtime.id);
+    if (!verdict.allow) {
+      sendResponse({ ok: false, error: verdict.reason });
+
+      return false;
+    }
     handle(msg).then(
       (data) => sendResponse({ ok: true, data }),
       (err: Error) => sendResponse({ ok: false, error: err.message }),

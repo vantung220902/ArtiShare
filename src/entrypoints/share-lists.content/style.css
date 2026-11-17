@@ -1,0 +1,238 @@
+:host {
+  display: block;
+  /* claude.ai's own font and text colour, so the box looks like part of its dialog. */
+  font: inherit;
+  color: inherit;
+}
+
+/* A fieldset gives the group role; its default frame and sizing are taken off. */
+.box {
+  min-width: 0;
+  margin: 8px 0;
+  padding: 8px 0 0;
+  border: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.heading {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.note {
+  margin: 0;
+  opacity: 0.75;
+}
+
+.warning {
+  margin-top: 6px;
+  opacity: 1;
+}
+
+.search-row {
+  position: relative;
+  margin: 0 0 6px;
+}
+
+/* Our own × (below) replaces the browser's, which a screen reader and a test can't rely on. */
+.search::-webkit-search-cancel-button {
+  display: none;
+}
+
+.clear {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  padding: 0 6px;
+  font: inherit;
+  line-height: 1.4;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  transform: translateY(-50%);
+}
+
+.clear:hover {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.clear:focus-visible {
+  outline: 2px solid currentColor;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 4px 8px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.result:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.result[aria-pressed='true'] {
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  border-color: currentColor;
+}
+
+.result:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+
+.result-name {
+  overflow-wrap: anywhere;
+}
+
+.result-lists {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.search {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 6px 28px 6px 8px;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 8px;
+}
+
+/* The browser's own placeholder grey is fixed, so on a dark dialog it can't be read. */
+.search::placeholder {
+  color: inherit;
+  opacity: 0.7;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  /* About three rows of chips (26px each with the gaps), then it scrolls, so a long list of lists
+     never pushes the invite field out of claude.ai's scrolling area. The padding keeps the focus
+     ring of a chip on the edge from being cut off, and the negative margin takes the space back.
+     Not on the right: it would push the box 3px past the dialog's edge and sideways-scroll it. */
+  box-sizing: content-box;
+  max-height: 90px;
+  padding: 3px;
+  margin: -3px 0 -3px -3px;
+  overflow-y: auto;
+}
+
+.more {
+  padding: 4px 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 3px 10px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 999px;
+}
+
+.chip:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.chip[aria-disabled='true'],
+.result[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.chip[aria-pressed='true'] {
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  border-color: currentColor;
+}
+
+.chip:focus-visible,
+.search:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+
+/* Said by screen readers, not drawn. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip-count {
+  opacity: 0.65;
+}
+
+.retry {
+  margin-top: 6px;
+  padding: 3px 12px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 999px;
+}
+
+.retry:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.retry:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+
+.manual {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  font: inherit;
+  color: inherit;
+  resize: vertical;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 8px;
+}

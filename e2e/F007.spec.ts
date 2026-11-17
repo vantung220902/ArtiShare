@@ -1,164 +1,232 @@
-import type { BrowserContext, Page } from '@playwright/test';
+import type { BrowserContext, Frame, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { openArtifact, openChatArtifact } from './claudePage';
 
-// F007: Save to a list puts the people who aren't in any list into a new list in a couple of clicks.
-// Driven in the side panel page: a popup page is itself the front tab, so it can't see an artifact.
+// F007: lists changed in ArtiShare (another tab with the popup page) while claude.ai's Share dialog
+// is open show up in the box straight away, without reopening the dialog.
 
-test.beforeEach(async ({ context }) => {
-  // Serve the pages ourselves: nothing may reach claude.ai.
-  await context.route(/^https:\/\/claude\.ai\//, (route) =>
-    route.fulfill({ contentType: 'text/html', body: '<title>page</title>' }),
-  );
-});
+const BOX = 'artishare-share-lists';
+const FIELD = "input[role=combobox][aria-label='Invite people by email']";
 
-/** Saves a new list from the given page, through the background like the Lists tab does. */
+const DESIGN = ['a@example.com', 'b@example.com'];
+const TEAM = ['c@example.com', 'e@example.com', 'f@example.com'];
+
+type Reply<T = unknown> = { ok: true; data: T } | { ok: false; error: string };
+
+async function change(page: Page, change: object) {
+  await page.evaluate(async (c) => {
+    const reply = (await chrome.runtime.sendMessage({ type: 'config-change', change: c })) as Reply;
+    if (!reply.ok) throw new Error(reply.error);
+  }, change);
+}
+
 async function saveList(page: Page, name: string, emails: string[]) {
-  await page.evaluate(
-    async (args) => {
-      const reply = (await chrome.runtime.sendMessage({
-        type: 'config-change',
-        change: {
-          type: 'save-list',
-          list: { id: crypto.randomUUID(), name: args.name, emails: args.emails, access: 'view' },
-          expected: null,
-        },
-      })) as { ok: boolean; error?: string };
-      if (!reply.ok) throw new Error(reply.error);
-    },
-    { name, emails },
-  );
+  const list = { id: crypto.randomUUID(), name, emails, access: 'view' };
+  await change(page, { type: 'save-list', list, expected: null });
 }
 
-async function panelOver(context: BrowserContext, extensionId: string, id: string) {
-  const tab = await context.newPage();
-  await tab.goto(`https://claude.ai/artifact/${id}`);
-  // The side panel page follows the tab in front, so it is opened first, then the tab is raised.
-  const panel = await context.newPage();
-  await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
-  await expect(panel.getByRole('heading', { name: 'ArtiShare' })).toBeVisible();
-  await tab.bringToFront();
+/** The list as stored now, so an edit can name what it expects to replace. */
+const stored = (page: Page, name: string) =>
+  page.evaluate(async (wanted) => {
+    const reply = (await chrome.runtime.sendMessage({ type: 'config-get' })) as Reply<{
+      lists: { id: string; name: string; emails: string[]; access: string }[];
+    }>;
+    if (!reply.ok) throw new Error(reply.error);
 
-  return { panel, tab };
+    return reply.data.lists.find((l) => l.name === wanted)!;
+  }, name);
+
+async function editList(
+  page: Page,
+  name: string,
+  edit: (list: { name: string; emails: string[] }) => object,
+) {
+  const expected = await stored(page, name);
+  await change(page, { type: 'save-list', list: { ...expected, ...edit(expected) }, expected });
 }
 
-const SHARED = 'ExampleSharedArtifact1';
-const share = (panel: Page) => panel.getByRole('tabpanel', { name: 'Share' });
-// The Share form stays mounted (hidden) under Manage access and has a Name and a Permission of its own.
-const saveView = (panel: Page) =>
-  share(panel)
-    .locator('section.card')
-    .filter({ has: panel.getByRole('heading', { name: 'Save to a list' }) });
-const openManage = (panel: Page) => panel.getByRole('button', { name: 'Manage access' }).click();
-const openSave = (panel: Page) => share(panel).getByRole('button', { name: 'Save to a list' }).click();
-const PLACEHOLDER = 'commenter@example.com & locked@example.com +1 email';
+async function deleteList(page: Page, name: string) {
+  const expected = await stored(page, name);
+  await change(page, { type: 'delete-list', id: expected.id, expected });
+}
 
-test('Save to a list replaces People with access, lists everyone ticked with their permission', async ({
+/** What an import that replaces the lists leaves in storage: a whole new set under the same key. */
+const replaceAll = (page: Page, lists: { name: string; emails: string[] }[]) =>
+  page.evaluate(async (imported) => {
+    await chrome.storage.local.set({
+      config: {
+        version: 2,
+        lists: imported.map((l, i) => ({ id: `imported-${i}`, access: 'view', ...l })),
+        defaultSelection: { mode: 'some', listIds: [] },
+      },
+    });
+  }, lists);
+
+async function openShare(context: BrowserContext) {
+  const claude = await openArtifact(context);
+  await claude.share();
+  await expect(claude.host.locator('[data-share-pop][data-open]')).toBeVisible();
+
+  return claude;
+}
+
+const box = (host: Frame) => host.locator(BOX);
+const chip = (host: Frame, name: string) => box(host).getByRole('button', { name: new RegExp(`^${name},`) });
+const field = (host: Frame) => host.locator(FIELD);
+const search = (host: Frame) => box(host).getByRole('searchbox', { name: 'Search lists or people' });
+/** The chips in the order they are drawn, as 'Team 3'. */
+const chips = (host: Frame) => box(host).locator('.chip').allInnerTexts();
+const texts = async (host: Frame) => (await chips(host)).map((t) => t.replace(/\s+/g, ' ').trim());
+
+/** The popup page in another tab, as the person would use it, and claude.ai's tab in front again. */
+async function twoLists(panel: Page) {
+  await saveList(panel, 'Design', DESIGN);
+  await saveList(panel, 'Team', TEAM);
+}
+
+test('adding someone to Team makes its chip read Team 4, and a picked Team shows as not picked', async ({
   context,
-  extensionId,
+  panel,
 }) => {
-  const { panel } = await panelOver(context, extensionId, SHARED);
-  await openManage(panel);
-  await openSave(panel);
+  await twoLists(panel);
+  const { host } = await openShare(context);
+  await expect(chip(host, 'Team')).toHaveText('Team 3');
+  await chip(host, 'Team').click();
+  await expect(chip(host, 'Team')).toHaveAttribute('aria-pressed', 'true');
+  await chip(host, 'Design').click();
 
-  const view = saveView(panel);
-  await expect(view.getByRole('heading', { name: 'Save to a list' })).toBeFocused();
-  await expect(share(panel).getByRole('heading', { name: 'People with access' })).toHaveCount(0);
-  // Back stays at the top.
-  await expect(share(panel).getByRole('button', { name: 'Back' })).toBeVisible();
+  await change(panel, {
+    type: 'add-to-list',
+    id: (await stored(panel, 'Team')).id,
+    emails: ['d@example.com'],
+  });
 
-  // Labelled with the address and what they can do on this artifact; the UI says "Commenter".
-  for (const label of [
-    'commenter@example.com · Commenter',
-    'locked@example.com · Can view',
-    'viewer@example.com · Can view',
-  ]) {
-    await expect(view.getByRole('checkbox', { name: label })).toBeChecked();
-  }
-  await expect(view.getByRole('checkbox', { name: 'Select all' })).toBeChecked();
-  await expect(view.getByText('3 of 3 selected')).toBeVisible();
+  await expect(chip(host, 'Team')).toHaveText('Team 4');
+  await expect(chip(host, 'Team')).toHaveAttribute('aria-pressed', 'false');
+  await expect(chip(host, 'Design')).toHaveAttribute('aria-pressed', 'true');
+  await expect(box(host)).toHaveCount(1);
+  // The field itself is not touched by a change in ArtiShare.
+  await expect(field(host)).toHaveValue([...TEAM, ...DESIGN].join(', '));
 
-  // No saved lists: only the new-list fields, with the Lists tab's name for an unnamed list.
-  await expect(view.getByLabel('Name')).toHaveAttribute('placeholder', PLACEHOLDER);
-  // They don't all have the same permission, so Can view.
-  await expect(view.getByLabel('Permission')).toHaveValue('view');
-  await expect(view.getByRole('button', { name: 'Save 3 people' })).toBeEnabled();
+  await chip(host, 'Team').click();
+
+  await expect(field(host)).toHaveValue([...TEAM, ...DESIGN, 'd@example.com'].join(', '));
+  await expect(chip(host, 'Team')).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('saving goes back to People with access, says what was saved and opens the list', async ({
+test('renaming Team renames the chip and moves it into Lists tab order', async ({ context, panel }) => {
+  await twoLists(panel);
+  const { host } = await openShare(context);
+  expect(await texts(host)).toEqual(['Design 2', 'Team 3']);
+
+  await editList(panel, 'Team', () => ({ name: 'Core team' }));
+
+  await expect.poll(() => texts(host)).toEqual(['Core team 3', 'Design 2']);
+  await expect(chip(host, 'Core team')).toHaveAccessibleName('Core team, 3 people');
+});
+
+test('a rename shows in an open search, and a search shows new people and lists as they appear', async ({
   context,
-  extensionId,
+  panel,
 }) => {
-  const { panel } = await panelOver(context, extensionId, SHARED);
-  await openManage(panel);
-  await expect(panel.getByRole('tab', { name: /Lists/ })).toContainText('0');
-  await openSave(panel);
-  await saveView(panel).getByLabel('Name').fill('Shared reviewers');
-  await saveView(panel).getByRole('button', { name: 'Save 3 people' }).click();
+  await twoLists(panel);
+  const { host } = await openShare(context);
+  await search(host).fill('team');
+  const rows = box(host).locator('.result');
+  await expect(rows).toHaveText([/^Team · 3 people$/]);
 
-  const view = share(panel);
-  await expect(view.getByRole('heading', { name: 'People with access' })).toBeVisible();
-  await expect(view.getByText('Saved 3 people to Shared reviewers.')).toBeVisible();
-  await expect(view.getByRole('button', { name: 'Open list' })).toBeVisible();
-  for (const email of ['viewer@example.com', 'commenter@example.com', 'locked@example.com']) {
-    await expect(
-      view
-        .locator('ul.people > li')
-        .filter({ hasText: email })
-        .locator('.hint')
-        .filter({ hasText: 'In Shared reviewers' }),
-    ).toHaveCount(1);
-  }
-  await expect(view.getByText(/in any of your lists/)).toHaveCount(0);
-  await expect(view.getByRole('button', { name: 'Save to a list' })).toHaveCount(0);
-  await expect(panel.getByRole('tab', { name: /Lists/ })).toContainText('1');
+  await editList(panel, 'Team', () => ({ name: 'Core team' }));
 
-  await view.getByRole('button', { name: 'Open list' }).click();
-  const lists = panel.getByRole('tabpanel', { name: 'Lists' });
-  await expect(lists).toBeVisible();
-  const card = lists.locator('details.list-card').filter({ hasText: 'Shared reviewers' });
-  await expect(card).toHaveAttribute('open', '');
-  const emails = await card.locator('textarea').inputValue();
-  expect(emails.split(/\s+/).filter(Boolean).toSorted()).toEqual([
-    'commenter@example.com',
-    'locked@example.com',
-    'viewer@example.com',
+  await expect(rows).toHaveText([/^Core team · 3 people$/]);
+  await expect(search(host)).toHaveValue('team');
+
+  await editList(panel, 'Core team', (l) => ({ emails: [...l.emails, 'teammate@example.com'] }));
+
+  await expect(rows).toHaveText([/^Core team · 4 people$/, /^teammate@example\.com\s*In Core team$/]);
+});
+
+test('deleting Design takes its chip away but leaves the addresses it already put in the field', async ({
+  context,
+  panel,
+}) => {
+  await twoLists(panel);
+  const { host } = await openShare(context);
+  await chip(host, 'Design').click();
+  await expect(field(host)).toHaveValue(DESIGN.join(', '));
+
+  await deleteList(panel, 'Design');
+
+  await expect.poll(() => texts(host)).toEqual(['Team 3']);
+  await expect(field(host)).toHaveValue(DESIGN.join(', '));
+  // The rest of the box still works with those addresses in the field.
+  await chip(host, 'Team').click();
+  await expect(field(host)).toHaveValue([...DESIGN, ...TEAM].join(', '));
+});
+
+test('a new list QA appears as QA 1, in Lists tab order', async ({ context, panel }) => {
+  await twoLists(panel);
+  const { host } = await openShare(context);
+
+  await saveList(panel, 'QA', ['q@example.com']);
+
+  await expect.poll(() => texts(host)).toEqual(['Design 2', 'QA 1', 'Team 3']);
+  await chip(host, 'QA').click();
+  await expect(field(host)).toHaveValue('q@example.com');
+  await expect(chip(host, 'QA')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('importing lists that replace the old ones turns the chips into the imported lists', async ({
+  context,
+  panel,
+}) => {
+  await twoLists(panel);
+  const { host } = await openShare(context);
+  await chip(host, 'Team').click();
+
+  await replaceAll(panel, [
+    { name: 'Ops', emails: ['o1@example.com', 'o2@example.com'] },
+    { name: 'Alpha', emails: ['x@example.com'] },
   ]);
-  await expect(card.getByLabel('Permission')).toHaveValue('view');
+
+  await expect.poll(() => texts(host)).toEqual(['Alpha 1', 'Ops 2']);
+  await expect(chip(host, 'Team')).toHaveCount(0);
+  await expect(chip(host, 'Ops')).toHaveAttribute('aria-pressed', 'false');
+  await chip(host, 'Ops').click();
+  await expect(field(host)).toHaveValue([...TEAM, 'o1@example.com', 'o2@example.com'].join(', '));
 });
 
-test('the permission is preset to the one everybody has', async ({ context, extensionId }) => {
-  // Every odd Crowded person is pending Can view and every even one Commenter, so tick just evens.
-  const { panel } = await panelOver(context, extensionId, 'ExampleCrowdedArtifact1');
-  await openManage(panel);
-  await openSave(panel);
-  const view = saveView(panel);
-  await expect(view.getByLabel('Permission')).toHaveValue('view');
-  await view.getByRole('checkbox', { name: 'Select all' }).uncheck();
-  await view.getByRole('checkbox', { name: 'crowd02@example.com · Commenter' }).check();
-  await view.getByRole('checkbox', { name: 'crowd04@example.com · Commenter' }).check();
-  await expect(view.getByLabel('Permission')).toHaveValue('comment');
-});
-
-test('an empty name gets the placeholder, made unique when a list already has it', async ({
+test('deleting every list shows the no-lists note, and a new list brings the chips back', async ({
   context,
-  extensionId,
+  panel,
 }) => {
-  const { panel } = await panelOver(context, extensionId, SHARED);
-  await saveList(panel, PLACEHOLDER, ['other@example.com']);
-  await openManage(panel);
-  await openSave(panel);
-  await share(panel).getByRole('button', { name: 'Save 3 people' }).click();
+  await twoLists(panel);
+  const { host } = await openShare(context);
+  await search(host).fill('team');
 
-  await expect(share(panel).getByText(`Saved 3 people to ${PLACEHOLDER} (2).`)).toBeVisible();
+  await deleteList(panel, 'Design');
+  await deleteList(panel, 'Team');
+
+  await expect(box(host)).toContainText("No saved lists yet. Make one in ArtiShare's Lists tab.");
+  await expect(box(host).locator('.chip')).toHaveCount(0);
+  await expect(search(host)).toHaveCount(0);
+
+  await saveList(panel, 'Fresh', ['n@example.com']);
+
+  await expect.poll(() => texts(host)).toEqual(['Fresh 1']);
+  // The search comes back empty: a search for a list that is gone isn't kept.
+  await expect(search(host)).toHaveValue('');
+  await expect(box(host)).toHaveCount(1);
 });
 
-test('Cancel goes back to People with access and saves nothing', async ({ context, extensionId }) => {
-  const { panel } = await panelOver(context, extensionId, SHARED);
-  await openManage(panel);
-  await openSave(panel);
-  await share(panel).getByRole('button', { name: 'Cancel' }).click();
+test('changes made while the box is in the top frame follow the same way', async ({ context, panel }) => {
+  await twoLists(panel);
+  const claude = await openChatArtifact(context);
+  await claude.share();
+  const { host } = claude;
+  await expect(host.locator('[data-share-pop][data-open]')).toBeVisible();
+  await expect(chip(host, 'Team')).toHaveText('Team 3');
 
-  await expect(share(panel).getByRole('heading', { name: 'People with access' })).toBeVisible();
-  await expect(share(panel).getByRole('button', { name: 'Save to a list' })).toBeFocused();
-  await expect(panel.getByRole('tab', { name: /Lists/ })).toContainText('0');
+  await editList(panel, 'Team', () => ({ name: 'Core team' }));
+
+  await expect.poll(() => texts(host)).toEqual(['Core team 3', 'Design 2']);
 });

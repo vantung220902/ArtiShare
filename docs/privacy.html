@@ -23,7 +23,7 @@
     <main class="wrap">
       <section class="hero prose">
         <h1>Privacy policy</h1>
-        <p class="updated">Last updated: 8 November 2026</p>
+        <p class="updated">Last updated: 17 November 2026</p>
         <p>
           ArtiShare is a Chrome extension that invites saved lists of email addresses to claude.ai artifacts.
           This page says what data it handles and where that data goes.
@@ -70,6 +70,33 @@
           emails the invitations. From there, claude.ai's own
           <a href="https://www.anthropic.com/legal/privacy">privacy policy</a> applies.
         </p>
+
+        <h2>The ArtiShare lists box on claude.ai</h2>
+        <p>
+          ArtiShare also runs on claude.ai pages, to show an <strong>ArtiShare lists</strong> box inside
+          claude.ai's own Share dialog on an artifact. The box does these things, and no more:
+        </p>
+        <ul>
+          <li>
+            It reads your saved lists from the extension, and nothing else from it. It doesn't read your
+            invitation runs or your claude.ai account details.
+          </li>
+          <li>
+            It puts email addresses into claude.ai's &ldquo;Invite people by email&rdquo; field only when you
+            pick a list or a person in the box. It doesn't invite anyone itself: you choose claude.ai's own
+            Invite option, and from then on claude.ai's
+            <a href="https://www.anthropic.com/legal/privacy">privacy policy</a> applies to those addresses.
+          </li>
+          <li>
+            It sends nothing to any server and makes no requests of its own. The box is drawn so that
+            claude.ai's own scripts can't read it, and a claude.ai page can ask ArtiShare for your lists and
+            for nothing else: it can't change them or start an invitation run.
+          </li>
+          <li>
+            It puts addresses on your clipboard only if you click its <strong>Copy</strong> button, which
+            shows when claude.ai's field won't take them.
+          </li>
+        </ul>
 
         <h2>What ArtiShare doesn't do</h2>
         <ul>

@@ -1,0 +1,246 @@
+/* A stand-in for claude.ai's Share dialog (see dialog.js). Class names here are the stand-in's own
+   and deliberately unlike claude.ai's: ArtiShare must only select on data-* markers, role and
+   aria-label, so a test that passes by leaning on a class name here would fail on the real page. */
+
+:root {
+  --si-bg: #ffffff;
+  --si-fg: #1f1e1d;
+  --si-muted: #6b6a66;
+  --si-line: #e4e2dc;
+  --si-hover: #f4f3ee;
+}
+
+[data-mode='dark'] {
+  --si-bg: #262624;
+  --si-fg: #f5f4ef;
+  --si-muted: #a9a79f;
+  --si-line: #3d3d3a;
+  --si-hover: #30302e;
+}
+
+html,
+body {
+  margin: 0;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  font-size: 14px;
+  background: var(--si-bg);
+  color: var(--si-fg);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+.si-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--si-line);
+}
+
+.si-artifact {
+  padding: 24px;
+}
+
+.si-frame {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 54px);
+  border: 0;
+}
+
+.si-positioner {
+  position: fixed;
+  top: 56px;
+  right: 16px;
+}
+
+.si-pop {
+  box-sizing: border-box;
+  width: 435px;
+  max-width: calc(100vw - 16px);
+  background: var(--si-bg);
+  color: var(--si-fg);
+  border: 1px solid var(--si-line);
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.18);
+  outline: none;
+  transition: opacity 120ms;
+}
+
+.si-pop[data-closed] {
+  opacity: 0;
+}
+
+.si-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.si-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.si-title-row h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+}
+
+.si-icon-btn {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.si-icon-btn:hover {
+  background: var(--si-hover);
+}
+
+.si-tabs [role='radiogroup'] {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--si-hover);
+}
+
+.si-tabs [role='radio'] {
+  padding: 4px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.si-tabs [data-checked] {
+  background: var(--si-bg);
+  font-weight: 600;
+}
+
+/* The real one scrolls at 36vh; the box under the field has to live inside this. */
+.si-pinned {
+  max-height: 36vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.si-field {
+  border: 1px solid var(--si-line);
+  border-radius: 8px;
+  padding: 0 10px;
+}
+
+.si-field input[role='combobox'] {
+  box-sizing: border-box;
+  width: 100%;
+  border: 0;
+  outline: none;
+  padding: 9px 0;
+  font: inherit;
+  background: transparent;
+  color: inherit;
+}
+
+.si-field:focus-within {
+  border-color: var(--si-muted);
+}
+
+.si-section {
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.si-view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.si-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.si-row [data-name] {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.si-muted {
+  color: var(--si-muted);
+  font-size: 12px;
+}
+
+.si-pill {
+  border: 1px solid var(--si-line);
+  border-radius: 6px;
+  background: none;
+  padding: 3px 8px;
+}
+
+.si-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--si-line);
+}
+
+.si-footer p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--si-muted);
+}
+
+.si-listbox {
+  position: fixed;
+  z-index: 10;
+  box-sizing: border-box;
+  min-width: 240px;
+  max-width: calc(100vw - 16px);
+  background: var(--si-bg);
+  color: var(--si-fg);
+  border: 1px solid var(--si-line);
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.18);
+  padding: 4px;
+}
+
+.si-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.si-option[data-highlighted],
+.si-option:hover {
+  background: var(--si-hover);
+}

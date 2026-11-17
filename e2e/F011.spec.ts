@@ -1,390 +1,223 @@
-import type { BrowserContext, Page } from '@playwright/test';
+import type { BrowserContext, Frame, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { openArtifact, openChatArtifact } from './claudePage';
 
-// F011: Save to a list copes with a long list of people and with things changing while it's open.
-// Driven in the side panel page: a popup page is itself the front tab, so it can't see an artifact.
-// "In the popup" is the same page with the popup's CSS (380 px, 600 px tall): see `asPopup`.
+// F011: when the box can't read the lists (damaged storage, a background that doesn't answer, an
+// extension that was updated under an open tab) it says what to do, and claude.ai's dialog keeps working.
 
-test.beforeEach(async ({ context }) => {
-  // Serve the pages ourselves: nothing may reach claude.ai.
-  await context.route(/^https:\/\/claude\.ai\//, (route) =>
-    route.fulfill({ contentType: 'text/html', body: '<title>page</title>' }),
-  );
-});
+const BOX = 'artishare-share-lists';
+const FIELD = "input[role=combobox][aria-label='Invite people by email']";
+const DAMAGED = "Couldn't read your lists";
+const DAMAGED_DETAIL = 'Saved lists have an unsupported or damaged format. They were not changed.';
+const UPDATED = 'ArtiShare was updated. Reload this page to use your lists.';
 
-const CROWDED = 'ExampleCrowdedArtifact1';
-const crowd = (n: number) => `crowd${String(n).padStart(2, '0')}@example.com`;
-const unlisted = (n: number) => `${n} people aren't in any of your lists.`;
-const ALL = Array.from({ length: 45 }, (_, i) => crowd(i + 1));
+const TEAM = ['a@example.com', 'b@example.com', 'c@example.com'];
 
-/** Saves a new list from the given page, through the background like the Lists tab does. */
-async function saveList(page: Page, name: string, emails: string[]) {
-  await page.evaluate(
-    async (args) => {
-      const reply = (await chrome.runtime.sendMessage({
-        type: 'config-change',
-        change: {
-          type: 'save-list',
-          list: { id: crypto.randomUUID(), name: args.name, emails: args.emails, access: 'view' },
-          expected: null,
-        },
-      })) as { ok: boolean; error?: string };
-      if (!reply.ok) throw new Error(reply.error);
-    },
-    { name, emails },
-  );
-}
+const writeLists = (page: Page, lists: { name: string; emails: string[] }[]) =>
+  page.evaluate(async (all) => {
+    await chrome.storage.local.set({
+      config: {
+        version: 2,
+        lists: all.map((l, i) => ({ id: `list-${i}`, access: 'view', ...l })),
+        defaultSelection: { mode: 'some', listIds: [] },
+      },
+    });
+  }, lists);
 
-async function panelOver(context: BrowserContext, extensionId: string, id: string) {
-  const tab = await context.newPage();
-  await tab.goto(`https://claude.ai/artifact/${id}`);
-  // The side panel page follows the tab in front, so it is opened first, then the tab is raised.
-  const panel = await context.newPage();
-  await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
-  await expect(panel.getByRole('heading', { name: 'ArtiShare' })).toBeVisible();
-
-  // Another window of the extension, where lists get saved and runs started behind the first one's back.
-  const other = await context.newPage();
-  await other.goto(`chrome-extension://${extensionId}/popup.html`);
-  await expect(other.getByRole('heading', { name: 'ArtiShare' })).toBeVisible();
-  await tab.bringToFront();
-
-  return { panel, other };
-}
-
-/** The popup's own layout: html is 380 px wide and .popup is at most 600 px tall. */
-async function asPopup(page: Page) {
-  await page.setViewportSize({ width: 380, height: 700 });
-  await page.evaluate(() => document.documentElement.classList.remove('sidepanel'));
-}
-
-const share = (panel: Page) => panel.getByRole('tabpanel', { name: 'Share' });
-// The Share form stays mounted (hidden) under Manage access and has fields of its own.
-const saveView = (panel: Page) =>
-  share(panel)
-    .locator('section.card')
-    .filter({ has: panel.getByRole('heading', { name: 'Save to a list' }) });
-const openManage = (panel: Page) => panel.getByRole('button', { name: 'Manage access' }).click();
-const openSave = (panel: Page) => share(panel).getByRole('button', { name: 'Save to a list' }).click();
-
-/** True when the page or the scrolling body can be scrolled sideways. */
-const scrollsSideways = (page: Page) =>
-  page.evaluate(() => {
-    const body = document.querySelector('.popup-body')!;
-
-    return (
-      document.documentElement.scrollWidth > document.documentElement.clientWidth ||
-      body.scrollWidth > body.clientWidth
-    );
+/** Something under the `config` key that ArtiShare can't make sense of. */
+const damageLists = (page: Page) =>
+  page.evaluate(async () => {
+    await chrome.storage.local.set({ config: { version: 99, lists: 'not a list' } });
   });
 
-/** Changes what claude.ai reports for the next 'sharees' reads in this page. */
-async function reshape(page: Page, extra: { email: string; access: string; status: string; id?: string }[]) {
-  await page.evaluate((more) => {
-    const original = chrome.runtime.sendMessage.bind(chrome.runtime) as (msg: unknown) => Promise<unknown>;
-    (chrome.runtime as unknown as { sendMessage: unknown }).sendMessage = async (msg: { type?: string }) => {
-      const reply = (await original(msg)) as { ok: boolean; data?: unknown[] };
-      if (msg?.type !== 'sharees' || !reply.ok) return reply;
+const setSilent = (page: Page, silent: boolean) =>
+  page.evaluate(async (on) => {
+    if (on) await chrome.storage.session.set({ fakeSilentConfigGet: true });
+    else await chrome.storage.session.remove('fakeSilentConfigGet');
+  }, silent);
 
-      return { ...reply, data: [...(reply.data ?? []), ...more] };
-    };
-  }, extra);
-}
-
-async function openCrowd(panel: Page) {
-  await openManage(panel);
-  await expect(share(panel).getByText(unlisted(45))).toBeVisible();
-  await openSave(panel);
-}
-
-test('45 people are offered in order and the header and Save stay in view while scrolling (popup)', async ({
-  context,
-  extensionId,
-}) => {
-  const { panel } = await panelOver(context, extensionId, CROWDED);
-  await asPopup(panel);
-  await openCrowd(panel);
-
-  const view = saveView(panel);
-  const boxes = view.locator('.choices').first().getByRole('checkbox');
-  await expect(boxes).toHaveCount(45);
-  await expect(view.getByText('45 of 45 selected')).toBeVisible();
-  const labels = await view.locator('.choices').first().locator('label').allTextContents();
-  expect(labels.map((l) => l.split(' · ')[0])).toEqual(ALL);
-
-  const header = panel.locator('.popup-top');
-  const save = view.getByRole('button', { name: 'Save 45 people' });
-  const headerTop = (await header.boundingBox())!.y;
-  const body = panel.locator('.popup-body');
-
-  // Nothing is scrolled yet, and the save button is already in view, with Cancel beside it.
-  await expect(save).toBeInViewport({ ratio: 1 });
-  await expect(view.getByRole('button', { name: 'Cancel' })).toBeInViewport({ ratio: 1 });
-
-  for (const position of [0, 0.4, 1]) {
-    await body.evaluate((el, at) => el.scrollTo(0, (el.scrollHeight - el.clientHeight) * at), position);
-    expect((await header.boundingBox())!.y).toBe(headerTop);
-    await expect(header).toBeInViewport({ ratio: 1 });
-    await expect(save).toBeInViewport({ ratio: 1 });
-    expect(await scrollsSideways(panel)).toBe(false);
-    // The body is what scrolls, not the page.
-    expect(await panel.evaluate(() => document.documentElement.scrollTop)).toBe(0);
-  }
-
-  // It really scrolled, and at the end the last checkbox is clear of the bar.
-  expect(await body.evaluate((el) => el.scrollTop)).toBeGreaterThan(500);
-  const last = boxes.last();
-  await expect(last).toBeInViewport({ ratio: 1 });
-  const lastBox = (await last.boundingBox())!;
-  const barBox = (await view.locator('.action-bar').boundingBox())!;
-  expect(lastBox.y + lastBox.height).toBeLessThanOrEqual(barBox.y);
-  // And it can be used from there.
-  await last.uncheck();
-  await expect(view.getByText('44 of 45 selected')).toBeVisible();
-  await last.check();
-
-  // At the top again the bar is still reachable, and it opaquely covers what scrolls under it.
-  await body.evaluate((el) => el.scrollTo(0, 0));
-  await expect(save).toBeInViewport({ ratio: 1 });
-  const covered = await save.evaluate((el) => {
-    const bar = el.closest('.action-bar')!;
-    const r = bar.getBoundingClientRect();
-
-    return document.elementFromPoint(r.left + 4, r.top + 4) === bar;
+/** Everything the page throws or logs as an error, for 'nothing throws in the console'. */
+function watchErrors(page: Page) {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
   });
-  expect(covered).toBe(true);
+
+  return errors;
+}
+
+type Variant = 'iframe' | 'top';
+
+async function openShare(context: BrowserContext, variant: Variant = 'iframe') {
+  const claude = variant === 'iframe' ? await openArtifact(context) : await openChatArtifact(context);
+  const errors = watchErrors(claude.page);
+  await claude.share();
+  await expect(claude.host.locator('[data-share-pop][data-open]')).toBeVisible();
+
+  return { ...claude, errors };
+}
+
+const box = (host: Frame) => host.locator(BOX);
+const chip = (host: Frame, name: string) => box(host).getByRole('button', { name: new RegExp(`^${name},`) });
+const retry = (host: Frame) => box(host).getByRole('button', { name: 'Retry', exact: true });
+const field = (host: Frame) => host.locator(FIELD);
+
+/** claude.ai's own dialog still does its job: its field offers Invite and the Invite is sent. */
+async function claudeStillInvites(host: Frame, email: string) {
+  await field(host).fill(email);
+  const option = host.getByRole('option', { name: new RegExp(`Invite ${email.replace('.', '\\.')}`) });
+  await expect(option).toBeVisible();
+  await option.click();
+  await expect.poll(() => host.evaluate(() => window.__standIn.invited.length)).toBeGreaterThan(0);
+  const invited = await host.evaluate(() => window.__standIn.invited.flatMap((i) => i.emails));
+  expect(invited).toContain(email);
+}
+
+/** claude.ai's dialog closes and opens again, with one box each time. */
+async function dialogOpensAndCloses(page: Page, host: Frame) {
+  await host.evaluate(() => window.__standIn.close());
+  await expect(host.locator('[data-share-pop][data-open]')).toHaveCount(0);
+  await expect(box(host)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Share', exact: true }).click();
+  await expect(host.locator('[data-share-pop][data-open]')).toBeVisible();
+  await expect(box(host)).toHaveCount(1);
+}
+
+for (const variant of ['iframe', 'top'] as const) {
+  test(`damaged saved lists: the box says why, with Retry, and claude.ai still works (${variant})`, async ({
+    context,
+    panel,
+  }) => {
+    await damageLists(panel);
+    const { page, host, errors } = await openShare(context, variant);
+
+    await expect(box(host)).toHaveCount(1);
+    await expect(box(host).getByRole('alert')).toHaveText(`${DAMAGED}: ${DAMAGED_DETAIL}`);
+    await expect(retry(host)).toBeVisible();
+    await expect(box(host).locator('.chip')).toHaveCount(0);
+
+    // Retry reads again, and it is still damaged: the same message, still one box.
+    await retry(host).click();
+    await expect(box(host).getByRole('alert')).toHaveText(`${DAMAGED}: ${DAMAGED_DETAIL}`);
+    await expect(box(host)).toHaveCount(1);
+
+    await claudeStillInvites(host, 'x@example.com');
+    await dialogOpensAndCloses(page, host);
+    await expect(box(host).getByRole('alert')).toContainText(DAMAGED);
+    expect(errors).toEqual([]);
+  });
+}
+
+test('fixing the saved lists brings the chips back, and Retry works too', async ({ context, panel }) => {
+  await damageLists(panel);
+  const { host, errors } = await openShare(context);
+  await expect(box(host).getByRole('alert')).toContainText(DAMAGED);
+
+  await writeLists(panel, [{ name: 'Team', emails: TEAM }]);
+  await expect(chip(host, 'Team')).toHaveText('Team 3');
+  await expect(box(host).getByRole('alert')).toHaveCount(0);
+  await expect(retry(host)).toHaveCount(0);
+  await expect(box(host)).toHaveCount(1);
+
+  // The chips work again.
+  await chip(host, 'Team').click();
+  await expect(field(host)).toHaveValue(TEAM.join(', '));
+  expect(errors).toEqual([]);
 });
 
-test('saving 45 people as Crowd makes one list and People with access says In Crowd (popup)', async ({
+test('Retry after the lists are fixed reads them again', async ({ context, panel }) => {
+  // The background doesn't answer, so the box is on its Retry; the lists are saved meanwhile.
+  await writeLists(panel, [{ name: 'Team', emails: TEAM }]);
+  await setSilent(panel, true);
+  const { host } = await openShare(context);
+  await expect(box(host).getByRole('alert')).toContainText("Couldn't reach ArtiShare", { timeout: 10_000 });
+
+  await setSilent(panel, false);
+  await retry(host).click();
+  await expect(chip(host, 'Team')).toHaveText('Team 3');
+  await expect(box(host)).toHaveCount(1);
+});
+
+test('a background that does not answer within a few seconds: the box says it could not reach ArtiShare', async ({
   context,
-  extensionId,
+  panel,
 }) => {
-  const { panel } = await panelOver(context, extensionId, CROWDED);
-  await asPopup(panel);
-  await openCrowd(panel);
+  await writeLists(panel, [{ name: 'Team', emails: TEAM }]);
+  await setSilent(panel, true);
+  const { page, host, errors } = await openShare(context);
+  const started = Date.now();
 
-  const view = saveView(panel);
-  await view.getByLabel('Name').fill('Crowd');
-  await view.getByRole('button', { name: 'Save 45 people' }).click();
+  // Nothing yet: the box waits quietly rather than saying something wrong.
+  await expect(box(host)).toHaveCount(1);
+  await expect(box(host).getByRole('alert')).toHaveCount(0);
+  await expect(box(host).getByRole('alert')).toContainText("Couldn't reach ArtiShare", { timeout: 10_000 });
+  expect(Date.now() - started).toBeGreaterThan(2000);
+  await expect(retry(host)).toBeVisible();
+  await expect(box(host)).toHaveCount(1);
 
-  const people = share(panel);
-  await expect(people.getByText('Saved 45 people to Crowd.')).toBeVisible();
-  await expect(people.getByText(/in any of your lists/)).toHaveCount(0);
-  await expect(panel.getByRole('tab', { name: /Lists/ })).toContainText('1');
-  const rows = people.locator('ul.people > li').filter({ hasNotText: 'You (owner)' });
-  await expect(rows).toHaveCount(45);
-  for (const row of await rows.all()) {
-    await expect(row.locator('.hint')).toContainText('In Crowd');
-  }
+  // Retry while it is still silent: it waits again, then says so again, still one box.
+  await retry(host).click();
+  await expect(box(host).getByRole('alert')).toContainText("Couldn't reach ArtiShare", { timeout: 10_000 });
+  await expect(box(host)).toHaveCount(1);
 
-  // One list holding all 45 addresses.
-  await panel.getByRole('tab', { name: /Lists/ }).click();
-  const lists = panel.getByRole('tabpanel', { name: /Lists/ });
-  await lists.locator('summary', { hasText: 'Crowd' }).click();
-  const addresses = (await lists.getByLabel('Email addresses').filter({ visible: true }).inputValue())
-    .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean);
-  expect(addresses).toEqual(ALL);
+  await claudeStillInvites(host, 'y@example.com');
+  await dialogOpensAndCloses(page, host);
+  expect(errors).toEqual([]);
 });
 
-test('in the side panel at 320 px the same works, with nothing scrolling sideways', async ({
+/**
+ * The extension reloaded under a tab that stays open: Chrome leaves the page's old content script
+ * running without `chrome.runtime.id`, so every `chrome.*` call from it throws.
+ */
+async function reloadExtension(context: BrowserContext, panel: Page) {
+  const worker = context.serviceWorkers()[0]!;
+  await panel.close();
+  // The worker goes away in the middle of the call, so the call itself never answers.
+  await worker.evaluate(() => chrome.runtime.reload()).catch(() => {});
+  await expect.poll(() => context.serviceWorkers().every((w) => w !== worker)).toBe(true);
+}
+
+test('after the extension is reloaded, opening Share says to reload the page, and nothing throws', async ({
   context,
-  extensionId,
+  panel,
 }) => {
-  const { panel } = await panelOver(context, extensionId, CROWDED);
-  await panel.setViewportSize({ width: 320, height: 640 });
-  await openCrowd(panel);
+  await writeLists(panel, [{ name: 'Team', emails: TEAM }]);
+  const claude = await openArtifact(context);
+  const errors = watchErrors(claude.page);
+  const { page, host } = claude;
+  await reloadExtension(context, panel);
 
-  const view = saveView(panel);
-  await expect(view.locator('.choices').first().getByRole('checkbox')).toHaveCount(45);
-  await expect(view.getByText('45 of 45 selected')).toBeVisible();
-  const save = view.getByRole('button', { name: 'Save 45 people' });
-  const body = panel.locator('.popup-body');
-  const headerTop = (await panel.locator('.popup-top').boundingBox())!.y;
+  await claude.share();
+  await expect(host.locator('[data-share-pop][data-open]')).toBeVisible();
+  await expect(box(host)).toHaveCount(1);
+  await expect(box(host).getByRole('alert')).toHaveText(UPDATED);
+  // Nothing to retry: only reloading the page helps.
+  await expect(retry(host)).toHaveCount(0);
+  await expect(box(host).locator('.chip')).toHaveCount(0);
 
-  await body.evaluate((el) => el.scrollTo(0, el.scrollHeight));
-  expect((await panel.locator('.popup-top').boundingBox())!.y).toBe(headerTop);
-  await expect(save).toBeInViewport({ ratio: 1 });
-  expect(await scrollsSideways(panel)).toBe(false);
-
-  await view.getByLabel('Name').fill('Crowd');
-  await save.click();
-  const people = share(panel);
-  await expect(people.getByText('Saved 45 people to Crowd.')).toBeVisible();
-  await expect(people.locator('ul.people > li .hint').filter({ hasText: 'In Crowd' })).toHaveCount(45);
-  expect(await scrollsSideways(panel)).toBe(false);
+  await claudeStillInvites(host, 'z@example.com');
+  await dialogOpensAndCloses(page, host);
+  await expect(box(host).getByRole('alert')).toHaveText(UPDATED);
+  expect(errors).toEqual([]);
 });
 
-test('long addresses are cut off with … and keep the full address in a tooltip at 320 px', async ({
+test('clicking a chip in an open box after the extension is reloaded says the same', async ({
   context,
-  extensionId,
+  panel,
 }) => {
-  const { panel } = await panelOver(context, extensionId, CROWDED);
-  await panel.setViewportSize({ width: 320, height: 640 });
-  const long = `${'a-very-long-mailbox-name-'.repeat(4)}end@some-extremely-long-domain-name-for-a-company.example.com`;
-  await reshape(panel, [{ email: long, access: 'view', status: 'pending', id: 'inv-long' }]);
-  await openManage(panel);
-  await expect(share(panel).getByText(unlisted(46))).toBeVisible();
-  await openSave(panel);
+  await writeLists(panel, [{ name: 'Team', emails: TEAM }]);
+  const { page, host, errors } = await openShare(context);
+  await expect(chip(host, 'Team')).toHaveText('Team 3');
+  await reloadExtension(context, panel);
 
-  const view = saveView(panel);
-  const label = view.locator('.choices').first().locator('.truncate', { hasText: long });
-  await expect(label).toHaveAttribute('title', long);
-  const cut = await label.evaluate((el) => ({
-    clipped: el.scrollWidth > el.clientWidth,
-    ellipsis: getComputedStyle(el).textOverflow,
-    nowrap: getComputedStyle(el).whiteSpace,
-  }));
-  expect(cut).toEqual({ clipped: true, ellipsis: 'ellipsis', nowrap: 'nowrap' });
-  expect(await scrollsSideways(panel)).toBe(false);
+  await chip(host, 'Team').click();
+  await expect(box(host).getByRole('alert')).toHaveText(UPDATED);
+  await expect(box(host)).toHaveCount(1);
+  // The lists from before the update are not used: nothing was put in the field.
+  await expect(field(host)).toHaveValue('');
 
-  // A short address isn't cut.
-  const short = view.locator('.truncate', { hasText: crowd(1) });
-  expect(await short.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(false);
-});
-
-test('someone saved to a list in another window drops out of the checkboxes at once', async ({
-  context,
-  extensionId,
-}) => {
-  const { panel, other } = await panelOver(context, extensionId, CROWDED);
-  await openCrowd(panel);
-  const view = saveView(panel);
-  // Choices made so far are kept.
-  await view.getByRole('checkbox', { name: new RegExp(crowd(2)) }).uncheck();
-  await expect(view.getByText('44 of 45 selected')).toBeVisible();
-
-  await saveList(other, 'Elsewhere', [crowd(1)]);
-
-  await expect(view.getByText('43 of 44 selected')).toBeVisible({ timeout: 1_000 });
-  await expect(view.getByRole('checkbox', { name: new RegExp(crowd(1)) })).toHaveCount(0);
-  await expect(view.getByRole('checkbox', { name: new RegExp(crowd(2)) })).not.toBeChecked();
-  await expect(view.getByRole('button', { name: 'Save 43 people' })).toBeEnabled();
-});
-
-test('with the first person untouched the count reads … of 44 selected', async ({ context, extensionId }) => {
-  const { panel, other } = await panelOver(context, extensionId, CROWDED);
-  await openCrowd(panel);
-  const view = saveView(panel);
-
-  await saveList(other, 'Elsewhere', [crowd(1)]);
-
-  await expect(view.getByText('44 of 44 selected')).toBeVisible({ timeout: 1_000 });
-  await expect(view.locator('.choices').first().getByRole('checkbox')).toHaveCount(44);
-});
-
-test('when nobody is left Save to a list closes and People with access shows no note', async ({
-  context,
-  extensionId,
-}) => {
-  const { panel, other } = await panelOver(context, extensionId, CROWDED);
-  await openCrowd(panel);
-
-  await saveList(other, 'Everyone', ALL);
-
-  const people = share(panel);
-  await expect(people.getByRole('heading', { name: 'People with access' })).toBeVisible({ timeout: 2_000 });
-  await expect(panel.getByRole('heading', { name: 'Save to a list' })).toHaveCount(0);
-  await expect(people.getByText(/in any of your lists/)).toHaveCount(0);
-  await expect(people.getByRole('button', { name: 'Save to a list' })).toHaveCount(0);
-  await expect(people.locator('ul.people > li .hint').filter({ hasText: 'In Everyone' })).toHaveCount(45);
-  // Focus isn't left on nothing.
-  await expect(people.getByRole('button', { name: 'Back' })).toBeFocused();
-
-  // If a list is deleted later the form doesn't pop back open by itself.
-  await other.getByRole('tab', { name: /Lists/ }).click();
-  await other.getByRole('tabpanel', { name: /Lists/ }).locator('summary', { hasText: 'Everyone' }).click();
-  await other.getByRole('tabpanel', { name: /Lists/ }).getByRole('button', { name: 'Delete' }).click();
-  await other.getByRole('alertdialog').getByRole('button', { name: 'Delete', exact: true }).click();
-  await expect(people.getByText(unlisted(45))).toBeVisible();
-  await expect(panel.getByRole('heading', { name: 'Save to a list' })).toHaveCount(0);
-});
-
-test('a run that invites new people leaves the checkboxes alone; Refresh after Cancel shows them', async ({
-  context,
-  extensionId,
-}) => {
-  const { panel, other } = await panelOver(context, extensionId, CROWDED);
-  await openCrowd(panel);
-  const view = saveView(panel);
-  await view.getByRole('checkbox', { name: new RegExp(crowd(3)) }).uncheck();
-
-  await other.evaluate(async (id) => {
-    const reply = (await chrome.runtime.sendMessage({
-      type: 'start',
-      label: 'New people',
-      accountEmail: 'owner@example.com',
-      plans: [
-        {
-          artifact: { id, kind: 'artifact', url: `https://claude.ai/artifact/${id}` },
-          toInvite: [
-            { email: 'newbie1@example.com', access: 'view' },
-            { email: 'newbie2@example.com', access: 'edit' },
-          ],
-          alreadyShared: [],
-          sameInbox: [],
-          self: [],
-        },
-      ],
-    })) as { ok: boolean; error?: string };
-    if (!reply.ok) throw new Error(reply.error);
-  }, CROWDED);
-  // The run finishes in the other window.
-  await other.getByRole('tab', { name: 'Share' }).click();
-  await expect(other.getByText('Done', { exact: true })).toBeVisible({ timeout: 20_000 });
-  await panel.waitForTimeout(500);
-
-  // Nothing changed by itself.
-  await expect(view.getByText('44 of 45 selected')).toBeVisible();
-  await expect(view.getByRole('checkbox', { name: /newbie/ })).toHaveCount(0);
-  await expect(view.locator('.choices').first().getByRole('checkbox')).toHaveCount(45);
-
-  await view.getByRole('button', { name: 'Cancel' }).click();
-  const people = share(panel);
-  await expect(people.getByText(unlisted(45))).toBeVisible();
-  await people.getByRole('button', { name: 'Refresh' }).click();
-
-  await expect(people.getByText(unlisted(47))).toBeVisible();
-  for (const email of ['newbie1@example.com', 'newbie2@example.com']) {
-    await expect(people.locator('ul.people > li').filter({ hasText: email }).locator('.hint')).toContainText(
-      'Not in a list',
-    );
-  }
-  // They are offered now.
-  await openSave(panel);
-  await expect(saveView(panel).getByText('47 of 47 selected')).toBeVisible();
-  await expect(
-    saveView(panel).getByRole('checkbox', { name: /newbie2@example.com · Can edit/ }),
-  ).toBeChecked();
-});
-
-test('people without an invitation id can be saved, and the owner is never offered', async ({
-  context,
-  extensionId,
-}) => {
-  const { panel } = await panelOver(context, extensionId, 'ExampleSharedArtifact1');
-  await reshape(panel, [
-    { email: 'joined@example.com', access: 'view', status: 'active' },
-    { email: 'second-owner@example.com', access: 'owner', status: 'active' },
-  ]);
-  await openManage(panel);
-  await expect(share(panel).getByText(unlisted(4))).toBeVisible();
-  await openSave(panel);
-
-  const view = saveView(panel);
-  const boxes = view.locator('.choices').first().getByRole('checkbox');
-  await expect(boxes).toHaveCount(4);
-  await expect(view.getByRole('checkbox', { name: /joined@example.com · Can view/ })).toBeChecked();
-  await expect(view.getByRole('checkbox', { name: /owner@example.com/ })).toHaveCount(0);
-
-  await view.getByLabel('Name').fill('With joined');
-  await view.getByRole('button', { name: 'Save 4 people' }).click();
-  await expect(share(panel).getByText('Saved 4 people to With joined.')).toBeVisible();
-  await expect(
-    share(panel).locator('ul.people > li').filter({ hasText: 'joined@example.com' }).locator('.hint'),
-  ).toContainText('In With joined');
-  // The owner row is still only the signed-in user.
-  await expect(share(panel).locator('ul.people > li').first()).toContainText('You (owner)');
-  await expect(share(panel).locator('ul.people > li').filter({ hasText: 'second-owner' })).toHaveCount(0);
+  await claudeStillInvites(host, 'w@example.com');
+  await dialogOpensAndCloses(page, host);
+  expect(errors).toEqual([]);
 });

@@ -1,157 +1,213 @@
-import type { BrowserContext, Page } from '@playwright/test';
+import type { BrowserContext, Frame, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { openArtifact } from './claudePage';
 
-// F008: Save to a list can instead add the people to one of my existing lists.
-// Driven in the side panel page: a popup page is itself the front tab, so it can't see an artifact.
+// F008: the box says something useful with no lists, with a list that has nobody in it, when
+// everything is already in the field, and when the field held addresses before the box loaded.
 
-test.beforeEach(async ({ context }) => {
-  // Serve the pages ourselves: nothing may reach claude.ai.
-  await context.route(/^https:\/\/claude\.ai\//, (route) =>
-    route.fulfill({ contentType: 'text/html', body: '<title>page</title>' }),
-  );
+const BOX = 'artishare-share-lists';
+const FIELD = "input[role=combobox][aria-label='Invite people by email']";
+
+const TEAM = ['a@example.com', 'b@example.com', 'c@example.com'];
+const DESIGN = ['c@example.com', 'd@example.com'];
+
+/** Saved lists written the way an import that replaces them leaves them: a whole new set. */
+const writeLists = (page: Page, lists: { name: string; emails: string[] }[]) =>
+  page.evaluate(async (all) => {
+    await chrome.storage.local.set({
+      config: {
+        version: 2,
+        lists: all.map((l, i) => ({ id: `list-${i}`, access: 'view', ...l })),
+        defaultSelection: { mode: 'some', listIds: [] },
+      },
+    });
+  }, lists);
+
+async function openShare(context: BrowserContext) {
+  const claude = await openArtifact(context);
+  await claude.share();
+  await expect(claude.host.locator('[data-share-pop][data-open]')).toBeVisible();
+
+  return claude;
+}
+
+const box = (host: Frame) => host.locator(BOX);
+const chip = (host: Frame, name: string) => box(host).getByRole('button', { name: new RegExp(`^${name},`) });
+const field = (host: Frame) => host.locator(FIELD);
+const search = (host: Frame) => box(host).getByRole('searchbox', { name: 'Search lists or people' });
+const invited = (host: Frame) => host.evaluate(() => window.__standIn.invited);
+
+test('with no saved lists the box says so and shows no search field', async ({ context }) => {
+  const { host } = await openShare(context);
+
+  await expect(box(host)).toHaveCount(1);
+  await expect(box(host).getByRole('group', { name: 'ArtiShare lists' })).toBeVisible();
+  await expect(box(host)).toContainText("No saved lists yet. Make one in ArtiShare's Lists tab.");
+  await expect(box(host).locator('.chip')).toHaveCount(0);
+  await expect(search(host)).toHaveCount(0);
+  // claude.ai's own field is untouched and still works.
+  await field(host).fill('x@example.com');
+  await expect(host.getByRole('option', { name: /Invite x@example\.com/ })).toBeVisible();
 });
 
-/** Saves a new list from the given page, through the background like the Lists tab does. */
-async function saveList(page: Page, name: string, emails: string[], access: 'view' | 'comment' | 'edit') {
-  await page.evaluate(
-    async (args) => {
-      const reply = (await chrome.runtime.sendMessage({
-        type: 'config-change',
-        change: {
-          type: 'save-list',
-          list: { id: crypto.randomUUID(), name: args.name, emails: args.emails, access: args.access },
-          expected: null,
-        },
-      })) as { ok: boolean; error?: string };
-      if (!reply.ok) throw new Error(reply.error);
-    },
-    { name, emails, access },
-  );
-}
-
-async function panelOver(context: BrowserContext, extensionId: string, id: string) {
-  const tab = await context.newPage();
-  await tab.goto(`https://claude.ai/artifact/${id}`);
-  // The side panel page follows the tab in front, so it is opened first, then the tab is raised.
-  const panel = await context.newPage();
-  await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
-  await expect(panel.getByRole('heading', { name: 'ArtiShare' })).toBeVisible();
-  await tab.bringToFront();
-
-  return { panel, tab };
-}
-
-const SHARED = 'ExampleSharedArtifact1';
-const share = (panel: Page) => panel.getByRole('tabpanel', { name: 'Share' });
-// The Share form stays mounted (hidden) under Manage access and has fields of its own.
-const saveView = (panel: Page) =>
-  share(panel)
-    .locator('section.card')
-    .filter({ has: panel.getByRole('heading', { name: 'Save to a list' }) });
-const openManage = (panel: Page) => panel.getByRole('button', { name: 'Manage access' }).click();
-const openSave = (panel: Page) => share(panel).getByRole('button', { name: 'Save to a list' }).click();
-
-/** Team (Can edit) and Design (Can view), as in the feature's first step. */
-async function twoLists(panel: Page) {
-  await saveList(panel, 'Team', ['a@example.com'], 'edit');
-  await saveList(panel, 'Design', ['b@example.com'], 'view');
-}
-
-test('Add to an existing list swaps the new-list fields for a List drop-down', async ({
+test('a list with no addresses reads Empty 0, can’t be picked, stays focusable and explains itself', async ({
   context,
-  extensionId,
+  panel,
 }) => {
-  const { panel } = await panelOver(context, extensionId, SHARED);
-  await twoLists(panel);
-  await openManage(panel);
-  await openSave(panel);
-
-  const view = saveView(panel);
-  await expect(view.getByRole('radio', { name: 'New list' })).toBeChecked();
-  await expect(view.getByRole('radio', { name: 'Add to an existing list' })).not.toBeChecked();
-  await expect(view.getByLabel('Name')).toBeVisible();
-
-  await view.getByRole('radio', { name: 'Add to an existing list' }).check();
-  const list = view.getByLabel('List', { exact: true });
-  await expect(list).toBeVisible();
-  // The Lists tab's order (by name), each with its address count.
-  await expect(list.locator('option')).toHaveText(['Design (1 address)', 'Team (1 address)']);
-  await expect(view.getByLabel('Name')).toHaveCount(0);
-  await expect(view.getByLabel('Permission')).toHaveCount(0);
-
-  await list.selectOption({ label: 'Team (1 address)' });
-  await expect(
-    view.getByText(
-      "They'll get Team's permission (Can edit) when you share with Team. Their access to this artifact doesn't change.",
-    ),
-  ).toBeVisible();
-  await expect(view.getByRole('button', { name: 'Add 3 people to Team' })).toBeEnabled();
-
-  // Back to a new list brings the fields back.
-  await view.getByRole('radio', { name: 'New list' }).check();
-  await expect(view.getByLabel('Name')).toBeVisible();
-  await expect(view.getByLabel('Permission')).toBeVisible();
-  await expect(view.getByRole('button', { name: 'Save 3 people' })).toBeVisible();
-});
-
-test('Add appends the people to the list, keeps its permission and creates nothing', async ({
-  context,
-  extensionId,
-}) => {
-  const { panel } = await panelOver(context, extensionId, SHARED);
-  await twoLists(panel);
-  await openManage(panel);
-  await expect(panel.getByRole('tab', { name: /Lists/ })).toContainText('2');
-  await openSave(panel);
-
-  const view = saveView(panel);
-  await view.getByRole('radio', { name: 'Add to an existing list' }).check();
-  await view.getByLabel('List', { exact: true }).selectOption({ label: 'Team (1 address)' });
-  await view.getByRole('button', { name: 'Add 3 people to Team' }).click();
-
-  const people = share(panel);
-  await expect(people.getByRole('heading', { name: 'People with access' })).toBeVisible();
-  await expect(people.getByText('Added 3 people to Team.')).toBeVisible();
-  for (const email of ['viewer@example.com', 'commenter@example.com', 'locked@example.com']) {
-    await expect(
-      people
-        .locator('ul.people > li')
-        .filter({ hasText: email })
-        .locator('.hint')
-        .filter({ hasText: 'In Team' }),
-    ).toHaveCount(1);
-  }
-  await expect(people.getByText(/in any of your lists/)).toHaveCount(0);
-  await expect(panel.getByRole('tab', { name: /Lists/ })).toContainText('2');
-
-  await people.getByRole('button', { name: 'Open list' }).click();
-  const lists = panel.getByRole('tabpanel', { name: 'Lists' });
-  const team = lists.locator('details.list-card').filter({ hasText: 'Team' });
-  await expect(team).toHaveAttribute('open', '');
-  // The old address first, then the three new ones; still Can edit.
-  const emails = (await team.locator('textarea').inputValue()).split(/\s+/).filter(Boolean);
-  expect(emails[0]).toBe('a@example.com');
-  expect(emails.slice(1).toSorted()).toEqual([
-    'commenter@example.com',
-    'locked@example.com',
-    'viewer@example.com',
+  await writeLists(panel, [
+    { name: 'Empty', emails: [] },
+    { name: 'Team', emails: TEAM },
   ]);
-  await expect(team.getByLabel('Permission')).toHaveValue('edit');
+  const { host } = await openShare(context);
+  const empty = chip(host, 'Empty');
 
-  // Design is unchanged.
-  const design = lists.locator('details.list-card').filter({ hasText: 'Design' });
-  await design.locator('summary').click();
-  expect((await design.locator('textarea').inputValue()).trim()).toBe('b@example.com');
-  await expect(design.getByLabel('Permission')).toHaveValue('view');
+  await expect(empty).toHaveText('Empty 0');
+  await expect(empty).toHaveAccessibleName('Empty, 0 people');
+  await expect(empty).toHaveAttribute('aria-disabled', 'true');
+  await expect(empty).toHaveAttribute('title', 'This list has no addresses.');
+  // Not the `disabled` attribute, which would take it out of the Tab order.
+  await expect(empty).not.toHaveJSProperty('disabled', true);
+  await empty.focus();
+  await expect(empty).toBeFocused();
+
+  // Playwright treats aria-disabled as not clickable, so the click is forced.
+  await empty.click({ force: true });
+  await expect(field(host)).toHaveValue('');
+  await expect(empty).toHaveAttribute('aria-pressed', 'false');
+  await expect(box(host).locator('output')).toHaveText('');
+  // The click does nothing to the field even when it has something in it.
+  await chip(host, 'Team').click();
+  await empty.click({ force: true });
+  await expect(field(host)).toHaveValue(TEAM.join(', '));
+  await expect(empty).toHaveAttribute('aria-pressed', 'false');
+  // The other chips still work.
+  await expect(chip(host, 'Team')).toHaveAttribute('aria-pressed', 'true');
+  expect(await invited(host)).toEqual([]);
 });
 
-test('with no saved lists, Add to an existing list is not offered', async ({ context, extensionId }) => {
-  const { panel } = await panelOver(context, extensionId, SHARED);
-  await openManage(panel);
-  await openSave(panel);
+test('an empty list found by search can’t be picked either', async ({ context, panel }) => {
+  await writeLists(panel, [{ name: 'Empty', emails: [] }]);
+  const { host } = await openShare(context);
 
-  const view = saveView(panel);
-  await expect(view.getByLabel('Name')).toBeVisible();
-  await expect(view.getByRole('radio')).toHaveCount(0);
-  await expect(view.getByText('Add to an existing list')).toHaveCount(0);
+  await search(host).fill('empty');
+  const row = box(host).locator('.result');
+
+  await expect(row).toHaveText(/^Empty · 0 people$/);
+  await expect(row).toHaveAttribute('aria-disabled', 'true');
+  await expect(row).toHaveAttribute('title', 'This list has no addresses.');
+  await row.click({ force: true });
+  await expect(field(host)).toHaveValue('');
+});
+
+test('a list becomes pickable once it has addresses', async ({ context, panel }) => {
+  await writeLists(panel, [{ name: 'Empty', emails: [] }]);
+  const { host } = await openShare(context);
+  await expect(chip(host, 'Empty')).toHaveAttribute('aria-disabled', 'true');
+
+  await writeLists(panel, [{ name: 'Empty', emails: ['n@example.com'] }]);
+
+  await expect(chip(host, 'Empty')).toHaveText('Empty 1');
+  await expect(chip(host, 'Empty')).not.toHaveAttribute('aria-disabled', 'true');
+  await chip(host, 'Empty').click();
+  await expect(field(host)).toHaveValue('n@example.com');
+});
+
+test('when every address of every list is in the field all chips are picked and one unpicks as usual', async ({
+  context,
+  panel,
+}) => {
+  await writeLists(panel, [
+    { name: 'Team', emails: TEAM },
+    { name: 'Design', emails: DESIGN },
+  ]);
+  const { host } = await openShare(context);
+
+  await chip(host, 'Team').click();
+  await chip(host, 'Design').click();
+
+  await expect(field(host)).toHaveValue('a@example.com, b@example.com, c@example.com, d@example.com');
+  await expect(chip(host, 'Team')).toHaveAttribute('aria-pressed', 'true');
+  await expect(chip(host, 'Design')).toHaveAttribute('aria-pressed', 'true');
+
+  // Design goes; c@ stays because Team still has it.
+  await chip(host, 'Design').click();
+
+  await expect(field(host)).toHaveValue('a@example.com, b@example.com, c@example.com');
+  await expect(chip(host, 'Design')).toHaveAttribute('aria-pressed', 'false');
+  await expect(chip(host, 'Team')).toHaveAttribute('aria-pressed', 'true');
+
+  await chip(host, 'Team').click();
+  await expect(field(host)).toHaveValue('');
+  await expect(chip(host, 'Team')).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('every address typed by hand shows both chips picked, and a chip unpicks as usual', async ({
+  context,
+  panel,
+}) => {
+  await writeLists(panel, [
+    { name: 'Team', emails: TEAM },
+    { name: 'Design', emails: DESIGN },
+  ]);
+  const { host } = await openShare(context);
+
+  await field(host).fill('a@example.com, b@example.com, c@example.com, d@example.com');
+
+  await expect(chip(host, 'Team')).toHaveAttribute('aria-pressed', 'true');
+  await expect(chip(host, 'Design')).toHaveAttribute('aria-pressed', 'true');
+  await chip(host, 'Team').click();
+  await expect(field(host)).toHaveValue('c@example.com, d@example.com');
+  await expect(chip(host, 'Team')).toHaveAttribute('aria-pressed', 'false');
+  await expect(chip(host, 'Design')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('a field that already holds Team’s addresses shows Team as picked as soon as the box appears', async ({
+  context,
+  panel,
+}) => {
+  await writeLists(panel, [
+    { name: 'Team', emails: TEAM },
+    { name: 'Design', emails: DESIGN },
+  ]);
+  const { host } = await openShare(context);
+  await field(host).fill(TEAM.join(', '));
+  await expect(chip(host, 'Team')).toHaveAttribute('aria-pressed', 'true');
+
+  // claude.ai re-renders the invite area: the box is built again around a field that already
+  // has the addresses, as if they had been typed before the box loaded.
+  await host.evaluate(() => {
+    document.querySelector('artishare-share-lists')?.remove();
+    window.__standIn.rerenderPinned();
+  });
+
+  await expect(box(host)).toHaveCount(1);
+  await expect(chip(host, 'Team')).toHaveAttribute('aria-pressed', 'true');
+  await expect(chip(host, 'Design')).toHaveAttribute('aria-pressed', 'false');
+  await expect(field(host)).toHaveValue(TEAM.join(', '));
+  // Clicking Team takes it out as usual.
+  await chip(host, 'Team').click();
+  await expect(field(host)).toHaveValue('');
+});
+
+test('addresses typed in the moment the dialog opens are picked up when the box loads', async ({
+  context,
+  panel,
+}) => {
+  await writeLists(panel, [{ name: 'Team', emails: TEAM }]);
+  const { host } = await openArtifact(context);
+
+  // Open the dialog and fill the field in one go, before the box has had time to read the lists.
+  await host.evaluate(
+    ({ selector, text }) => {
+      window.__standIn.open();
+      const input = document.querySelector<HTMLInputElement>(selector)!;
+      const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!;
+      descriptor.set!.call(input, text);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    },
+    { selector: FIELD, text: TEAM.join(', ') },
+  );
+
+  await expect(field(host)).toHaveValue(TEAM.join(', '));
+  await expect(chip(host, 'Team')).toHaveAttribute('aria-pressed', 'true');
 });

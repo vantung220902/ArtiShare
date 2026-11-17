@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- The wrapper page, https://claude.ai/artifact/{id}: a header with Share, and the artifact and its
+     Share dialog in a same-origin iframe, as on the real site. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Test Artifact</title>
+    <!-- inline:dialog.css -->
+  </head>
+  <body>
+    <header class="si-header">
+      <strong>Test Artifact</strong>
+      <button type="button" data-stand-in-share class="si-pill">Share</button>
+    </header>
+    <iframe class="si-frame" title="Artifact"></iframe>
+    <script>
+      const frame = document.querySelector('iframe');
+      const outer = new URLSearchParams(location.search);
+      const inner = new URLSearchParams({ m: outer.get('m') ?? 'light', chrome: 'none' });
+      if (outer.has('noInvite')) inner.set('noInvite', '1');
+      frame.src = `/code/artifact/3f1c9a52-7d0e-4b8a-9c61-2e5d8a4b7f10?${inner}`;
+
+      document.querySelector('[data-stand-in-share]').addEventListener('click', () => {
+        frame.contentWindow.postMessage({ standIn: 'open-share' }, location.origin);
+      });
+      // The iframe can't see presses out here, so the wrapper passes them on.
+      document.addEventListener('pointerdown', (event) => {
+        if (event.target.closest('[data-stand-in-share]')) return;
+        frame.contentWindow.postMessage({ standIn: 'outside-pointer' }, location.origin);
+      });
+    </script>
+  </body>
+</html>
