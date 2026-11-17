@@ -2,13 +2,13 @@ import { createRoot, type Root } from 'react-dom/client';
 import type { ContentScriptContext } from 'wxt/utils/content-script-context';
 import { createShadowRootUi, type ShadowRootContentScriptUi } from 'wxt/utils/content-script-ui/shadow-root';
 import css from './style.css?inline';
+import { FIELD } from './inviteField';
 import { ShareListsBox } from './ShareListsBox';
 
 // Only the markers claude.ai's Share dialog is known to carry (see harness/claude-share-dialog.md).
 // Class names are utility classes and change; if a marker goes, the box simply doesn't appear.
 const PORTAL = '[data-base-ui-portal]';
 const ANCHOR = '[data-share-pinned] > [data-share-entry]';
-const FIELD = 'input[role=combobox]';
 
 /** Tests only: the fake build can leave the shadow root open so Playwright can look inside it. */
 const OPEN_FOR_TESTS =
@@ -64,7 +64,7 @@ function watchShareDialogs(ctx: ContentScriptContext) {
         css,
         onMount: (container) => {
           const root = createRoot(container);
-          root.render(<ShareListsBox />);
+          root.render(<ShareListsBox entry={entry} />);
 
           return root;
         },
