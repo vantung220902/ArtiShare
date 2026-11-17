@@ -27,6 +27,11 @@ export type StandInOptions = {
   mode?: 'light' | 'dark';
   /** A dialog without the invite field. */
   noInvite?: boolean;
+  /**
+   * Leave ArtiShare's box with its closed shadow root, as the real build has it. By default the
+   * fake build is asked to open it, because Playwright can't look inside a closed one.
+   */
+  closedShadow?: boolean;
 };
 
 declare global {
@@ -69,6 +74,26 @@ export async function routeClaude(context: BrowserContext) {
   return { requests };
 }
 
+/**
+ * Asks the fake build to leave the box's shadow root open (see `OPEN_FOR_TESTS` in the content
+ * script). The page marks itself, and the content script, which runs later, reads the mark.
+ */
+async function openShadowForTests(context: BrowserContext) {
+  await context.addInitScript(() => {
+    const mark = () => {
+      const root = document.documentElement as HTMLElement | null;
+      if (root) root.dataset.artishareOpenShadow = '';
+
+      return Boolean(root);
+    };
+    if (!mark()) {
+      new MutationObserver((_records, observer) => {
+        if (mark()) observer.disconnect();
+      }).observe(document, { childList: true });
+    }
+  });
+}
+
 function query(options: StandInOptions) {
   const params = new URLSearchParams();
   if (options.mode) params.set('m', options.mode);
@@ -95,6 +120,7 @@ async function frameOf(page: Page) {
  */
 export async function openArtifact(context: BrowserContext, options: StandInOptions = {}) {
   await routeClaude(context);
+  if (!options.closedShadow) await openShadowForTests(context);
   const page = await context.newPage();
   const q = query(options);
   await page.goto(`${ARTIFACT_URL}${q ? `?${q}` : ''}`);
@@ -109,6 +135,7 @@ export async function openArtifact(context: BrowserContext, options: StandInOpti
  */
 export async function openChatArtifact(context: BrowserContext, options: StandInOptions = {}) {
   await routeClaude(context);
+  if (!options.closedShadow) await openShadowForTests(context);
   const page = await context.newPage();
   const q = query(options);
   await page.goto(`${CHAT_URL}${q ? `&${q}` : ''}`);

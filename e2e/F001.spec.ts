@@ -110,8 +110,9 @@ test('the dialog has the real one’s markers, nesting and content, about 435 px
   ).toHaveAttribute('aria-haspopup', 'listbox');
   await expect(host.locator('[data-invite-field] > input[type=hidden]')).toHaveCount(1);
   await expect(host.locator('[data-invite-field] > span[role=status]')).toHaveCount(1);
-  // "People with access" sits in the pinned area, after the entry.
-  await expect(host.locator('[data-share-pinned] > [data-share-entry] + span')).toHaveText(
+  // "People with access" sits in the pinned area, after the entry (and after ArtiShare's box, which
+  // the extension in these tests puts right behind the entry).
+  await expect(host.locator('[data-share-pinned] > [data-share-entry] ~ span')).toHaveText(
     'People with access',
   );
 

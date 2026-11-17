@@ -1,0 +1,73 @@
+:host {
+  display: block;
+  /* claude.ai's own font and text colour, so the box looks like part of its dialog. */
+  font: inherit;
+  color: inherit;
+}
+
+/* A fieldset gives the group role; its default frame and sizing are taken off. */
+.box {
+  min-width: 0;
+  margin: 8px 0;
+  padding: 8px 0 0;
+  border: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.heading {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.note {
+  margin: 0;
+  opacity: 0.75;
+}
+
+.search {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 6px;
+  padding: 6px 8px;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 8px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 3px 10px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 999px;
+}
+
+.chip:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip-count {
+  opacity: 0.65;
+}
